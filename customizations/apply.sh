@@ -74,7 +74,7 @@ try:
     c = open(path).read()
     if 'google-services' not in c:
         c = re.sub(r'(alias\(libs\.plugins\.kotlin\.serialization\))',
-                   r'\1\n    id("com.google.gms.google-services")', c, count=1)
+                   r'\1\n    id("com.google.gms.google-services") version "4.4.2"', c, count=1)
         open(path,'w').write(c)
         print('  OK: google-services plugin added')
 except Exception as e:
