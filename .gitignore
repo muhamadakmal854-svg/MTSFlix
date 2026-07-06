@@ -4,7 +4,6 @@
 keystore-secrets.txt
 
 # Firebase
-google-services.json
 
 # Android build
 build/

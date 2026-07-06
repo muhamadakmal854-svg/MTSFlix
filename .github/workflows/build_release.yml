@@ -99,9 +99,12 @@ jobs:
       # ─── Firebase Config ───────────────────────────────────────────────────
       - name: 🔥 Inject Firebase Config
         run: |
-          if [ -n "${{ secrets.GOOGLE_SERVICES_JSON }}" ]; then
+          if [ -f google-services.json ]; then
+            cp google-services.json cloudstream/app/google-services.json
+            echo "✅ google-services.json copied from repo root"
+          elif [ -n "${{ secrets.GOOGLE_SERVICES_JSON }}" ]; then
             echo "${{ secrets.GOOGLE_SERVICES_JSON }}" | tr -d '\r\n ' | base64 -d > cloudstream/app/google-services.json
-            echo "✅ google-services.json injected"
+            echo "✅ google-services.json injected from secret"
           else
             echo "⚠️  GOOGLE_SERVICES_JSON not set — using placeholder"
             cat > cloudstream/app/google-services.json << 'EOF'

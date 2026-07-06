@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "298386754850",
+    "project_id": "mtsflix-592e4",
+    "storage_bucket": "mtsflix-592e4.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:298386754850:android:83821afa0769fb7b4f697b",
+        "android_client_info": {
+          "package_name": "com.mts.mtsflix"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCorTrKOZPYTSUnM6Accl-Ks3wQvZyXFrg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
