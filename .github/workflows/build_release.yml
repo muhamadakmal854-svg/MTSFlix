@@ -100,7 +100,7 @@ jobs:
       - name: 🔥 Inject Firebase Config
         run: |
           if [ -n "${{ secrets.GOOGLE_SERVICES_JSON }}" ]; then
-            echo "${{ secrets.GOOGLE_SERVICES_JSON }}" | base64 -d > cloudstream/app/google-services.json
+            echo "${{ secrets.GOOGLE_SERVICES_JSON }}" | tr -d '\r\n ' | base64 -d > cloudstream/app/google-services.json
             echo "✅ google-services.json injected"
           else
             echo "⚠️  GOOGLE_SERVICES_JSON not set — using placeholder"
@@ -124,7 +124,7 @@ jobs:
         run: |
           if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
             mkdir -p $HOME/keystore
-            echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > $HOME/keystore/mtsflix.jks
+            echo "${{ secrets.KEYSTORE_BASE64 }}" | tr -d '\r\n ' | base64 -d > $HOME/keystore/mtsflix.jks
             echo "HAS_KEYSTORE=true" >> $GITHUB_ENV
             echo "✅ Keystore ready"
           else
