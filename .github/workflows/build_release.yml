@@ -102,11 +102,10 @@ jobs:
           if [ -f google-services.json ]; then
             cp google-services.json cloudstream/app/google-services.json
             echo "✅ google-services.json copied from repo root"
-          elif [ -n "${{ secrets.GOOGLE_SERVICES_JSON }}" ]; then
-            echo "${{ secrets.GOOGLE_SERVICES_JSON }}" | tr -d '\r\n ' | base64 -d > cloudstream/app/google-services.json
+          elif [ -n "${{ secrets.GOOGLE_SERVICES_JSON }}" ] && echo "${{ secrets.GOOGLE_SERVICES_JSON }}" | tr -d '\r\n ' | base64 -d > cloudstream/app/google-services.json 2>/dev/null; then
             echo "✅ google-services.json injected from secret"
           else
-            echo "⚠️  GOOGLE_SERVICES_JSON not set — using placeholder"
+            echo "⚠️  GOOGLE_SERVICES_JSON not set or invalid — using placeholder"
             cat > cloudstream/app/google-services.json << 'EOF'
           {"project_info":{"project_number":"000","project_id":"mtsflix-592e4","storage_bucket":"mtsflix-592e4.appspot.com"},"client":[{"client_info":{"mobilesdk_app_id":"1:000:android:000","android_client_info":{"package_name":"com.mts.mtsflix"}},"oauth_client":[],"api_key":[{"current_key":"PLACEHOLDER"}],"services":{"appinvite_service":{"other_platform_oauth_client":[]}}}],"configuration_version":"1"}
           EOF
@@ -127,9 +126,13 @@ jobs:
         run: |
           if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
             mkdir -p $HOME/keystore
-            echo "${{ secrets.KEYSTORE_BASE64 }}" | tr -d '\r\n ' | base64 -d > $HOME/keystore/mtsflix.jks
-            echo "HAS_KEYSTORE=true" >> $GITHUB_ENV
-            echo "✅ Keystore ready"
+            if echo "${{ secrets.KEYSTORE_BASE64 }}" | tr -d '\r\n ' | base64 -d > $HOME/keystore/mtsflix.jks 2>/dev/null; then
+              echo "HAS_KEYSTORE=true" >> $GITHUB_ENV
+              echo "✅ Keystore ready"
+            else
+              echo "HAS_KEYSTORE=false" >> $GITHUB_ENV
+              echo "⚠️  Failed to decode KEYSTORE_BASE64 (invalid base64) — using debug signing"
+            fi
           else
             echo "HAS_KEYSTORE=false" >> $GITHUB_ENV
             echo "⚠️  No keystore — using debug signing"
