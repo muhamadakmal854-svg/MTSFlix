@@ -1,222 +1,202 @@
-<div align="center">
+<p align="center">
+  <img src="banner.png" alt="MTSFlix Banner" width="100%"/>
+</p>
 
-# 🎬 MTSFlix
+<p align="center">
+  <img src="logo.png" alt="MTSFlix Logo" width="150"/>
+</p>
 
-**Aplikasi Streaming Movie, Series & Anime untuk Komuniti MTS**
+<h1 align="center">MTSFlix</h1>
 
-*Berasaskan CloudStream 3 · Firebase Sync · Verified Device Access*
+<p align="center">
+  <strong>Aplikasi Penstriman Video Premium untuk Android</strong><br/>
+  Dibina di atas <a href="https://github.com/recloudstream/cloudstream">CloudStream 3</a> dengan ciri eksklusif MTS
+</p>
 
-[![Build](https://img.shields.io/github/actions/workflow/status/muhamadakmal854-svg/MTSFlix/build_release.yml?branch=main&label=Build%20APK&style=flat-square&color=success)](../../actions)
-[![Release](https://img.shields.io/github/v/release/muhamadakmal854-svg/MTSFlix?label=Latest&style=flat-square&color=E50914)](../../releases/latest)
-[![Android](https://img.shields.io/badge/Android-5.0%2B-green?style=flat-square)](../../releases)
-
-**[📥 Download APK](../../releases/latest)** · **[📋 Senarai Provider](https://github.com/muhamadakmal854-svg/Provider)** · **[💬 @muhamadakmal854](https://t.me/muhamadakmal854)**
-
-</div>
-
----
-
-## 🚀 Cara Install (Pengguna)
-
-### Langkah 1 — Download APK
-Pergi ke **[Releases](../../releases/latest)** dan download `MTSFlix-vX.X.X.apk`
-
-### Langkah 2 — Install
-Aktifkan *Sumber Tidak Diketahui* → Install APK
-
-### Langkah 3 — Pengesahan Peranti
-```
-Buka MTSFlix → Skrin pengesahan muncul
-→ Salin KOD PERANTI anda (MTSF-XXXX-XXXX-XXXX)
-→ Hubungi admin: t.me/muhamadakmal854
-→ Admin daftarkan → Tap "Cuba Semula" dalam app
-→ Login Google (pilihan, untuk sync)
-→ Selamat menonton! 🎬
-```
-
-### Cara Update APK
-MTSFlix akan **auto-detect update** dan tawarkan download bila buka app. Tiada perlu uninstall.
+<p align="center">
+  <a href="https://github.com/muhamadakmal854-svg/MTSFlix/releases/latest">
+    <img src="https://img.shields.io/github/v/release/muhamadakmal854-svg/MTSFlix?style=for-the-badge&logo=android&color=4f46e5&labelColor=1e1b4b" alt="Latest Release"/>
+  </a>
+  <a href="https://github.com/muhamadakmal854-svg/MTSFlix/releases/latest">
+    <img src="https://img.shields.io/github/downloads/muhamadakmal854-svg/MTSFlix/total?style=for-the-badge&color=7c3aed&labelColor=1e1b4b" alt="Downloads"/>
+  </a>
+  <a href="https://github.com/muhamadakmal854-svg/MTSFlix/actions">
+    <img src="https://img.shields.io/github/actions/workflow/status/muhamadakmal854-svg/MTSFlix/build_release.yml?style=for-the-badge&logo=githubactions&color=059669&labelColor=1e1b4b" alt="Build Status"/>
+  </a>
+  <img src="https://img.shields.io/badge/Android-5.0%2B-brightgreen?style=for-the-badge&logo=android&labelColor=1e1b4b" alt="Android 5.0+"/>
+</p>
 
 ---
 
-## 📋 Cara Kerja
+## 📥 Download APK
 
-### Aliran Pengesahan Peranti
+> **Download terkini:** [MTSFlix Latest Release](https://github.com/muhamadakmal854-svg/MTSFlix/releases/latest)
 
-```
-Buka App
-   ↓
-Jana Kod Unik Peranti (SHA-256 hardware fingerprint)
-   ↓
-Fetch licenses.json dari GitHub
-   ↓
-Kod AKTIF + BELUM TAMAT? ──YES──→ Masuk App → Login Google (pilihan)
-                          ─ NO──→ Tunjuk Kod + Arahan Hubungi Admin
-```
-
-### Provider Auto-Sync (Tiada APK baru diperlukan)
-
-```
-Admin tambah/update provider di repo Provider
-   ↓
-GitHub Actions build .cs3 plugin
-   ↓
-plugins.json dikemaskini di branch builds
-   ↓
-Semua pengguna auto-dapat provider baru bila buka app 🔄
-```
-
-### APK Auto-Update
-
-```
-App buka → fetch version.json dari GitHub
-   ↓
-Versi baru ada? → Tunjuk dialog "Update Sekarang"
-   ↓
-Download APK via DownloadManager
-   ↓
-Install (sama signing key = data TIDAK hilang) ✅
-```
+| Versi | Saiz | Platform |
+|-------|------|----------|
+| v1.0.0 | ~70 MB | Android 5.0+ (API 21+) |
 
 ---
 
-## 👑 Panduan Admin — License Manager
+## ✨ Ciri-Ciri Utama
 
-### Perintah Penuh
+| Ciri | Keterangan |
+|------|-----------|
+| 🔐 **Pengesahan Peranti** | Kod unik untuk setiap peranti — kawalan akses selamat |
+| 🔑 **Login Google** | Daftar masuk dengan akaun Google via Firebase |
+| 🔔 **Notifikasi Episod** | Pemberitahuan automatik bila episod baru keluar |
+| 🔌 **Provider Auto-Sync** | Extension provider dikemas kini tanpa perlu reinstall |
+| 📥 **Auto-Update APK** | Kemaskini APK terus dalam aplikasi |
+| 🚫 **Tiada Iklan** | Pengalaman menonton tanpa gangguan iklan |
+| 🌐 **Multi-Bahasa** | Kandungan dengan subtitle pelbagai bahasa |
+| 📺 **Multi-Server** | Putar dari pelbagai pelayan video |
+
+---
+
+## 🔌 Provider MTS (Extension)
+
+MTSFlix menggunakan sistem extension untuk mengakses sumber video. Provider MTS dikonfigurasikan secara automatik semasa pemasangan.
+
+**Repo Provider:**
+```
+https://cdn.jsdelivr.net/gh/muhamadakmal854-svg/Provider@builds/repo.json
+```
+
+| Provider | Domain | Kandungan |
+|----------|--------|-----------|
+| 🎬 Anichin | anichin.moe | Anime Sub Indonesia |
+| 🎭 Animexin | animexin.dev | Anime Multi-Bahasa |
+| 🎥 KlikXXI | flagsio.com | Filem & TV Melayu |
+| *(lebih akan ditambah)* | | |
+
+---
+
+## 🚀 Cara Pasang
+
+### Pasang Baru
+1. **Download APK** dari [Releases](https://github.com/muhamadakmal854-svg/MTSFlix/releases/latest)
+2. Pergi ke **Tetapan → Keselamatan → Allow Unknown Sources**
+3. Pasang fail APK
+4. Buka MTSFlix → Login dengan Google
+5. Provider akan dimuat turun secara automatik ✅
+
+### Kemaskini (Update)
+App MTSFlix akan **memaparkan notifikasi update** secara automatik bila versi baru tersedia.
+
+Klik **"Kemaskini Sekarang"** dalam app → APK baru akan dimuat turun dan dipasang automatik.
+
+> ⚠️ Data & tetapan anda **tidak akan hilang** semasa update (gunakan signing key yang sama)
+
+---
+
+## 🔄 Auto-Update
+
+MTSFlix mempunyai sistem auto-update yang menyemak `version.json` di repo ini:
+
+```
+https://raw.githubusercontent.com/muhamadakmal854-svg/MTSFlix/main/version.json
+```
+
+Setiap kali versi baru dibina, `version.json` dikemas kini secara automatik oleh GitHub Actions.
+
+---
+
+## 🏗️ Cara Build (Untuk Pembangun)
+
+Repository ini menggunakan **GitHub Actions** untuk membina APK secara automatik.
+
+### Prasyarat (GitHub Secrets)
+
+| Secret | Keterangan |
+|--------|-----------|
+| `KEYSTORE_BASE64` | Fail keystore `.jks` dikodkan dalam base64 |
+| `KEYSTORE_PASSWORD` | Kata laluan keystore |
+| `KEY_ALIAS` | Alias kunci dalam keystore |
+| `KEY_PASSWORD` | Kata laluan kunci |
+
+> 💡 Jalankan `python master.py setup` untuk arahan persediaan penuh
+
+### Trigger Build Manual
 
 ```bash
-# Tambah lesen baru
-bash manage_license.sh add "Ahmad Ali" "ahmad@gmail.com" "MTSF-A1B2-C3D4-E5F6" "2026-12-31" "Samsung S24"
+# Build versi baru
+python master.py build 1.2.0 "Deskripsi kemaskini"
 
-# Padam lesen secara kekal (perlu taip DELETE untuk sahkan)
-bash manage_license.sh delete "MTSF-A1B2-C3D4-E5F6"
+# Semak status build
+python master.py status
 
-# Gantung lesen (data kekal, boleh unban)
-bash manage_license.sh ban "MTSF-A1B2-C3D4-E5F6" "Melanggar syarat"
-
-# Aktifkan semula lesen
-bash manage_license.sh unban "MTSF-A1B2-C3D4-E5F6"
-
-# Perbaharui tarikh tamat
-bash manage_license.sh renew "MTSF-A1B2-C3D4-E5F6" "2027-12-31"
-
-# Senarai semua lesen
-bash manage_license.sh list
-bash manage_license.sh list --active    # hanya aktif
-bash manage_license.sh list --banned    # hanya banned
-bash manage_license.sh list --expired   # hanya tamat
-
-# Maklumat terperinci
-bash manage_license.sh info "MTSF-A1B2-C3D4-E5F6"
-
-# Simulasi semakan app
-bash manage_license.sh check "MTSF-A1B2-C3D4-E5F6"
-
-# Push ke GitHub (auto-push selepas setiap operasi, atau manual)
-bash manage_license.sh push
-
-# Statistik
-bash manage_license.sh stats
-
-# Eksport ke CSV
-bash manage_license.sh export csv
+# Buka GitHub Actions
+python master.py open
 ```
 
-### Keselamatan Data
-- Data lama **TIDAK AKAN HILANG** apabila push ke GitHub
-- Data hanya hilang apabila admin jalankan `delete` secara eksplisit
-- `ban` menggantung akses tanpa memadam data (boleh `unban` kemudian)
-
----
-
-## 🛠️ Setup Developer (Sekali Sahaja)
-
-### 1. Clone MTSFlix repo
-```bash
-git clone https://github.com/muhamadakmal854-svg/MTSFlix.git
-cd MTSFlix
-```
-
-### 2. Generate Keystore
-```bash
-bash generate_keystore.sh
-# Salin output ke GitHub Secrets
-```
-
-### 3. Setup Firebase ([console.firebase.google.com](https://console.firebase.google.com/project/mtsflix-592e4))
-- Add Android App → Package: `com.mts.mtsflix`
-- Download `google-services.json` → encode base64
-
-### 4. Tambah 5 GitHub Secrets
-Lihat [SETUP_SECRETS.md](SETUP_SECRETS.md) untuk panduan lengkap.
-
-| Secret | Sumber |
-|--------|--------|
-| `KEYSTORE_BASE64` | `generate_keystore.sh` |
-| `KEYSTORE_PASSWORD` | `generate_keystore.sh` |
-| `KEY_ALIAS` | `mtsflix` |
-| `KEY_PASSWORD` | `generate_keystore.sh` |
-| `GOOGLE_SERVICES_JSON` | Firebase Console |
-
-### 5. Build APK Pertama
-```bash
-git tag v1.0.0
-git push origin v1.0.0
-# APK tersedia dalam ~15 minit di Releases
-```
-
----
-
-## 📁 Struktur Repo
+### Struktur Folder
 
 ```
 MTSFlix/
-├── .github/workflows/
-│   └── build_release.yml      ← Build APK + Release + Update version.json
+├── .github/
+│   └── workflows/
+│       └── build_release.yml   # Workflow GitHub Actions
 ├── customizations/
-│   ├── apply.sh               ← 13-langkah patch CloudStream → MTSFlix
-│   └── strings_override.xml
-├── custom_src/
-│   ├── MTSFlixInit.kt         ← Initializer
-│   ├── auth/GoogleSignInHelper.kt
-│   ├── license/
-│   │   ├── DeviceCodeManager.kt      ← Jana kod SHA-256
-│   │   ├── LicenseVerifier.kt        ← Semak licenses.json
-│   │   ├── LicenseCheckActivity.kt   ← Skrin pengesahan (LAUNCHER)
-│   │   └── DefaultRepoSetup.kt       ← Inject provider URL
-│   ├── notifications/EpisodeNotificationWorker.kt
-│   ├── sync/FirestoreWatchlistSync.kt
-│   └── update/AutoUpdateManager.kt   ← In-app APK auto-update
-├── licenses.json              ← Database lesen (edit → push → serta-merta aktif)
-├── version.json               ← Auto-update oleh GitHub Actions
-├── manage_license.sh          ← CLI pengurusan lesen
-├── generate_keystore.sh       ← Jana keystore signing
-├── SETUP_SECRETS.md           ← Panduan setup secrets
-├── .gitignore
-└── README.md
+│   └── apply.sh                # Skrip patch CloudStream
+├── custom_src/                 # Kod sumber khas MTSFlix
+│   ├── auth/                   # Google Sign-In & Firebase Auth
+│   ├── license/                # Sistem pengesahan peranti
+│   ├── notifications/          # Worker notifikasi episod
+│   └── update/                 # Sistem auto-update APK
+├── google-services.json        # Konfigurasi Firebase
+├── version.json                # Maklumat versi semasa (auto-update)
+├── licenses.json               # Senarai peranti berlesen
+├── logo.png                    # Logo MTSFlix
+└── master.py                   # Skrip pengurusan build
 ```
 
 ---
 
-## 📞 Hubungi Admin
+## 📱 Tangkapan Skrin
 
-| Platform | Pautan |
-|----------|--------|
-| **Telegram** | [@muhamadakmal854](https://t.me/muhamadakmal854) |
-| **GitHub Issues** | [Buka Issue](../../issues/new) |
-
-**Maklumat untuk daftar peranti:**
-1. Kod peranti: `MTSF-XXXX-XXXX-XXXX` (dari skrin pengesahan)
-2. Nama penuh
-3. Email Google
-4. Model peranti
+*Akan ditambah dalam versi akan datang*
 
 ---
 
-<div align="center">
+## 🔧 Penyelesaian Masalah
 
-*🎬 MTSFlix · Berasaskan [CloudStream 3](https://github.com/recloudstream/cloudstream) (GPL-3.0)*
+### App tidak mahu buka / stuck di skrin lesen
+- Pastikan peranti anda telah didaftarkan dalam `licenses.json`
+- Hubungi admin untuk tambah ID peranti anda
 
-*Provider di repo [muhamadakmal854-svg/Provider](https://github.com/muhamadakmal854-svg/Provider)*
+### Provider tidak load / tiada video
+- Pergi ke **Tetapan → Provider** → Refresh repo
+- Semak sambungan internet anda
+- Cuba tukar server video dalam pilihan player
 
-</div>
+### Update gagal dimuat turun
+- Pergi ke **Tetapan → Kemas kini** → Muat turun semula
+- Atau download APK terus dari [Releases](https://github.com/muhamadakmal854-svg/MTSFlix/releases/latest)
+
+---
+
+## 📋 Rekod Perubahan (Changelog)
+
+### v1.0.0 — Julai 2026
+- 🎉 Pelancaran pertama MTSFlix
+- ✅ Sistem pengesahan peranti (LicenseCheckActivity)
+- ✅ Login Google + Firebase Auth
+- ✅ Notifikasi episod baru (WorkManager)
+- ✅ Auto-update APK dalam app
+- ✅ Provider MTS: Anichin, Animexin, KlikXXI
+- ✅ Firebase Firestore untuk senarai tontonan
+- ✅ Build pipeline GitHub Actions sepenuhnya automatik
+
+---
+
+## 📄 Lesen
+
+Projek ini adalah perisian proprietari. Hak cipta terpelihara © 2026 MTS.
+
+Dibina menggunakan [CloudStream 3](https://github.com/recloudstream/cloudstream) — Lesen LGPL-3.0.
+
+---
+
+<p align="center">
+  Dibina dengan ❤️ oleh MTS &nbsp;|&nbsp; Dikuasakan oleh <a href="https://github.com/recloudstream/cloudstream">CloudStream 3</a>
+</p>
