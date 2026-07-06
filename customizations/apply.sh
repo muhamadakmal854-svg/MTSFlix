@@ -271,9 +271,35 @@ EOF
 fi
 
 # --- 11. Firebase config check --------------------------------------------
-echo "[11/13] Firebase config check..."
+echo "[11/13] Firebase config check & patching..."
 if [ -f "$CS_DIR/app/google-services.json" ]; then
   echo "  OK: google-services.json present"
+  python3 - << 'PYEOF'
+import json, os
+path = os.environ.get('CS_DIR','cloudstream') + '/app/google-services.json'
+try:
+    with open(path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+    clients = data.get('client', [])
+    if clients:
+        existing = {c.get('client_info', {}).get('android_client_info', {}).get('package_name') for c in clients}
+        base_client = clients[0]
+        for pkg in ['com.mts.mtsflix.prerelease', 'com.mts.mtsflix.nodata']:
+            if pkg not in existing:
+                new_c = json.loads(json.dumps(base_client))
+                new_c['client_info']['android_client_info']['package_name'] = pkg
+                app_id = new_c['client_info'].get('mobilesdk_app_id', '')
+                if app_id:
+                    new_c['client_info']['mobilesdk_app_id'] = app_id + '.' + pkg.split('.')[-1]
+                clients.append(new_c)
+                print(f"  Added client package: {pkg}")
+        data['client'] = clients
+        with open(path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=2)
+        print("  OK: patched google-services.json successfully")
+except Exception as e:
+    print(f"  WARN: Failed to patch google-services.json: {e}")
+PYEOF
   PROJ=$(python3 -c "import json; d=json.load(open('$CS_DIR/app/google-services.json')); print(d.get('project_info',{}).get('project_id','?'))" 2>/dev/null || echo "?")
   echo "  Project: $PROJ"
 else
