@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">MTSFlix</string>
+    <string name="app_description">Tonton movie, series &amp; anime tanpa had</string>
+    <string name="search_hint">Cari movie, series, anime...</string>
+</resources>

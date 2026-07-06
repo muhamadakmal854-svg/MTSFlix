@@ -1,0 +1,29 @@
+# Signing
+*.jks
+*.keystore
+keystore-secrets.txt
+
+# Firebase
+google-services.json
+
+# Android build
+build/
+.gradle/
+local.properties
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Export
+mtsflix_licenses_*.csv
+mtsflix_licenses_*.json
+
+# CloudStream clone (created by workflow)
+/cloudstream/
+
+# Local config containing secrets
+mtsflix_config.json

@@ -1,0 +1,277 @@
+name: 🎬 MTSFlix Release Build
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'customizations/**'
+      - 'custom_src/**'
+      - '.github/workflows/build_release.yml'
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version_name:
+        description: 'Version name (e.g. 1.2.0)'
+        required: false
+        default: ''
+      release_notes:
+        description: 'Release notes / changelog'
+        required: false
+        default: 'Update MTSFlix'
+      mandatory_update:
+        description: 'Force update (mandatory)?'
+        required: false
+        default: 'false'
+        type: boolean
+      create_release:
+        description: 'Create GitHub Release?'
+        required: false
+        default: 'true'
+        type: boolean
+
+permissions:
+  contents: write
+
+env:
+  APP_PACKAGE: com.mts.mtsflix
+  APP_NAME: MTSFlix
+  CLOUDSTREAM_REPO: recloudstream/cloudstream
+  PROVIDER_URL: https://raw.githubusercontent.com/muhamadakmal854-svg/Provider/builds/plugins.json
+  LICENSE_URL: https://raw.githubusercontent.com/muhamadakmal854-svg/MTSFlix/main/licenses.json
+  VERSION_URL: https://raw.githubusercontent.com/muhamadakmal854-svg/MTSFlix/main/version.json
+
+jobs:
+  build:
+    name: Build MTSFlix APK
+    runs-on: ubuntu-latest
+
+    steps:
+      # ─── Setup ────────────────────────────────────────────────────────────
+      - name: 📥 Checkout MTSFlix Repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: 📥 Clone CloudStream 3
+        run: |
+          git clone --depth=1 https://github.com/${{ env.CLOUDSTREAM_REPO }} cloudstream
+          echo "✅ CloudStream cloned"
+
+      - name: ☕ Setup JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: 21
+          distribution: temurin
+          cache: gradle
+
+      - name: 🤖 Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      # ─── Determine Version ─────────────────────────────────────────────────
+      - name: 🏷️ Determine Version
+        id: version
+        run: |
+          if [ -n "${{ github.event.inputs.version_name }}" ]; then
+            VER="${{ github.event.inputs.version_name }}"
+          elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            VER="${GITHUB_REF#refs/tags/v}"
+          else
+            # Auto-version from existing version.json or run number
+            if [ -f version.json ]; then
+              CURRENT=$(python3 -c "import json; d=json.load(open('version.json')); print(d.get('version','1.0.0'))" 2>/dev/null || echo "1.0.0")
+              # Bump patch version
+              IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
+              VER="${MAJOR}.${MINOR}.$((PATCH+1))"
+            else
+              VER="1.0.${{ github.run_number }}"
+            fi
+          fi
+          echo "VER=$VER" >> $GITHUB_ENV
+          echo "version=$VER" >> $GITHUB_OUTPUT
+          echo "Build version: $VER"
+
+      # ─── Apply MTSFlix Customizations ─────────────────────────────────────
+      - name: 🎨 Apply MTSFlix Customizations
+        run: |
+          chmod +x customizations/apply.sh
+          bash customizations/apply.sh
+        env:
+          MTSFLIX_DIR: ${{ github.workspace }}
+          CS_DIR: ${{ github.workspace }}/cloudstream
+          GITHUB_REPOSITORY: ${{ github.repository }}
+
+      # ─── Firebase Config ───────────────────────────────────────────────────
+      - name: 🔥 Inject Firebase Config
+        run: |
+          if [ -n "${{ secrets.GOOGLE_SERVICES_JSON }}" ]; then
+            echo "${{ secrets.GOOGLE_SERVICES_JSON }}" | base64 -d > cloudstream/app/google-services.json
+            echo "✅ google-services.json injected"
+          else
+            echo "⚠️  GOOGLE_SERVICES_JSON not set — using placeholder"
+            cat > cloudstream/app/google-services.json << 'EOF'
+          {"project_info":{"project_number":"000","project_id":"mtsflix-592e4","storage_bucket":"mtsflix-592e4.appspot.com"},"client":[{"client_info":{"mobilesdk_app_id":"1:000:android:000","android_client_info":{"package_name":"com.mts.mtsflix"}},"oauth_client":[],"api_key":[{"current_key":"PLACEHOLDER"}],"services":{"appinvite_service":{"other_platform_oauth_client":[]}}}],"configuration_version":"1"}
+          EOF
+          fi
+
+      # ─── Signing Keystore ──────────────────────────────────────────────────
+      - name: 🔑 Setup Keystore
+        run: |
+          if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
+            mkdir -p $HOME/keystore
+            echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > $HOME/keystore/mtsflix.jks
+            echo "HAS_KEYSTORE=true" >> $GITHUB_ENV
+            echo "✅ Keystore ready"
+          else
+            echo "HAS_KEYSTORE=false" >> $GITHUB_ENV
+            echo "⚠️  No keystore — using debug signing"
+          fi
+
+      # ─── Build APK ─────────────────────────────────────────────────────────
+      - name: 🔨 Build Release APK
+        working-directory: cloudstream
+        env:
+          SIGNING_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          SIGNING_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          SIGNING_STORE_FILE: ${{ env.HOME }}/keystore/mtsflix.jks
+          SIGNING_STORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        run: |
+          chmod +x gradlew
+          if [ "$HAS_KEYSTORE" = "true" ]; then
+            ./gradlew assembleRelease \
+              -Pandroid.injected.signing.store.file="$HOME/keystore/mtsflix.jks" \
+              -Pandroid.injected.signing.store.password="${{ secrets.KEYSTORE_PASSWORD }}" \
+              -Pandroid.injected.signing.key.alias="${{ secrets.KEY_ALIAS }}" \
+              -Pandroid.injected.signing.key.password="${{ secrets.KEY_PASSWORD }}" \
+              --no-daemon --stacktrace
+          else
+            ./gradlew assembleRelease --no-daemon --stacktrace
+          fi
+
+      # ─── Collect & Rename APK ─────────────────────────────────────────────
+      - name: 📦 Prepare APK
+        run: |
+          mkdir -p release_output
+          APK=$(find cloudstream/app/build/outputs/apk -name '*.apk' | head -1)
+          if [ -z "$APK" ]; then
+            echo "❌ APK not found!"
+            find cloudstream/app/build -name '*.apk' 2>/dev/null
+            exit 1
+          fi
+          DEST="release_output/MTSFlix-v${{ env.VER }}.apk"
+          cp "$APK" "$DEST"
+          SIZE=$(du -h "$DEST" | cut -f1)
+          echo "APK_PATH=$DEST" >> $GITHUB_ENV
+          echo "APK_SIZE=$SIZE" >> $GITHUB_ENV
+          echo "✅ APK ready: $DEST ($SIZE)"
+          
+          # Compute SHA256
+          SHA256=$(sha256sum "$DEST" | cut -d' ' -f1)
+          echo "APK_SHA256=$SHA256" >> $GITHUB_ENV
+          echo "SHA256: $SHA256"
+
+      # ─── Update version.json ──────────────────────────────────────────────
+      - name: 📄 Update version.json
+        run: |
+          RELEASE_NOTES="${{ github.event.inputs.release_notes }}"
+          [ -z "$RELEASE_NOTES" ] && RELEASE_NOTES="MTSFlix v${{ env.VER }}"
+          MANDATORY="${{ github.event.inputs.mandatory_update }}"
+          [ -z "$MANDATORY" ] && MANDATORY="false"
+          REPO="${{ github.repository }}"
+          VER="${{ env.VER }}"
+          SHA256="${{ env.APK_SHA256 }}"
+          RUN_NUM="${{ github.run_number }}"
+          
+          python3 << PYEOF
+          import json
+          from datetime import datetime
+          import os
+          
+          ver = os.environ.get('VER', '1.0.0')
+          run_num = int(os.environ.get('RUN_NUM', '1'))
+          repo = os.environ.get('REPO', 'muhamadakmal854-svg/MTSFlix')
+          sha256 = os.environ.get('SHA256', '')
+          release_notes = os.environ.get('RELEASE_NOTES', f'MTSFlix v{ver}')
+          mandatory = os.environ.get('MANDATORY', 'false').lower() == 'true'
+          
+          data = {
+              "version": ver,
+              "versionCode": run_num,
+              "downloadUrl": f"https://github.com/{repo}/releases/download/v{ver}/MTSFlix-v{ver}.apk",
+              "releaseNotes": release_notes,
+              "mandatory": mandatory,
+              "sha256": sha256,
+              "publishedAt": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
+              "minAndroid": 21,
+              "providerUrl": "https://raw.githubusercontent.com/muhamadakmal854-svg/Provider/builds/plugins.json"
+          }
+          
+          with open('version.json', 'w') as f:
+              json.dump(data, f, indent=2)
+          print(f"version.json updated: v{ver} (code {run_num})")
+          PYEOF
+          
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add version.json
+          git diff --staged --quiet || git commit -m "chore: Update version.json to v${{ env.VER }} [skip ci]"
+          git push
+          echo "✅ version.json committed and pushed"
+
+      # ─── Upload Artifact ───────────────────────────────────────────────────
+      - name: 📤 Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MTSFlix-v${{ env.VER }}
+          path: release_output/*.apk
+          retention-days: 30
+
+      # ─── Create GitHub Release ────────────────────────────────────────────
+      - name: 🚀 Create GitHub Release
+        if: >
+          startsWith(github.ref, 'refs/tags/') ||
+          (github.event_name == 'workflow_dispatch' && github.event.inputs.create_release == 'true')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ env.VER }}
+          name: "🎬 MTSFlix v${{ env.VER }}"
+          body: |
+            ## 🎬 MTSFlix v${{ env.VER }}
+
+            ${{ github.event.inputs.release_notes || 'Update MTSFlix' }}
+
+            ---
+
+            ### 📥 Cara Install / Update
+            1. Download **MTSFlix-v${{ env.VER }}.apk** di bawah
+            2. App akan **auto-detect** update dan tawarkan download bila buka MTSFlix
+            3. Atau install manual — **data tidak akan hilang** (sama signing key)
+
+            ### ✅ Ciri-Ciri
+            - 🔐 Pengesahan peranti (kod unik setiap device)
+            - 🔑 Login Google — sync watchlist & sejarah
+            - 🔔 Notifikasi episod baru
+            - 🔌 Provider MTS auto-sync (tiada reinstall perlu)
+            - 📥 Auto-update APK dalam app
+            - 🚫 Tiada iklan
+
+            ---
+
+            | Info | Nilai |
+            |------|-------|
+            | Versi | `v${{ env.VER }}` |
+            | Saiz | `${{ env.APK_SIZE }}` |
+            | SHA256 | `${{ env.APK_SHA256 }}` |
+            | Build | `#${{ github.run_number }}` |
+            | Commit | `${{ github.sha }}` |
+
+            > 🤖 Built automatically by GitHub Actions
+          files: release_output/*.apk
+          draft: false
+          prerelease: false
+          make_latest: true

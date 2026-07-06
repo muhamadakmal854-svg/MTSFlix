@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "description": "MTSFlix Device License Registry",
+  "lastUpdated": "2026-07-05",
+  "licenses": [
+    {
+      "id": "LIC-EXAMPLE-00000001",
+      "deviceCode": "MTSF-EXAM-PLE0-0001",
+      "username": "Admin MTS",
+      "email": "admin@mts.com",
+      "expiredAt": "2099-12-31",
+      "active": true,
+      "banned": false,
+      "bannedReason": "",
+      "addedAt": "2026-07-05",
+      "deviceInfo": "Contoh — Gantikan dengan kod peranti sebenar",
+      "note": "JANGAN padam baris ini — ia contoh template. Duplicate dan edit untuk pengguna baru.",
+      "lastModified": "2026-07-05T00:00:00"
+    }
+  ]
+}
