@@ -96,16 +96,6 @@ jobs:
           echo "version=$VER" >> $GITHUB_OUTPUT
           echo "Build version: $VER"
 
-      # ─── Apply MTSFlix Customizations ─────────────────────────────────────
-      - name: 🎨 Apply MTSFlix Customizations
-        run: |
-          chmod +x customizations/apply.sh
-          bash customizations/apply.sh
-        env:
-          MTSFLIX_DIR: ${{ github.workspace }}
-          CS_DIR: ${{ github.workspace }}/cloudstream
-          GITHUB_REPOSITORY: ${{ github.repository }}
-
       # ─── Firebase Config ───────────────────────────────────────────────────
       - name: 🔥 Inject Firebase Config
         run: |
@@ -118,6 +108,16 @@ jobs:
           {"project_info":{"project_number":"000","project_id":"mtsflix-592e4","storage_bucket":"mtsflix-592e4.appspot.com"},"client":[{"client_info":{"mobilesdk_app_id":"1:000:android:000","android_client_info":{"package_name":"com.mts.mtsflix"}},"oauth_client":[],"api_key":[{"current_key":"PLACEHOLDER"}],"services":{"appinvite_service":{"other_platform_oauth_client":[]}}}],"configuration_version":"1"}
           EOF
           fi
+
+      # ─── Apply MTSFlix Customizations ─────────────────────────────────────
+      - name: 🎨 Apply MTSFlix Customizations
+        run: |
+          chmod +x customizations/apply.sh
+          bash customizations/apply.sh
+        env:
+          MTSFLIX_DIR: ${{ github.workspace }}
+          CS_DIR: ${{ github.workspace }}/cloudstream
+          GITHUB_REPOSITORY: ${{ github.repository }}
 
       # ─── Signing Keystore ──────────────────────────────────────────────────
       - name: 🔑 Setup Keystore
