@@ -12,7 +12,7 @@ CS_DIR="${CS_DIR:-$(pwd)/cloudstream}"
 GITHUB_REPOSITORY="${GITHUB_REPOSITORY:-muhamadakmal854-svg/MTSFlix}"
 PROVIDER_GITHUB="${PROVIDER_GITHUB:-muhamadakmal854-svg/Provider}"
 
-MTS_PROVIDER_URL="https://raw.githubusercontent.com/${PROVIDER_GITHUB}/builds/plugins.json"
+MTS_PROVIDER_URL="https://cdn.jsdelivr.net/gh/${PROVIDER_GITHUB}@builds/repo.json"
 LICENSE_URL="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/main/licenses.json"
 VERSION_URL="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/main/version.json"
 

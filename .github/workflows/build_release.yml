@@ -41,7 +41,7 @@ env:
   APP_PACKAGE: com.mts.mtsflix
   APP_NAME: MTSFlix
   CLOUDSTREAM_REPO: recloudstream/cloudstream
-  PROVIDER_URL: https://raw.githubusercontent.com/muhamadakmal854-svg/Provider/builds/plugins.json
+  PROVIDER_URL: https://cdn.jsdelivr.net/gh/muhamadakmal854-svg/Provider@builds/repo.json
   LICENSE_URL: https://raw.githubusercontent.com/muhamadakmal854-svg/MTSFlix/main/licenses.json
   VERSION_URL: https://raw.githubusercontent.com/muhamadakmal854-svg/MTSFlix/main/version.json
 
@@ -208,7 +208,7 @@ jobs:
               "sha256": sha256,
               "publishedAt": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
               "minAndroid": 21,
-              "providerUrl": "https://raw.githubusercontent.com/muhamadakmal854-svg/Provider/builds/plugins.json"
+              "providerUrl": "https://cdn.jsdelivr.net/gh/muhamadakmal854-svg/Provider@builds/repo.json"
           }
           
           with open('version.json', 'w') as f:
