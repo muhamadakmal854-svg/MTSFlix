@@ -102,8 +102,9 @@ try:
     c = open(path).read()
     if 'firebase-bom' not in c:
         c = c.replace('dependencies {', 'dependencies {\n' + deps)
+        c += "\n// MTSFlix: Avoid duplicate protobuf classes\nconfigurations.all {\n    exclude(group = \"com.google.firebase\", module = \"protolite-well-known-types\")\n}\n"
         open(path,'w').write(c)
-        print('  OK: Firebase deps added')
+        print('  OK: Firebase deps and exclusions added')
 except Exception as e:
     print(f'  WARN: {e}')
 PYEOF
