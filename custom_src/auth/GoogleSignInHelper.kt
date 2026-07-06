@@ -136,7 +136,5 @@ object GoogleSignInHelper {
         }
     }
 
-    companion object {
-        const val REQUEST_CODE_SIGN_IN = 9001
-    }
+    const val REQUEST_CODE_SIGN_IN = 9001
 }
