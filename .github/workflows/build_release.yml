@@ -226,7 +226,9 @@ jobs:
           git config user.name "github-actions[bot]"
           git add version.json
           git diff --staged --quiet || git commit -m "chore: Update version.json to v${{ env.VER }} [skip ci]"
-          git push
+          # Pull rebase to handle concurrent pushes from master.py
+          git pull --rebase origin main || true
+          git push origin HEAD:main
           echo "✅ version.json committed and pushed"
 
       # ─── Upload Artifact ───────────────────────────────────────────────────
