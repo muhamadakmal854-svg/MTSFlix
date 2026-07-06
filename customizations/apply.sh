@@ -101,7 +101,7 @@ deps = """
 try:
     c = open(path).read()
     if 'firebase-bom' not in c:
-        c = re.sub(r'(\}\s*\Z)', deps + r'\n\1', c, count=1)
+        c = c.replace('dependencies {', 'dependencies {\n' + deps)
         open(path,'w').write(c)
         print('  OK: Firebase deps added')
 except Exception as e:
