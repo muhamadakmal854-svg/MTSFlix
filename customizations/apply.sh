@@ -2,7 +2,7 @@
 # ==============================================================
 #  MTSFlix Customization Script v2.0
 #  Patches CloudStream 3 → MTSFlix
-#  13 steps including: branding, Firebase, provider URL,
+#  14 steps including: branding, Firebase, provider URL,
 #  device verification, auto-update, AndroidManifest patches
 # ==============================================================
 set -e
@@ -335,7 +335,36 @@ else:
     print(f'  URL: {provider_url}')
 PYEOF
 
-# --- 13. Summary ----------------------------------------------------------
+# --- 13. Replace App Launcher Icons with MTSFlix Logo ----------------------
+echo "[13/13] Replacing app launcher icons with MTSFlix logo..."
+if [ -f "$MTSFLIX_DIR/logo.png" ]; then
+  # Remove adaptive launcher XMLs to force fallback to our custom PNG logo
+  rm -f "$CS_DIR"/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml 2>/dev/null || true
+  rm -f "$CS_DIR"/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml 2>/dev/null || true
+
+  # Directories to update
+  MIPMAP_DIRS=("mipmap-mdpi" "mipmap-hdpi" "mipmap-xhdpi" "mipmap-xxhdpi" "mipmap-xxxhdpi")
+
+  for dir in "${MIPMAP_DIRS[@]}"; do
+    TARGET_DIR="$CS_DIR/app/src/main/res/$dir"
+    if [ -d "$TARGET_DIR" ]; then
+      # Delete existing webp/png launcher icons to avoid duplicate resources
+      rm -f "$TARGET_DIR"/ic_launcher.webp 2>/dev/null || true
+      rm -f "$TARGET_DIR"/ic_launcher_round.webp 2>/dev/null || true
+      rm -f "$TARGET_DIR"/ic_launcher.png 2>/dev/null || true
+      rm -f "$TARGET_DIR"/ic_launcher_round.png 2>/dev/null || true
+      
+      # Copy our new logo
+      cp "$MTSFLIX_DIR/logo.png" "$TARGET_DIR/ic_launcher.png"
+      cp "$MTSFLIX_DIR/logo.png" "$TARGET_DIR/ic_launcher_round.png"
+    fi
+  done
+  echo "  OK: App launcher icons replaced with MTSFlix logo"
+else
+  echo "  WARN: logo.png not found at $MTSFLIX_DIR/logo.png"
+fi
+
+# --- 14. Summary ----------------------------------------------------------
 echo ""
 echo "======================================================"
 echo "    MTSFlix Customization Complete!"
