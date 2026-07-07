@@ -1,65 +1,51 @@
 #!/bin/bash
-# ==============================================================================
-#            MTSFlix Automated Customization Script (Strict License Only)
-# ==============================================================================
+# ==============================================================
+#  MTSFlix Customization Script v3.0 (Fresh Minimal Rebuild)
+#  Patches CloudStream 3 → MTSFlix
+# ==============================================================
 set -e
 
-MTSFLIX_DIR="${MTSFLIX_DIR:-$(pwd)}"
-CS_DIR="${CS_DIR:-$MTSFLIX_DIR/cloudstream}"
+MTSFLIX_DIR="${MTSFLIX_DIR:-$(cd "$(dirname "$0")/.." && pwd)}"
+CS_DIR="${CS_DIR:-$(pwd)/cloudstream}"
 
-echo "======================================================"
-echo "    MTSFlix Customization Script (Strict License)"
-echo "    Root  : $MTSFLIX_DIR"
-echo "    Target: $CS_DIR"
-echo "======================================================"
+[ ! -d "$CS_DIR" ] && { echo "ERROR: CloudStream dir not found: $CS_DIR"; exit 1; }
 
 # --- 1. Change applicationId -----------------------------------------------
-echo "[1/6] Changing applicationId to com.mts.mtsflix..."
-GRADLE_KTS="$CS_DIR/app/build.gradle.kts"
-if [ -f "$GRADLE_KTS" ]; then
-  python3 - << 'PYEOF'
-import os
-path = os.environ.get('CS_DIR','cloudstream') + '/app/build.gradle.kts'
-try:
-    c = open(path).read()
-    c = c.replace('applicationId = "com.lagradost.cloudstream3"', 'applicationId = "com.mts.mtsflix"')
-    open(path,'w').write(c)
-    print('  OK: applicationId changed to com.mts.mtsflix')
-except Exception as e:
-    print(f'  WARN: {e}')
-PYEOF
-else
-  echo "  WARN: app/build.gradle.kts not found"
+echo "[1/11] Changing applicationId to com.mts.mtsflix..."
+APP_BUILD="$CS_DIR/app/build.gradle.kts"
+if [ -f "$APP_BUILD" ]; then
+  sed -i 's|applicationId = "com\.lagradost\.cloudstream3"|applicationId = "com.mts.mtsflix"|g' "$APP_BUILD"
+  echo "  OK: applicationId = com.mts.mtsflix"
 fi
 
-# --- 2. Set App Name to MTSFlix --------------------------------------------
-echo "[2/6] Setting app name to MTSFlix in all localized resources..."
+# --- 2. Change App Name ----------------------------------------------------
+echo "[2/11] Setting app name to MTSFlix in all localized resources..."
 python3 - << 'PYEOF'
-import os, xml.etree.ElementTree as ET
+import os, re
 cs_dir = os.environ.get('CS_DIR','cloudstream')
-count = 0
-for root, dirs, files in os.walk(cs_dir + '/app/src/main/res'):
-    if 'values' in os.path.basename(root) and 'strings.xml' in files:
-        fpath = os.path.join(root, 'strings.xml')
-        try:
-            tree = ET.parse(fpath)
-            root_el = tree.getroot()
-            changed = False
-            for string_el in root_el.findall('string'):
-                if string_el.get('name') == 'app_name':
-                    if string_el.text != 'MTSFlix':
-                        string_el.text = 'MTSFlix'
-                        changed = True
-            if changed:
-                tree.write(fpath, encoding='utf-8', xml_declaration=True)
-                count += 1
-        except Exception as e:
-            pass
-print(f"  OK: Patched {count} strings.xml files to MTSFlix")
+res_dir = cs_dir + '/app/src/main/res'
+if not os.path.exists(res_dir):
+    print("  WARN: res directory not found")
+else:
+    count = 0
+    for root, dirs, files in os.walk(res_dir):
+        for f in files:
+            if f == 'strings.xml':
+                path = os.path.join(root, f)
+                try:
+                    c = open(path, encoding='utf-8').read()
+                    pattern = r'<string name="app_name">[^<]*</string>'
+                    new_c = re.sub(pattern, '<string name="app_name">MTSFlix</string>', c)
+                    if new_c != c:
+                        open(path, 'w', encoding='utf-8').write(new_c)
+                        count += 1
+                except Exception as e:
+                    print(f"  Error patching {path}: {e}")
+    print(f"  OK: Patched {count} strings.xml files to MTSFlix")
 PYEOF
 
 # --- 3. Copy Custom Assets (Logo, Banner) ----------------------------------
-echo "[3/6] Copying custom logo and banner (rebranding all icons/drawables)..."
+echo "[3/11] Copying custom logo and banner (rebranding all icons/drawables)..."
 if [ -f "$MTSFLIX_DIR/logo.png" ]; then
   # 1. Clean up and replace launcher icons & foreground
   find "$CS_DIR/app/src/main/res" -name "ic_launcher.png" -delete
@@ -109,8 +95,273 @@ else
   echo "  WARN: banner.png not found at root"
 fi
 
-# --- 4. Generate BuildUrls.kt with hardcoded URLs --------------------------
-echo "[4/6] Generating BuildUrls.kt with hardcoded URLs..."
+# --- 4. Patch RepositoryManager.kt for legacy MD5 verification fallback ---
+echo "[4/11] Patching RepositoryManager.kt to add legacy MD5 hash validation fallback..."
+python3 - << 'PYEOF'
+import os, re
+cs_dir = os.environ.get('CS_DIR','cloudstream')
+repo_mgr_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/plugins/RepositoryManager.kt'
+
+if not os.path.exists(repo_mgr_path):
+    print("  WARN: RepositoryManager.kt not found, skipping patch")
+else:
+    print("  Patching RepositoryManager.kt...")
+    content = open(repo_mgr_path, encoding='utf-8').read()
+    changed = False
+    
+    # 1. Inject md5 helper function below sha256 function
+    sha256_end = '        return "sha256-" + digest.digest().joinToString("") { "%02x".format(it) }\n    }'
+    md5_func = '''        return "sha256-" + digest.digest().joinToString("") { "%02x".format(it) }
+    }
+
+    @androidx.annotation.WorkerThread
+    fun md5(file: File): String {
+        val digest = MessageDigest.getInstance("MD5")
+        file.inputStream().use { fis ->
+            val buffer = ByteArray(8192)
+            var read = fis.read(buffer)
+            while (read != -1) {
+                digest.update(buffer, 0, read)
+                read = fis.read(buffer)
+            }
+        }
+        return digest.digest().joinToString("") { "%02x".format(it) }
+    }'''
+    
+    if sha256_end in content and 'fun md5(' not in content:
+        content = content.replace(sha256_end, md5_func)
+        changed = True
+        print("  OK: md5 helper function injected")
+        
+    # 2. Inject verification fallback check
+    verify_target = '''            if (expectedFileHash != null) {
+                val downloadHash = sha256(tempFile)
+                if (expectedFileHash != downloadHash) {
+                    tempFile.delete()
+                    throw IllegalStateException("Extension hash mismatch when validating \'${file.name}\'! Expected: \'$expectedFileHash\', got: \'$downloadHash\'.")
+                }
+            }'''
+            
+    verify_replacement = '''            if (expectedFileHash != null) {
+                val downloadHash = sha256(tempFile)
+                if (expectedFileHash != downloadHash) {
+                    val md5Hash = md5(tempFile)
+                    if (expectedFileHash != md5Hash) {
+                        tempFile.delete()
+                        throw IllegalStateException("Extension hash mismatch when validating \'${file.name}\'! Expected: \'$expectedFileHash\', got: \'$downloadHash\' or \'$md5Hash\'.")
+                    }
+                }
+            }'''
+            
+    if verify_target in content:
+        content = content.replace(verify_target, verify_replacement)
+        changed = True
+        print("  OK: md5 verification check injected")
+        
+    if changed:
+        open(repo_mgr_path, 'w', encoding='utf-8').write(content)
+        print("  OK: RepositoryManager.kt patched successfully")
+    else:
+        print("  INFO: RepositoryManager.kt already patched or targets not found")
+PYEOF
+
+# --- 5. Patch MainActivity.kt for permanent repo & auto-download plugins ---
+echo "[5/11] Patching MainActivity.kt for permanent repo & auto-download plugins..."
+python3 - << 'PYEOF'
+import os, re
+cs_dir = os.environ.get('CS_DIR','cloudstream')
+main_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/MainActivity.kt'
+
+if not os.path.exists(main_path):
+    print("  WARN: MainActivity.kt not found, skipping patch")
+else:
+    print("  Patching MainActivity.kt...")
+    content = open(main_path, encoding='utf-8').read()
+    changed = False
+
+    # Inject the permanent repo and auto-download logic right after super.onCreate(savedInstanceState)
+    oncreate_target = 'super.onCreate(savedInstanceState)'
+    oncreate_marker = '// MTSFlix: Permanent repo & Auto-download plugins'
+    
+    if oncreate_marker not in content and oncreate_target in content:
+        bypass_code = '''super.onCreate(savedInstanceState)
+        // MTSFlix: Permanent repo & Auto-download plugins
+        try {
+            val repoUrl = "https://cdn.jsdelivr.net/gh/muhamadakmal854-svg/Provider@builds/repo.json"
+            val repoName = "MTS Repo"
+            val key = "REPOSITORIES_KEY"
+            val currentRepos = getKey<Array<com.lagradost.cloudstream3.ui.settings.extensions.RepositoryData>>(key) ?: emptyArray()
+            
+            // Add repo if not present
+            if (currentRepos.none { it.url == repoUrl }) {
+                val newRepo = com.lagradost.cloudstream3.ui.settings.extensions.RepositoryData(null, repoName, repoUrl)
+                setKey(key, currentRepos + newRepo)
+                Log.i("MTSFlix", "Added permanent repo: $repoUrl")
+            }
+            
+            // Auto download and load/install all plugins in the background
+            com.lagradost.cloudstream3.utils.Coroutines.ioSafe {
+                try {
+                    val repo = com.lagradost.cloudstream3.plugins.RepositoryManager.parseRepository(repoUrl)
+                    if (repo != null) {
+                        val plugins = com.lagradost.cloudstream3.plugins.RepositoryManager.getRepoPlugins(
+                            com.lagradost.cloudstream3.ui.settings.extensions.RepositoryData(null, repoName, repoUrl)
+                        )
+                        if (plugins != null) {
+                            for (pluginWrapper in plugins) {
+                                val sitePlugin = pluginWrapper.plugin
+                                Log.i("MTSFlix", "Auto downloading/updating plugin: ${sitePlugin.name}")
+                                com.lagradost.cloudstream3.plugins.PluginManager.downloadPlugin(
+                                    this@MainActivity,
+                                    sitePlugin.url,
+                                    sitePlugin.fileHash,
+                                    sitePlugin.internalName,
+                                    repoUrl,
+                                    true // loadPlugin
+                                )
+                            }
+                        }
+                    }
+                } catch (t: Throwable) {
+                    Log.e("MTSFlix", "Error auto loading plugins: " + t.message, t)
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("MTSFlix", "Repo setup error: " + e.message)
+        }'''
+        content = content.replace(oncreate_target, bypass_code, 1)
+        changed = True
+        print("  OK: Permanent repo and auto-loader injected into MainActivity")
+
+    if changed:
+        open(main_path, 'w', encoding='utf-8').write(content)
+        print("  OK: MainActivity.kt patched successfully")
+    else:
+        print("  INFO: MainActivity.kt already patched or target not found")
+PYEOF
+
+# --- 6. Patch SettingsFragment.kt to hide Extensions menu option ----------
+echo "[6/11] Patching SettingsFragment.kt to hide Extensions option..."
+python3 - << 'PYEOF'
+import os, re
+cs_dir = os.environ.get('CS_DIR','cloudstream')
+settings_frag_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/ui/settings/SettingsFragment.kt'
+
+if not os.path.exists(settings_frag_path):
+    print("  WARN: SettingsFragment.kt not found, skipping patch")
+else:
+    print("  Patching SettingsFragment.kt...")
+    content = open(settings_frag_path, encoding='utf-8').read()
+    
+    # Hide the settingsExtensions view in onBindingCreated
+    target = 'binding.apply {'
+    replacement = 'binding.apply {\n            settingsExtensions.visibility = View.GONE'
+    
+    if target in content and 'settingsExtensions.visibility' not in content:
+        content = content.replace(target, replacement)
+        open(settings_frag_path, 'w', encoding='utf-8').write(content)
+        print("  OK: Hided Extensions option in SettingsFragment")
+    else:
+        print("  INFO: SettingsFragment.kt already patched or target not found")
+PYEOF
+# --- 7. Patch strings and settings_general.xml ----------------------------
+echo "[7/11] Patching donottranslate-strings.xml and settings_general.xml..."
+python3 - << 'PYEOF'
+import os, re
+cs_dir = os.environ.get('CS_DIR','cloudstream')
+
+# 1. Translate legal notice text
+donottranslate_path = cs_dir + '/app/src/main/res/values/donottranslate-strings.xml'
+if os.path.exists(donottranslate_path):
+    print("  Patching donottranslate-strings.xml...")
+    content = open(donottranslate_path, encoding='utf-8').read()
+    
+    malay_notice = """Sebarang isu undang-undang mengenai kandungan dalam aplikasi ini perlulah dirujuk kepada hos fail dan penyedia kandungan sebenar kerana kami tidak mempunyai sebarang kaitan dengan mereka.
+
+        Sekiranya berlaku pelanggaran hak cipta, sila hubungi terus pihak yang bertanggungjawab atau laman web penstriman berkenaan.
+
+        Aplikasi ini adalah untuk kegunaan pendidikan dan peribadi sahaja.
+
+        MTSFlix tidak mengehos sebarang kandungan dalam aplikasi ini, dan tidak mempunyai kawalan ke atas media yang dimasukkan atau dikeluarkan.
+        MTSFlix berfungsi seperti mana-mana enjin carian lain, seperti Google. MTSFlix tidak mengehos, memuat naik atau menguruskan sebarang video, filem atau kandungan. Ia hanya merangkak, mengumpul dan memaparkan pautan dalam antara muka yang mudah dan mesra pengguna.
+
+        Ia hanya mengikis laman web pihak ketiga yang boleh diakses secara umum melalui mana-mana pelayar web biasa. Adalah menjadi tanggungjawab pengguna untuk mengelakkan sebarang tindakan yang boleh melanggar undang-undang di kawasan tempatan anda. Gunakan MTSFlix atas risiko anda sendiri."""
+        
+    pattern = r'(<string name="legal_notice_text">)(.*?)(</string>)'
+    
+    # Let's replace the content between <string name="legal_notice_text"> and </string>
+    def repl_func(match):
+        return match.group(1) + malay_notice + match.group(3)
+        
+    new_content = re.sub(pattern, repl_func, content, flags=re.DOTALL)
+    if new_content != content:
+        open(donottranslate_path, 'w', encoding='utf-8').write(new_content)
+        print("    OK: Translated legal_notice_text to Bahasa Melayu and changed CloudStream to MTSFlix")
+
+# 2. Remove benene and links category from settings_general.xml
+xml_path = cs_dir + '/app/src/main/res/xml/settings_general.xml'
+if os.path.exists(xml_path):
+    print("  Patching settings_general.xml...")
+    content = open(xml_path, encoding='utf-8').read()
+    
+    # Remove benene count preference
+    benene_pattern = r'\s*<Preference\s+android:icon="@drawable/benene".*?/>'
+    content = re.sub(benene_pattern, '', content, flags=re.DOTALL)
+    
+    # Remove pref_category_links category
+    links_pattern = r'\s*<PreferenceCategory android:title="@string/pref_category_links">.*?</PreferenceCategory>'
+    content = re.sub(links_pattern, '', content, flags=re.DOTALL)
+    
+    open(xml_path, 'w', encoding='utf-8').write(content)
+    print("    OK: Removed benene count and links category from settings_general.xml")
+PYEOF
+
+# --- 8. Patch InAppUpdater.kt for custom update repository -----------------
+echo "[8/11] Patching InAppUpdater.kt for custom update repository..."
+python3 - << 'PYEOF'
+import os, re
+cs_dir = os.environ.get('CS_DIR','cloudstream')
+updater_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/utils/InAppUpdater.kt'
+
+if not os.path.exists(updater_path):
+    print("  WARN: InAppUpdater.kt not found, skipping patch")
+else:
+    print("  Patching InAppUpdater.kt...")
+    content = open(updater_path, encoding='utf-8').read()
+    changed = False
+    
+    # 1. Replace GITHUB_USER_NAME and GITHUB_REPO
+    user_target = 'private const val GITHUB_USER_NAME = "recloudstream"'
+    user_repl = 'private const val GITHUB_USER_NAME = "muhamadakmal854-svg"'
+    if user_target in content:
+        content = content.replace(user_target, user_repl)
+        changed = True
+        print("    OK: Changed GITHUB_USER_NAME to muhamadakmal854-svg")
+        
+    repo_target = 'private const val GITHUB_REPO = "cloudstream"'
+    repo_repl = 'private const val GITHUB_REPO = "MTSFlix"'
+    if repo_target in content:
+        content = content.replace(repo_target, repo_repl)
+        changed = True
+        print("    OK: Changed GITHUB_REPO to MTSFlix")
+        
+    # 2. Change update file name to MTSFlix
+    name_target = 'val appUpdateName = "CloudStream"'
+    name_repl = 'val appUpdateName = "MTSFlix"'
+    if name_target in content:
+        content = content.replace(name_target, name_repl)
+        changed = True
+        print("    OK: Changed appUpdateName to MTSFlix")
+        
+    if changed:
+        open(updater_path, 'w', encoding='utf-8').write(content)
+        print("    OK: InAppUpdater.kt patched successfully")
+    else:
+        print("    INFO: InAppUpdater.kt already patched or targets not found")
+PYEOF
+
+# --- 9. Generate BuildUrls.kt with hardcoded URLs --------------------------
+echo "[9/11] Generating BuildUrls.kt with hardcoded URLs..."
 TARGET_LIC="$CS_DIR/app/src/main/java/com/mts/mtsflix/license"
 mkdir -p "$TARGET_LIC"
 cat > "$TARGET_LIC/BuildUrls.kt" << KTEOF
@@ -122,8 +373,8 @@ const val MTS_LICENSE_URL = "https://raw.githubusercontent.com/muhamadakmal854-s
 KTEOF
 echo "  OK: BuildUrls.kt generated"
 
-# --- 5. Copy Custom MTSFlix Source Files ----------------------------------
-echo "[5/6] Copying custom MTSFlix source files..."
+# --- 10. Copy Custom MTSFlix Source Files ----------------------------------
+echo "[10/11] Copying custom MTSFlix source files..."
 CUSTOM_SRC="$MTSFLIX_DIR/custom_src"
 TARGET_PKG="$CS_DIR/app/src/main/java/com/mts/mtsflix"
 mkdir -p "$TARGET_PKG"
@@ -136,8 +387,8 @@ else
   echo "  WARN: custom_src not found"
 fi
 
-# --- 6. Patch AndroidManifest: LicenseCheckActivity as LAUNCHER -----------
-echo "[6/6] Setting LicenseCheckActivity as LAUNCHER..."
+# --- 11. Patch AndroidManifest: LicenseCheckActivity as LAUNCHER -----------
+echo "[11/11] Setting LicenseCheckActivity as LAUNCHER..."
 MANIFEST="$CS_DIR/app/src/main/AndroidManifest.xml"
 if [ -f "$MANIFEST" ]; then
   python3 - << 'PYEOF'
