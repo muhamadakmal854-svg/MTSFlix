@@ -146,7 +146,7 @@ else:
 PYEOF
 
 # --- 5. Patch MainActivity.kt for permanent repo & auto-download plugins ---
-echo "[5/5] Patching MainActivity.kt for permanent repo & auto-download plugins..."
+echo "[5/6] Patching MainActivity.kt for permanent repo & auto-download plugins..."
 python3 - << 'PYEOF'
 import os, re
 cs_dir = os.environ.get('CS_DIR','cloudstream')
@@ -218,6 +218,31 @@ else:
         print("  OK: MainActivity.kt patched successfully")
     else:
         print("  INFO: MainActivity.kt already patched or target not found")
+PYEOF
+
+# --- 6. Patch SettingsFragment.kt to hide Extensions menu option ----------
+echo "[6/6] Patching SettingsFragment.kt to hide Extensions option..."
+python3 - << 'PYEOF'
+import os, re
+cs_dir = os.environ.get('CS_DIR','cloudstream')
+settings_frag_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/ui/settings/SettingsFragment.kt'
+
+if not os.path.exists(settings_frag_path):
+    print("  WARN: SettingsFragment.kt not found, skipping patch")
+else:
+    print("  Patching SettingsFragment.kt...")
+    content = open(settings_frag_path, encoding='utf-8').read()
+    
+    # Hide the settingsExtensions view in onBindingCreated
+    target = 'binding.apply {'
+    replacement = 'binding.apply {\n            settingsExtensions.visibility = View.GONE'
+    
+    if target in content and 'settingsExtensions.visibility' not in content:
+        content = content.replace(target, replacement)
+        open(settings_frag_path, 'w', encoding='utf-8').write(content)
+        print("  OK: Hided Extensions option in SettingsFragment")
+    else:
+        print("  INFO: SettingsFragment.kt already patched or target not found")
 PYEOF
 
 echo "======================================================"
