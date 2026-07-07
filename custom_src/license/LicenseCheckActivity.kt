@@ -179,12 +179,8 @@ class LicenseCheckActivity : AppCompatActivity() {
 
     private fun checkGoogleLoginAndNavigate() {
         markSetupComplete()
-        if (com.mts.mtsflix.auth.GoogleSignInHelper.isSignedIn() && 
-            com.mts.mtsflix.auth.SecureSessionManager.isSessionValid(this)) {
-            launchMainApp()
-        } else {
-            launchGoogleLogin()
-        }
+        // Go directly to the main menu after license validation as requested
+        launchMainApp()
     }
 
     private fun markSetupComplete() {
