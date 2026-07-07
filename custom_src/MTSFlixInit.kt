@@ -3,7 +3,6 @@ package com.mts.mtsflix
 import android.content.Context
 import android.util.Log
 import androidx.preference.PreferenceManager
-import com.mts.mtsflix.license.DefaultRepoSetup
 
 /**
  * MTSFlix App Initializer
@@ -25,15 +24,7 @@ object MTSFlixInit {
         MTSFlixLogger.log("SYSTEM", "   MTSFlix Initializing...")
         MTSFlixLogger.log("SYSTEM", "=======================================")
 
-        // 1. Inject MTS Provider URL into CloudStream prefs
-        try {
-            DefaultRepoSetup.setup(context)
-            MTSFlixLogger.log("EXTENSION", "✅ Provider URL injected: ${DefaultRepoSetup.MTS_PROVIDER_URL}")
-        } catch (e: Exception) {
-            MTSFlixLogger.log("EXTENSION", "Provider setup error: ${e.message}")
-        }
-
-        // 2. Mark CloudStream setup as complete so MainActivity goes straight to Home
+        // Mark CloudStream setup as complete so MainActivity goes straight to Home
         try {
             markSetupComplete(context)
             MTSFlixLogger.log("SYSTEM", "✅ CloudStream setup marked as complete")
