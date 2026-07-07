@@ -1,6 +1,6 @@
 #!/bin/bash
 # ==============================================================
-#  MTSFlix Customization Script v2.0
+#  MTSFlix Customization Script v2.0.1 (Trigger Rebuild)
 #  Patches CloudStream 3 → MTSFlix
 #  13 steps including: branding, Firebase, provider URL,
 #  device verification, auto-update, AndroidManifest patches
