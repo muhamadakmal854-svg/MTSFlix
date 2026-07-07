@@ -1,11 +1,11 @@
 {
-  "version": "1.0.2",
+  "version": "1.0.3",
   "versionCode": 1,
-  "downloadUrl": "https://github.com/muhamadakmal854-svg/MTSFlix/releases/download/v1.0.2/MTSFlix-v1.0.2.apk",
-  "releaseNotes": "MTSFlix v1.0.2",
+  "downloadUrl": "https://github.com/muhamadakmal854-svg/MTSFlix/releases/download/v1.0.3/MTSFlix-v1.0.3.apk",
+  "releaseNotes": "MTSFlix v1.0.3",
   "mandatory": false,
   "sha256": "",
-  "publishedAt": "2026-07-07T03:35:03Z",
+  "publishedAt": "2026-07-07T03:56:56Z",
   "minAndroid": 21,
   "providerUrl": "https://cdn.jsdelivr.net/gh/muhamadakmal854-svg/Provider@builds/repo.json"
 }
