@@ -603,7 +603,7 @@ else:
             getSharedPreferences("rebuild_preference", 0).edit()
                 .putBoolean(HAS_DONE_SETUP_KEY, true).apply()
         } catch (e: Exception) {
-            android.util.Log.w("MTSFlix", "Setup bypass error: " + e.message)
+            Log.w("MTSFlix", "Setup bypass error: " + e.message)
         }'''
             content = content.replace(oncreate_target, oncreate_bypass, 1)
             changed = True
@@ -618,7 +618,7 @@ else:
         (r'if\s*\(!getKey<Boolean>\(HAS_DONE_SETUP_KEY[^)]*\)[^)]*\)\s*\{[^}]*navigate[^}]*\}',
          '/* MTSFlix: setup wizard disabled - handled by LicenseCheckActivity */'),
         (r'navigate\(R\.id\.navigation_setup[^)]*\)',
-         'android.util.Log.i("MTSFlix", "setup nav skipped")'),
+         'Log.i("MTSFlix", "setup nav skipped")'),
     ]
     for pattern, replacement in setup_nav_patterns:
         new_content = re.sub(pattern, replacement, content)
