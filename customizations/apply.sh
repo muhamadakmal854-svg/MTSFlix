@@ -47,8 +47,15 @@ PYEOF
 # --- 3. Copy Custom Assets (Logo, Banner) ----------------------------------
 echo "[3/7] Copying custom logo and banner (rebranding all icons/drawables)..."
 if [ -f "$MTSFLIX_DIR/logo.png" ]; then
-  # 1. Clean up and replace all launcher icons
-  find "$CS_DIR/app/src/main/res" -name "ic_launcher*" -delete
+  # 1. Clean up and replace launcher icons & foreground
+  find "$CS_DIR/app/src/main/res" -name "ic_launcher.png" -delete
+  find "$CS_DIR/app/src/main/res" -name "ic_launcher.webp" -delete
+  find "$CS_DIR/app/src/main/res" -name "ic_launcher.xml" -delete
+  find "$CS_DIR/app/src/main/res" -name "ic_launcher_round.png" -delete
+  find "$CS_DIR/app/src/main/res" -name "ic_launcher_round.webp" -delete
+  find "$CS_DIR/app/src/main/res" -name "ic_launcher_round.xml" -delete
+  find "$CS_DIR/app/src/main/res" -name "ic_launcher_foreground.xml" -delete
+  find "$CS_DIR/app/src/main/res" -name "ic_launcher_foreground.png" -delete
   
   for density in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
     mkdir -p "$CS_DIR/app/src/main/res/mipmap-$density"
@@ -62,6 +69,7 @@ if [ -f "$MTSFLIX_DIR/logo.png" ]; then
   
   # Copy logo as PNG to fallback drawables
   mkdir -p "$CS_DIR/app/src/main/res/drawable"
+  cp "$MTSFLIX_DIR/logo.png" "$CS_DIR/app/src/main/res/drawable/ic_launcher_foreground.png"
   cp "$MTSFLIX_DIR/logo.png" "$CS_DIR/app/src/main/res/drawable/ic_cloudstream_monochrome.png"
   cp "$MTSFLIX_DIR/logo.png" "$CS_DIR/app/src/main/res/drawable/ic_cloudstream_monochrome_big.png"
   cp "$MTSFLIX_DIR/logo.png" "$CS_DIR/app/src/main/res/drawable/ic_cloudstreamlogotv.png"
@@ -69,7 +77,7 @@ if [ -f "$MTSFLIX_DIR/logo.png" ]; then
   cp "$MTSFLIX_DIR/logo.png" "$CS_DIR/app/src/main/res/drawable/ic_cloudstreamlogotv_pre.png"
   cp "$MTSFLIX_DIR/logo.png" "$CS_DIR/app/src/main/res/drawable/ic_cloudstreamlogotv_pre_2.png"
   
-  echo "  OK: logo.png replaced launcher icons, monochromes and TV logos"
+  echo "  OK: logo.png replaced launcher icons, foregrounds, monochromes and TV logos"
 else
   echo "  WARN: logo.png not found at root"
 fi
