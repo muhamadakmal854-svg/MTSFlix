@@ -22,7 +22,7 @@ import os
 path = os.environ.get('CS_DIR','cloudstream') + '/app/build.gradle.kts'
 try:
     c = open(path).read()
-    c = c.replace('com.lagradost.cloudstream3', 'com.mts.mtsflix')
+    c = c.replace('applicationId = "com.lagradost.cloudstream3"', 'applicationId = "com.mts.mtsflix"')
     open(path,'w').write(c)
     print('  OK: applicationId changed to com.mts.mtsflix')
 except Exception as e:
