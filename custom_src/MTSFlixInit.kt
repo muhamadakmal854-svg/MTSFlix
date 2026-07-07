@@ -82,36 +82,31 @@ object MTSFlixInit {
     // ─── Setup Completion Bypass ──────────────────────────────────────────────
 
     /**
-     * CloudStream shows a setup wizard on first install if HAS_DONE_SETUP_KEY is false.
-     * The exact key string (confirmed from CloudStream source) is "HAS_DONE_SETUP".
-     * Since MTSFlix handles its own onboarding (license + Google login), we skip
-     * the CloudStream setup entirely by pre-setting this key to true.
+     * CloudStream stores ALL its DataStore keys (including HAS_DONE_SETUP_KEY) in a
+     * SharedPreferences file named "rebuild_preference" (PREFERENCES_NAME constant in DataStore.kt).
+     * This is confirmed from CloudStream source:
+     *   const val PREFERENCES_NAME = "rebuild_preference"  (DataStore.kt)
+     *   const val HAS_DONE_SETUP_KEY = "HAS_DONE_SETUP"   (SetupFragmentLanguage.kt)
      *
-     * CloudStream uses TWO storage mechanisms:
-     * 1. PreferenceManager default SharedPreferences (for some settings)
-     * 2. CloudStreamApp.setKey / DataStore (for most app state)
-     * We write to both to guarantee it is always picked up.
+     * We MUST write to this exact file — NOT PreferenceManager.getDefaultSharedPreferences.
+     * Previous attempts were writing to wrong files which is why the white screen persisted.
      */
     private fun markSetupComplete(context: Context) {
-        // Method 1: PreferenceManager (standard SharedPreferences)
-        PreferenceManager.getDefaultSharedPreferences(context)
-            .edit()
-            .putBoolean("HAS_DONE_SETUP", true)
-            .apply()
-
-        // Method 2: CloudStream DataStore (app-specific shared prefs file)
-        // CloudStream stores DataStore keys in a file named after the package.
-        // The actual storage file is named with the package + "_preferences"
-        val csPrefs = context.getSharedPreferences(
-            "com.lagradost.cloudstream3_preferences", Context.MODE_PRIVATE
-        )
-        csPrefs.edit().putBoolean("HAS_DONE_SETUP", true).apply()
-
-        // Method 3: Also write to MTSFlix package prefs (post-repackage)
-        val mtsPrefs = context.getSharedPreferences(
-            "com.mts.mtsflix_preferences", Context.MODE_PRIVATE
-        )
-        mtsPrefs.edit().putBoolean("HAS_DONE_SETUP", true).apply()
+        val key = "HAS_DONE_SETUP"
+        // Primary: CloudStream's actual DataStore backing file
+        try {
+            context.getSharedPreferences("rebuild_preference", Context.MODE_PRIVATE)
+                .edit().putBoolean(key, true).apply()
+        } catch (e: Exception) {
+            Log.w("MTSFlix", "markSetupComplete rebuild_preference: ${e.message}")
+        }
+        // Fallback: default SharedPreferences (in case build varies)
+        try {
+            PreferenceManager.getDefaultSharedPreferences(context)
+                .edit().putBoolean(key, true).apply()
+        } catch (e: Exception) {
+            Log.w("MTSFlix", "markSetupComplete defaultPrefs: ${e.message}")
+        }
     }
 
     // ─── Firebase ─────────────────────────────────────────────────────────────

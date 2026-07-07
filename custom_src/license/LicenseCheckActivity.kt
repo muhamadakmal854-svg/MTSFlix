@@ -188,21 +188,17 @@ class LicenseCheckActivity : AppCompatActivity() {
     }
 
     private fun markSetupComplete() {
-        // Write HAS_DONE_SETUP key to ALL possible SharedPreferences locations
-        // that CloudStream checks, so the setup wizard white screen is never shown.
+        // CloudStream DataStore uses SharedPreferences file named "rebuild_preference"
+        // (PREFERENCES_NAME in DataStore.kt). HAS_DONE_SETUP_KEY = "HAS_DONE_SETUP".
         val key = "HAS_DONE_SETUP"
+        try {
+            getSharedPreferences("rebuild_preference", android.content.Context.MODE_PRIVATE)
+                .edit().putBoolean(key, true).apply()
+        } catch (e: Exception) { android.util.Log.w("MTSFlix", "setup bypass fail: ${e.message}") }
         try {
             androidx.preference.PreferenceManager.getDefaultSharedPreferences(this)
                 .edit().putBoolean(key, true).apply()
-        } catch (e: Exception) { android.util.Log.w("MTSFlix", "prefs1 fail: ${e.message}") }
-        try {
-            getSharedPreferences("${packageName}_preferences", android.content.Context.MODE_PRIVATE)
-                .edit().putBoolean(key, true).apply()
-        } catch (e: Exception) { android.util.Log.w("MTSFlix", "prefs2 fail: ${e.message}") }
-        try {
-            getSharedPreferences("com.lagradost.cloudstream3_preferences", android.content.Context.MODE_PRIVATE)
-                .edit().putBoolean(key, true).apply()
-        } catch (e: Exception) { android.util.Log.w("MTSFlix", "prefs3 fail: ${e.message}") }
+        } catch (e: Exception) { android.util.Log.w("MTSFlix", "setup bypass2 fail: ${e.message}") }
     }
 
     private fun launchGoogleLogin() {

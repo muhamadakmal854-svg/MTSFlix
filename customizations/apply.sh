@@ -583,45 +583,55 @@ main_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/MainActivity
 if not os.path.exists(main_path):
     print("  WARN: MainActivity.kt not found, skipping patch")
 else:
-    print("  Patching MainActivity.kt...")
+    print("  Patching MainActivity.kt for setup bypass...")
     content = open(main_path, encoding='utf-8').read()
+    changed = False
 
-    # Target: the point where CloudStream checks HAS_DONE_SETUP_KEY
-    # We inject our bypass BEFORE it is checked so it always returns true
-    setup_import = 'import com.lagradost.cloudstream3.ui.setup.HAS_DONE_SETUP_KEY'
-    setup_bypass = '''import com.lagradost.cloudstream3.ui.setup.HAS_DONE_SETUP_KEY
-import androidx.preference.PreferenceManager as MTSPreferenceManager'''
-
-    if setup_import in content and 'MTSPreferenceManager' not in content:
-        content = content.replace(setup_import, setup_bypass)
-        print("  OK: Injected MTSPreferenceManager import")
-
-    # Patch onCreate to mark setup as done before the check runs
-    # Find super.onCreate() call and inject setup bypass right after it
-    oncreate_target = 'super.onCreate(savedInstanceState)'
-    oncreate_bypass = '''super.onCreate(savedInstanceState)
-        // MTSFlix: Mark setup as complete to bypass CloudStream setup wizard
-        // This prevents the white screen shown after first-time login
+    # STRATEGY 1: Inject setKey(HAS_DONE_SETUP_KEY, true) right after super.onCreate()
+    # This uses CloudStream's OWN setKey function (already imported in MainActivity)
+    # which correctly writes to the "rebuild_preference" SharedPreferences file.
+    oncreate_marker = '// MTSFlix: bypass setup wizard'
+    if oncreate_marker not in content:
+        # Find super.onCreate(savedInstanceState) - first occurrence only (inside onCreate)
+        oncreate_target = 'super.onCreate(savedInstanceState)'
+        if oncreate_target in content:
+            oncreate_bypass = '''super.onCreate(savedInstanceState)
+        // MTSFlix: bypass setup wizard - MTSFlix has its own onboarding (license + Google login)
+        // CloudStream stores this in "rebuild_preference" SharedPreferences via setKey()
         try {
-            val mtsPrefs = MTSPreferenceManager.getDefaultSharedPreferences(this)
-            mtsPrefs.edit().putBoolean(HAS_DONE_SETUP_KEY, true).apply()
-            val appPrefs = getSharedPreferences(packageName + "_preferences", 0)
-            appPrefs.edit().putBoolean(HAS_DONE_SETUP_KEY, true).apply()
+            setKey(HAS_DONE_SETUP_KEY, true)
+            getSharedPreferences("rebuild_preference", 0).edit()
+                .putBoolean(HAS_DONE_SETUP_KEY, true).apply()
         } catch (e: Exception) {
-            android.util.Log.w("MTSFlix", "Setup bypass failed: " + e.message)
+            android.util.Log.w("MTSFlix", "Setup bypass error: " + e.message)
         }'''
+            content = content.replace(oncreate_target, oncreate_bypass, 1)
+            changed = True
+            print("  OK: Injected setKey(HAS_DONE_SETUP_KEY, true) into MainActivity.onCreate()")
+        else:
+            print("  WARN: super.onCreate not found in MainActivity")
 
-    if oncreate_target in content and 'MTSFlix: Mark setup' not in content:
-        # Only patch the FIRST occurrence (inside onCreate)
-        content = content.replace(oncreate_target, oncreate_bypass, 1)
-        print("  OK: Injected setup bypass into MainActivity.onCreate()")
-    elif 'MTSFlix: Mark setup' in content:
-        print("  OK: MainActivity already patched (setup bypass exists)")
+    # STRATEGY 2: Remove/bypass the navigate-to-setup block entirely
+    # Pattern: if (!getKey<Boolean>(HAS_DONE_SETUP_KEY... -> navigate setup
+    # Find and comment out any navigate call pointing to setup
+    setup_nav_patterns = [
+        (r'if\s*\(!getKey<Boolean>\(HAS_DONE_SETUP_KEY[^)]*\)[^)]*\)\s*\{[^}]*navigate[^}]*\}',
+         '/* MTSFlix: setup wizard disabled - handled by LicenseCheckActivity */'),
+        (r'navigate\(R\.id\.navigation_setup[^)]*\)',
+         'android.util.Log.i("MTSFlix", "setup nav skipped")'),
+    ]
+    for pattern, replacement in setup_nav_patterns:
+        new_content = re.sub(pattern, replacement, content)
+        if new_content != content:
+            content = new_content
+            changed = True
+            print(f"  OK: Bypassed setup navigation block")
+
+    if changed:
+        open(main_path, 'w', encoding='utf-8').write(content)
+        print("  OK: MainActivity.kt patched successfully")
     else:
-        print("  WARN: super.onCreate target not found in MainActivity")
-
-    open(main_path, 'w', encoding='utf-8').write(content)
-    print("  OK: MainActivity.kt patched successfully")
+        print("  INFO: MainActivity.kt already patched or patterns not found (OK)")
 PYEOF
 
 # --- 13. Summary ----------------------------------------------------------
