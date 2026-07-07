@@ -16,21 +16,6 @@
       "deviceInfo": "Contoh — Gantikan dengan kod peranti sebenar",
       "note": "JANGAN padam baris ini — ia contoh template. Duplicate dan edit untuk pengguna baru.",
       "lastModified": "2026-07-05T00:00:00"
-    },
-    {
-      "id": "LIC-20260707-4DB4CBDE",
-      "deviceCode": "MTSF-692F-51A6-CD2D",
-      "username": "Ray",
-      "email": "ray@gmail.com",
-      "expiredAt": "2027-07-07",
-      "active": false,
-      "banned": true,
-      "bannedReason": "Melanggar syarat penggunaan MTSFlix",
-      "addedAt": "2026-07-07",
-      "deviceInfo": "Honor X 200",
-      "note": "Active",
-      "lastModified": "2026-07-07T08:56:16",
-      "bannedAt": "2026-07-07T08:56:16"
     }
   ]
 }
