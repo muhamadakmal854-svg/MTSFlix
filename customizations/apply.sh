@@ -75,6 +75,76 @@ else
   echo "  WARN: banner.png not found at root"
 fi
 
+# --- 4. Patch RepositoryManager.kt for legacy MD5 verification fallback ---
+echo "[4/4] Patching RepositoryManager.kt to add legacy MD5 hash validation fallback..."
+python3 - << 'PYEOF'
+import os, re
+cs_dir = os.environ.get('CS_DIR','cloudstream')
+repo_mgr_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/plugins/RepositoryManager.kt'
+
+if not os.path.exists(repo_mgr_path):
+    print("  WARN: RepositoryManager.kt not found, skipping patch")
+else:
+    print("  Patching RepositoryManager.kt...")
+    content = open(repo_mgr_path, encoding='utf-8').read()
+    changed = False
+    
+    # 1. Inject md5 helper function below sha256 function
+    sha256_end = '        return "sha256-" + digest.digest().joinToString("") { "%02x".format(it) }\n    }'
+    md5_func = '''        return "sha256-" + digest.digest().joinToString("") { "%02x".format(it) }
+    }
+
+    @androidx.annotation.WorkerThread
+    fun md5(file: File): String {
+        val digest = MessageDigest.getInstance("MD5")
+        file.inputStream().use { fis ->
+            val buffer = ByteArray(8192)
+            var read = fis.read(buffer)
+            while (read != -1) {
+                digest.update(buffer, 0, read)
+                read = fis.read(buffer)
+            }
+        }
+        return digest.digest().joinToString("") { "%02x".format(it) }
+    }'''
+    
+    if sha256_end in content and 'fun md5(' not in content:
+        content = content.replace(sha256_end, md5_func)
+        changed = True
+        print("  OK: md5 helper function injected")
+        
+    # 2. Inject verification fallback check
+    verify_target = '''            if (expectedFileHash != null) {
+                val downloadHash = sha256(tempFile)
+                if (expectedFileHash != downloadHash) {
+                    tempFile.delete()
+                    throw IllegalStateException("Extension hash mismatch when validating \'${file.name}\'! Expected: \'$expectedFileHash\', got: \'$downloadHash\'.")
+                }
+            }'''
+            
+    verify_replacement = '''            if (expectedFileHash != null) {
+                val downloadHash = sha256(tempFile)
+                if (expectedFileHash != downloadHash) {
+                    val md5Hash = md5(tempFile)
+                    if (expectedFileHash != md5Hash) {
+                        tempFile.delete()
+                        throw IllegalStateException("Extension hash mismatch when validating \'${file.name}\'! Expected: \'$expectedFileHash\', got: \'$downloadHash\' or \'$md5Hash\'.")
+                    }
+                }
+            }'''
+            
+    if verify_target in content:
+        content = content.replace(verify_target, verify_replacement)
+        changed = True
+        print("  OK: md5 verification check injected")
+        
+    if changed:
+        open(repo_mgr_path, 'w', encoding='utf-8').write(content)
+        print("  OK: RepositoryManager.kt patched successfully")
+    else:
+        print("  INFO: RepositoryManager.kt already patched or targets not found")
+PYEOF
+
 echo "======================================================"
 echo "    MTSFlix Customization Complete! (Fresh Minimal)"
 echo "======================================================"
