@@ -264,9 +264,8 @@ else:
     else:
         print("  INFO: SettingsFragment.kt already patched or target not found")
 PYEOF
-
-# --- 7. Patch strings and settings_general.xml ----------------------------
-echo "[7/7] Patching donottranslate-strings.xml and settings_general.xml..."
+# --- 7. Patch strings and settings_general.xml ----------------------------
+echo "[7/8] Patching donottranslate-strings.xml and settings_general.xml..."
 python3 - << 'PYEOF'
 import os, re
 cs_dir = os.environ.get('CS_DIR','cloudstream')
@@ -315,6 +314,50 @@ if os.path.exists(xml_path):
     
     open(xml_path, 'w', encoding='utf-8').write(content)
     print("    OK: Removed benene count and links category from settings_general.xml")
+PYEOF
+
+# --- 8. Patch InAppUpdater.kt for custom update repository -----------------
+echo "[8/8] Patching InAppUpdater.kt for custom update repository..."
+python3 - << 'PYEOF'
+import os, re
+cs_dir = os.environ.get('CS_DIR','cloudstream')
+updater_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/utils/InAppUpdater.kt'
+
+if not os.path.exists(updater_path):
+    print("  WARN: InAppUpdater.kt not found, skipping patch")
+else:
+    print("  Patching InAppUpdater.kt...")
+    content = open(updater_path, encoding='utf-8').read()
+    changed = False
+    
+    # 1. Replace GITHUB_USER_NAME and GITHUB_REPO
+    user_target = 'private const val GITHUB_USER_NAME = "recloudstream"'
+    user_repl = 'private const val GITHUB_USER_NAME = "muhamadakmal854-svg"'
+    if user_target in content:
+        content = content.replace(user_target, user_repl)
+        changed = True
+        print("    OK: Changed GITHUB_USER_NAME to muhamadakmal854-svg")
+        
+    repo_target = 'private const val GITHUB_REPO = "cloudstream"'
+    repo_repl = 'private const val GITHUB_REPO = "MTSFlix"'
+    if repo_target in content:
+        content = content.replace(repo_target, repo_repl)
+        changed = True
+        print("    OK: Changed GITHUB_REPO to MTSFlix")
+        
+    # 2. Change update file name to MTSFlix
+    name_target = 'val appUpdateName = "CloudStream"'
+    name_repl = 'val appUpdateName = "MTSFlix"'
+    if name_target in content:
+        content = content.replace(name_target, name_repl)
+        changed = True
+        print("    OK: Changed appUpdateName to MTSFlix")
+        
+    if changed:
+        open(updater_path, 'w', encoding='utf-8').write(content)
+        print("    OK: InAppUpdater.kt patched successfully")
+    else:
+        print("    INFO: InAppUpdater.kt already patched or targets not found")
 PYEOF
 
 echo "======================================================"
