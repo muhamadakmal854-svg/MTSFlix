@@ -209,6 +209,10 @@ class GoogleLoginActivity : AppCompatActivity() {
                                     android.util.Log.e("MTSFlix", "Init error: ${e.message}")
                                 }
 
+                                // Mark CloudStream setup as complete BEFORE launching MainActivity
+                                // to prevent the white setup wizard screen
+                                markSetupComplete()
+
                                 tvStatus.text = "Log masuk berjaya! ✅"
                                 tvStatus.setTextColor(Color.parseColor("#4CAF50"))
                                 progressBar.visibility = View.GONE
@@ -243,6 +247,24 @@ class GoogleLoginActivity : AppCompatActivity() {
         tvStatus.setTextColor(Color.parseColor("#FF5252"))
         tvMessage.text = msg
         tvMessage.setTextColor(Color.parseColor("#FF5252"))
+    }
+
+    private fun markSetupComplete() {
+        // Write HAS_DONE_SETUP key to ALL possible SharedPreferences locations
+        // that CloudStream checks, so the setup wizard is never shown.
+        val key = "HAS_DONE_SETUP"
+        try {
+            androidx.preference.PreferenceManager.getDefaultSharedPreferences(this)
+                .edit().putBoolean(key, true).apply()
+        } catch (e: Exception) { android.util.Log.w("MTSFlix", "prefs1 fail: ${e.message}") }
+        try {
+            getSharedPreferences("${packageName}_preferences", android.content.Context.MODE_PRIVATE)
+                .edit().putBoolean(key, true).apply()
+        } catch (e: Exception) { android.util.Log.w("MTSFlix", "prefs2 fail: ${e.message}") }
+        try {
+            getSharedPreferences("com.lagradost.cloudstream3_preferences", android.content.Context.MODE_PRIVATE)
+                .edit().putBoolean(key, true).apply()
+        } catch (e: Exception) { android.util.Log.w("MTSFlix", "prefs3 fail: ${e.message}") }
     }
 
     private fun launchMainApp() {

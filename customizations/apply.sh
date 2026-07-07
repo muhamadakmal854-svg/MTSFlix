@@ -572,6 +572,58 @@ if os.path.exists(vm_path):
     print("  OK: PlayerGeneratorViewModel.kt patched successfully")
 PYEOF
 
+# --- 12c. Patch MainActivity.kt to bypass CloudStream setup wizard -----------
+echo "[12c/13] Patching MainActivity.kt to bypass setup wizard (white screen fix)..."
+python3 - << 'PYEOF'
+import os, re
+
+cs_dir = os.environ.get('CS_DIR','cloudstream')
+main_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/MainActivity.kt'
+
+if not os.path.exists(main_path):
+    print("  WARN: MainActivity.kt not found, skipping patch")
+else:
+    print("  Patching MainActivity.kt...")
+    content = open(main_path, encoding='utf-8').read()
+
+    # Target: the point where CloudStream checks HAS_DONE_SETUP_KEY
+    # We inject our bypass BEFORE it is checked so it always returns true
+    setup_import = 'import com.lagradost.cloudstream3.ui.setup.HAS_DONE_SETUP_KEY'
+    setup_bypass = '''import com.lagradost.cloudstream3.ui.setup.HAS_DONE_SETUP_KEY
+import androidx.preference.PreferenceManager as MTSPreferenceManager'''
+
+    if setup_import in content and 'MTSPreferenceManager' not in content:
+        content = content.replace(setup_import, setup_bypass)
+        print("  OK: Injected MTSPreferenceManager import")
+
+    # Patch onCreate to mark setup as done before the check runs
+    # Find super.onCreate() call and inject setup bypass right after it
+    oncreate_target = 'super.onCreate(savedInstanceState)'
+    oncreate_bypass = '''super.onCreate(savedInstanceState)
+        // MTSFlix: Mark setup as complete to bypass CloudStream setup wizard
+        // This prevents the white screen shown after first-time login
+        try {
+            val mtsPrefs = MTSPreferenceManager.getDefaultSharedPreferences(this)
+            mtsPrefs.edit().putBoolean(HAS_DONE_SETUP_KEY, true).apply()
+            val appPrefs = getSharedPreferences(packageName + "_preferences", 0)
+            appPrefs.edit().putBoolean(HAS_DONE_SETUP_KEY, true).apply()
+        } catch (e: Exception) {
+            android.util.Log.w("MTSFlix", "Setup bypass failed: " + e.message)
+        }'''
+
+    if oncreate_target in content and 'MTSFlix: Mark setup' not in content:
+        # Only patch the FIRST occurrence (inside onCreate)
+        content = content.replace(oncreate_target, oncreate_bypass, 1)
+        print("  OK: Injected setup bypass into MainActivity.onCreate()")
+    elif 'MTSFlix: Mark setup' in content:
+        print("  OK: MainActivity already patched (setup bypass exists)")
+    else:
+        print("  WARN: super.onCreate target not found in MainActivity")
+
+    open(main_path, 'w', encoding='utf-8').write(content)
+    print("  OK: MainActivity.kt patched successfully")
+PYEOF
+
 # --- 13. Summary ----------------------------------------------------------
 echo ""
 echo "======================================================"
