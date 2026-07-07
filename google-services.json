@@ -12,7 +12,20 @@
           "package_name": "com.mts.mtsflix"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "298386754850-d6o1g9n8t5rfkiij6uhoq31gs5059u2v.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.mts.mtsflix",
+            "certificate_hash": "5ea240f0e6ae5919d7853277de9865523ac51c13"
+          }
+        },
+        {
+          "client_id": "298386754850-g3te5u3pl4558a4enmg0jp9s8ithh5pg.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyCorTrKOZPYTSUnM6Accl-Ks3wQvZyXFrg"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "298386754850-g3te5u3pl4558a4enmg0jp9s8ithh5pg.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
