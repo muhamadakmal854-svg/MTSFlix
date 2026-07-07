@@ -145,6 +145,81 @@ else:
         print("  INFO: RepositoryManager.kt already patched or targets not found")
 PYEOF
 
+# --- 5. Patch MainActivity.kt for permanent repo & auto-download plugins ---
+echo "[5/5] Patching MainActivity.kt for permanent repo & auto-download plugins..."
+python3 - << 'PYEOF'
+import os, re
+cs_dir = os.environ.get('CS_DIR','cloudstream')
+main_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/MainActivity.kt'
+
+if not os.path.exists(main_path):
+    print("  WARN: MainActivity.kt not found, skipping patch")
+else:
+    print("  Patching MainActivity.kt...")
+    content = open(main_path, encoding='utf-8').read()
+    changed = False
+
+    # Inject the permanent repo and auto-download logic right after super.onCreate(savedInstanceState)
+    oncreate_target = 'super.onCreate(savedInstanceState)'
+    oncreate_marker = '// MTSFlix: Permanent repo & Auto-download plugins'
+    
+    if oncreate_marker not in content and oncreate_target in content:
+        bypass_code = '''super.onCreate(savedInstanceState)
+        // MTSFlix: Permanent repo & Auto-download plugins
+        try {
+            val repoUrl = "https://cdn.jsdelivr.net/gh/muhamadakmal854-svg/Provider@builds/repo.json"
+            val repoName = "MTS Repo"
+            val key = "REPOSITORIES_KEY"
+            val currentRepos = getKey<Array<com.lagradost.cloudstream3.ui.settings.extensions.RepositoryData>>(key) ?: emptyArray()
+            
+            // Add repo if not present
+            if (currentRepos.none { it.url == repoUrl }) {
+                val newRepo = com.lagradost.cloudstream3.ui.settings.extensions.RepositoryData(null, repoName, repoUrl)
+                setKey(key, currentRepos + newRepo)
+                Log.i("MTSFlix", "Added permanent repo: $repoUrl")
+            }
+            
+            // Auto download and load/install all plugins in the background
+            com.lagradost.cloudstream3.utils.Coroutines.ioSafe {
+                try {
+                    val repo = com.lagradost.cloudstream3.plugins.RepositoryManager.parseRepository(repoUrl)
+                    if (repo != null) {
+                        val plugins = com.lagradost.cloudstream3.plugins.RepositoryManager.getRepoPlugins(
+                            com.lagradost.cloudstream3.ui.settings.extensions.RepositoryData(null, repoName, repoUrl)
+                        )
+                        if (plugins != null) {
+                            for (pluginWrapper in plugins) {
+                                val sitePlugin = pluginWrapper.plugin
+                                Log.i("MTSFlix", "Auto downloading/updating plugin: ${sitePlugin.name}")
+                                com.lagradost.cloudstream3.plugins.PluginManager.downloadPlugin(
+                                    this@MainActivity,
+                                    sitePlugin.url,
+                                    sitePlugin.fileHash,
+                                    sitePlugin.internalName,
+                                    repoUrl,
+                                    true // loadPlugin
+                                )
+                            }
+                        }
+                    }
+                } catch (t: Throwable) {
+                    Log.e("MTSFlix", "Error auto loading plugins: " + t.message, t)
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("MTSFlix", "Repo setup error: " + e.message)
+        }'''
+        content = content.replace(oncreate_target, bypass_code, 1)
+        changed = True
+        print("  OK: Permanent repo and auto-loader injected into MainActivity")
+
+    if changed:
+        open(main_path, 'w', encoding='utf-8').write(content)
+        print("  OK: MainActivity.kt patched successfully")
+    else:
+        print("  INFO: MainActivity.kt already patched or target not found")
+PYEOF
+
 echo "======================================================"
 echo "    MTSFlix Customization Complete! (Fresh Minimal)"
 echo "======================================================"
