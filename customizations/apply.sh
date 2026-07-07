@@ -217,8 +217,9 @@ try:
 
     # 2. If LicenseCheckActivity is already present (just in case), remove it first to avoid duplicates
     c = re.sub(r'\s*<!-- MTSFlix: Device Verification \(LAUNCHER\) -->[\s\S]*?</activity>', '', c)
+    c = re.sub(r'\s*<!-- MTSFlix: Google Login Activity -->[\s\S]*?</activity>', '', c)
 
-    # 3. Add LicenseCheckActivity as the sole LAUNCHER before </application>
+    # 3. Add LicenseCheckActivity as the sole LAUNCHER and declare GoogleLoginActivity before </application>
     activity = '''
         <!-- MTSFlix: Device Verification (LAUNCHER) -->
         <activity
@@ -231,10 +232,17 @@ try:
                 <category android:name="android.intent.category.LAUNCHER" />
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
             </intent-filter>
-        </activity>'''
+        </activity>
+
+        <!-- MTSFlix: Google Login Activity -->
+        <activity
+            android:name="com.mts.mtsflix.auth.GoogleLoginActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.MaterialComponents.DayNight.NoActionBar" />'''
     c = c.replace('</application>', activity + '\n    </application>')
     open(path,'w',encoding='utf-8').write(c)
-    print('  OK: LicenseCheckActivity set as sole LAUNCHER')
+    print('  OK: LicenseCheckActivity and GoogleLoginActivity registered in Manifest')
 except Exception as e:
     print(f'  WARN: {e}')
 PYEOF
@@ -366,6 +374,195 @@ if found:
 else:
     print(f'  INFO: DefaultRepoSetup.kt will inject URL at runtime')
     print(f'  URL: {provider_url}')
+PYEOF
+
+# --- 12b. Patch Exoplayer, Generator, and ViewModel for Logging & Fallbacks --
+echo "[12b/13] Patching Player and ViewModel for logging, auto-retry, and auto-learning..."
+python3 - << 'PYEOF'
+import os, re
+
+cs_dir = os.environ.get('CS_DIR','cloudstream')
+
+# 1. Patch CS3IPlayer.kt
+player_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/ui/player/CS3IPlayer.kt'
+if os.path.exists(player_path):
+    print("Patching CS3IPlayer.kt...")
+    content = open(player_path, encoding='utf-8').read()
+    
+    # Inject buffering timeout handler/runnable
+    decl_target = "private val subtitleHelper = PlayerSubtitleHelper()"
+    decl_replacement = decl_target + """
+    
+    // MTSFlix: Buffering timeout check
+    private val bufferingHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val bufferingRunnable = Runnable {
+        if (exoPlayer?.playbackState == androidx.media3.common.Player.STATE_BUFFERING) {
+            com.mts.mtsflix.MTSFlixLogger.log("PLAYBACK", "⚠️ Buffering stall detected (timeout > 12s). Triggering fallback...")
+            try {
+                playerListener?.onPlayerError(
+                    androidx.media3.common.PlaybackException(
+                        "Buffering timeout",
+                        null,
+                        androidx.media3.common.PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT
+                    )
+                )
+            } catch (e: Exception) {
+                com.mts.mtsflix.MTSFlixLogger.log("PLAYBACK", "Error triggering buffering timeout exception: " + e.message)
+            }
+        }
+    }"""
+    if decl_target in content:
+        content = content.replace(decl_target, decl_replacement)
+        print("  OK: Injected handler properties")
+        
+    release_target = "private fun releasePlayer(saveTime: Boolean = true) {"
+    release_replacement = release_target + "\n        bufferingHandler.removeCallbacks(bufferingRunnable)"
+    if release_target in content:
+        content = content.replace(release_target, release_replacement)
+        print("  OK: Injected releasePlayer cleanup")
+        
+    state_target = "override fun onPlaybackStateChanged(playbackState: Int) {\n                    super.onPlaybackStateChanged(playbackState)"
+    state_replacement = state_target + """
+                    
+                    // MTSFlix: buffering timeout reset
+                    bufferingHandler.removeCallbacks(bufferingRunnable)
+                    if (playbackState == Player.STATE_BUFFERING) {
+                        bufferingHandler.postDelayed(bufferingRunnable, 12000L)
+                    }"""
+    if state_target in content:
+        content = content.replace(state_target, state_replacement)
+        print("  OK: Injected onPlaybackStateChanged buffering check")
+        
+    online_target = "currentLink = link"
+    online_replacement = online_target + "\n            com.mts.mtsflix.VideoProviderEngine.detectAndRecordPattern(link.url)"
+    if online_target in content:
+        content = content.replace(online_target, online_replacement)
+        print("  OK: Injected detectAndRecordPattern in loadOnlinePlayer")
+        
+    content = re.sub(r'Log\.(d|i|w|e)\(TAG,\s*', r'com.mts.mtsflix.MTSFlixLogger.log("PLAYBACK", ', content)
+    open(player_path, 'w', encoding='utf-8').write(content)
+    print("  OK: CS3IPlayer.kt patched successfully")
+
+# 2. Patch GeneratorPlayer.kt
+gen_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/ui/player/GeneratorPlayer.kt'
+if os.path.exists(gen_path):
+    print("Patching GeneratorPlayer.kt...")
+    content = open(gen_path, encoding='utf-8').read()
+    
+    error_target = """    override fun playerError(exception: Throwable) {
+        val currentUrl =
+            currentSelectedLink?.let { it.first?.url ?: it.second?.uri?.toString() } ?: "unknown"
+        val headers = currentSelectedLink?.first?.headers?.toString() ?: "none"
+        val referer = currentSelectedLink?.first?.referer ?: "none"
+        Log.e(
+            TAG,
+            "playerError: $currentSelectedLink, " +
+                    "type=${exception::class.qualifiedName}, " +
+                    "message=${exception.message}, url=$currentUrl, headers=$headers, " +
+                    "referer=$referer, position=${player.getPosition() ?: "unknown"}, " +
+                    "duration=${player.getDuration() ?: "unknown"}, " +
+                    "isPlaying=${player.getIsPlaying()}", exception
+        )
+
+        if (!hasNextMirror()) {
+            viewModel.forceClearCache = true
+        }
+        super.playerError(exception)
+    }"""
+    
+    error_replacement = """    override fun playerError(exception: Throwable) {
+        val currentUrl =
+            currentSelectedLink?.let { it.first?.url ?: it.second?.uri?.toString() } ?: "unknown"
+        val headers = currentSelectedLink?.first?.headers?.toString() ?: "none"
+        val referer = currentSelectedLink?.first?.referer ?: "none"
+        
+        com.mts.mtsflix.MTSFlixLogger.log("PLAYBACK", "❌ Playback failed for: $currentUrl. Error: ${exception.message}")
+        
+        if (hasNextMirror()) {
+            com.mts.mtsflix.MTSFlixLogger.log("PLAYBACK", "🔄 Playback auto-retry: Switching to next available mirror...")
+            activity?.runOnUiThread {
+                nextMirror()
+            }
+        } else {
+            com.mts.mtsflix.MTSFlixLogger.log("PLAYBACK", "❌ No more mirrors/sources to play!")
+            viewModel.forceClearCache = true
+            super.playerError(exception)
+        }
+    }"""
+    
+    if error_target in content:
+        content = content.replace(error_target, error_replacement)
+        print("  OK: Replaced playerError with auto-retry mirror switcher")
+        
+    content = re.sub(r'Log\.(d|i|w|e)\(TAG,\s*', r'com.mts.mtsflix.MTSFlixLogger.log("PLAYBACK", ', content)
+    open(gen_path, 'w', encoding='utf-8').write(content)
+    print("  OK: GeneratorPlayer.kt patched successfully")
+
+# 3. Patch PlayerGeneratorViewModel.kt
+vm_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/ui/player/PlayerGeneratorViewModel.kt'
+if os.path.exists(vm_path):
+    print("Patching PlayerGeneratorViewModel.kt...")
+    content = open(vm_path, encoding='utf-8').read()
+    
+    cb_target = """                    callback = { link ->
+                        if (isActive)
+                            modifyState {
+                                add(link)
+                            }
+                    },"""
+    cb_replacement = """                    callback = { link ->
+                        if (isActive) {
+                            modifyState {
+                                add(link)
+                            }
+                            com.mts.mtsflix.MTSFlixLogger.log("EXTRACTION", "Found link: ${link.name} (Source: ${link.source}, URL: ${link.url})")
+                            com.mts.mtsflix.VideoProviderEngine.detectAndRecordPattern(link.url)
+                        }
+                    },"""
+    if cb_target in content:
+        content = content.replace(cb_target, cb_replacement)
+        print("  OK: Patched callback for logging and pattern recording")
+        
+    sub_target = """                    subtitleCallback = { link ->
+                        if (isActive && isValidSubtitle(link))
+                            modifyState {
+                                add(link)
+                            }
+                    })"""
+    sub_replacement = """                    subtitleCallback = { link ->
+                        if (isActive && isValidSubtitle(link)) {
+                            modifyState {
+                                add(link)
+                            }
+                            com.mts.mtsflix.MTSFlixLogger.log("PLAYBACK", "Found subtitle: ${link.name} (Url: ${link.url})")
+                        }
+                    })"""
+    if sub_target in content:
+        content = content.replace(sub_target, sub_replacement)
+        print("  OK: Patched subtitleCallback for logging")
+        
+    finish_target = """            if (!isActive) {
+                return@launchSafe
+            }
+
+            /** Only mark as success if we have not skipped loading */"""
+    finish_replacement = """            if (!isActive) {
+                return@launchSafe
+            }
+
+            val linksCount = state.links.size
+            com.mts.mtsflix.MTSFlixLogger.log("EXTRACTION", "Finished loading links. Total links found: $linksCount")
+            if (linksCount == 0) {
+                com.mts.mtsflix.MTSFlixLogger.log("EXTRACTION", "❌ No links found for this title!")
+            }
+
+            /** Only mark as success if we have not skipped loading */"""
+    if finish_target in content:
+        content = content.replace(finish_target, finish_replacement)
+        print("  OK: Patched loading finish logs")
+        
+    open(vm_path, 'w', encoding='utf-8').write(content)
+    print("  OK: PlayerGeneratorViewModel.kt patched successfully")
 PYEOF
 
 # --- 13. Summary ----------------------------------------------------------

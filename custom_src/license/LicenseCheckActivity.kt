@@ -87,7 +87,7 @@ class LicenseCheckActivity : AppCompatActivity() {
                     DeviceCodeManager.setVerified(this@LicenseCheckActivity, result.username, result.expiryDate)
                     showVerifiedState(result.username, result.expiryDate)
                     delay(2000)
-                    launchMainApp()
+                    checkGoogleLoginAndNavigate()
                 }
 
                 LicenseVerifier.Status.BANNED -> {
@@ -136,7 +136,7 @@ class LicenseCheckActivity : AppCompatActivity() {
                         val expiry = DeviceCodeManager.getExpiryDate(this@LicenseCheckActivity) ?: ""
                         showVerifiedState(username, expiry)
                         delay(1200)
-                        launchMainApp()
+                        checkGoogleLoginAndNavigate()
                     } else {
                         showErrorState(
                             icon = "📡",
@@ -153,7 +153,7 @@ class LicenseCheckActivity : AppCompatActivity() {
                         val expiry = DeviceCodeManager.getExpiryDate(this@LicenseCheckActivity) ?: ""
                         showVerifiedState(username, expiry)
                         delay(1200)
-                        launchMainApp()
+                        checkGoogleLoginAndNavigate()
                     } else {
                         showErrorState(
                             icon = "⚠️",
@@ -183,6 +183,21 @@ class LicenseCheckActivity : AppCompatActivity() {
                 startActivity(intent)
             }
         }
+        finish()
+    }
+
+    private fun checkGoogleLoginAndNavigate() {
+        if (com.mts.mtsflix.auth.GoogleSignInHelper.isSignedIn() && 
+            com.mts.mtsflix.auth.SecureSessionManager.isSessionValid(this)) {
+            launchMainApp()
+        } else {
+            launchGoogleLogin()
+        }
+    }
+
+    private fun launchGoogleLogin() {
+        val intent = Intent(this, com.mts.mtsflix.auth.GoogleLoginActivity::class.java)
+        startActivity(intent)
         finish()
     }
 

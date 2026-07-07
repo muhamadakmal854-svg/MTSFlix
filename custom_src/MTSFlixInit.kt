@@ -30,9 +30,15 @@ object MTSFlixInit {
         if (initialized) return
         initialized = true
 
-        Log.i(TAG, "═══════════════════════════════")
-        Log.i(TAG, "   MTSFlix Initializing...")
-        Log.i(TAG, "═══════════════════════════════")
+        // Initialize file logging first
+        MTSFlixLogger.init(context)
+
+        // Initialize video provider engine
+        VideoProviderEngine.init(context)
+
+        MTSFlixLogger.log("SYSTEM", "═══════════════════════════════")
+        MTSFlixLogger.log("SYSTEM", "   MTSFlix Initializing...")
+        MTSFlixLogger.log("SYSTEM", "═══════════════════════════════")
 
         // 1. Firebase
         initFirebase(context)
@@ -40,27 +46,27 @@ object MTSFlixInit {
         // 2. Notifications
         try {
             EpisodeNotificationWorker.createNotificationChannel(context)
-            Log.i(TAG, "✅ Notification channel ready")
+            MTSFlixLogger.log("SYSTEM", "✅ Notification channel ready")
         } catch (e: Exception) {
-            Log.w(TAG, "Notification channel: ${e.message}")
+            MTSFlixLogger.log("SYSTEM", "Notification channel error: ${e.message}")
         }
 
         // 3. Inject MTS Provider URL into CloudStream prefs
         try {
             DefaultRepoSetup.setup(context)
-            Log.i(TAG, "✅ Provider URL injected: ${DefaultRepoSetup.MTS_PROVIDER_URL}")
+            MTSFlixLogger.log("EXTENSION", "✅ Provider URL injected: ${DefaultRepoSetup.MTS_PROVIDER_URL}")
         } catch (e: Exception) {
-            Log.w(TAG, "Provider setup: ${e.message}")
+            MTSFlixLogger.log("EXTENSION", "Provider setup error: ${e.message}")
         }
 
         // 4. If user already signed in, start services
         if (GoogleSignInHelper.isSignedIn()) {
             onUserSignedIn(context)
         } else {
-            Log.i(TAG, "ℹ️  User not signed in — standby mode")
+            MTSFlixLogger.log("AUTH", "ℹ️ User not signed in — standby mode")
         }
 
-        Log.i(TAG, "✅ MTSFlix initialized successfully")
+        MTSFlixLogger.log("SYSTEM", "✅ MTSFlix initialized successfully")
     }
 
     // ─── Firebase ─────────────────────────────────────────────────────────────
@@ -69,26 +75,26 @@ object MTSFlixInit {
         try {
             if (FirebaseApp.getApps(context).isEmpty()) {
                 FirebaseApp.initializeApp(context)
-                Log.i(TAG, "✅ Firebase initialized (mtsflix-592e4)")
+                MTSFlixLogger.log("SYSTEM", "✅ Firebase initialized (mtsflix-592e4)")
             } else {
-                Log.d(TAG, "Firebase already initialized")
+                MTSFlixLogger.log("SYSTEM", "Firebase already initialized")
             }
         } catch (e: Exception) {
-            Log.w(TAG, "Firebase skipped: ${e.message}")
+            MTSFlixLogger.log("SYSTEM", "Firebase skipped: ${e.message}")
         }
     }
 
     // ─── User Signed In ───────────────────────────────────────────────────────
 
     fun onUserSignedIn(context: Context) {
-        Log.i(TAG, "👤 User: ${GoogleSignInHelper.getUserEmail()}")
+        MTSFlixLogger.log("AUTH", "👤 User: ${GoogleSignInHelper.getUserEmail()}")
 
         // Start episode tracker
         try {
             EpisodeNotificationWorker.schedule(context)
-            Log.i(TAG, "✅ Episode tracker started (every 12h)")
+            MTSFlixLogger.log("SYSTEM", "✅ Episode tracker started (every 12h)")
         } catch (e: Exception) {
-            Log.e(TAG, "Episode tracker: ${e.message}")
+            MTSFlixLogger.log("SYSTEM", "Episode tracker error: ${e.message}")
         }
 
         // Save user profile to Firestore
@@ -99,18 +105,18 @@ object MTSFlixInit {
                 photoUrl = GoogleSignInHelper.getUserPhotoUrl()
             )
         } catch (e: Exception) {
-            Log.e(TAG, "Profile sync: ${e.message}")
+            MTSFlixLogger.log("SYNC", "Profile sync error: ${e.message}")
         }
     }
 
     // ─── User Signed Out ──────────────────────────────────────────────────────
 
     fun onUserSignedOut(context: Context) {
-        Log.i(TAG, "👤 User signed out")
+        MTSFlixLogger.log("AUTH", "👤 User signed out")
         try {
             EpisodeNotificationWorker.cancel(context)
         } catch (e: Exception) {
-            Log.e(TAG, "Episode tracker cancel: ${e.message}")
+            MTSFlixLogger.log("SYSTEM", "Episode tracker cancel error: ${e.message}")
         }
     }
 

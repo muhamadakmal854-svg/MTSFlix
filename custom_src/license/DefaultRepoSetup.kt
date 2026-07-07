@@ -2,19 +2,20 @@ package com.mts.mtsflix.license
 
 import android.content.Context
 import android.util.Log
+import com.mts.mtsflix.MTSFlixLogger
+import java.io.File
+import java.net.HttpURLConnection
+import java.net.URL
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 /**
  * MTSFlix Default Repository Setup
  *
  * Automatically adds the MTS Provider repository to CloudStream's
- * extension list on first launch. The URL is permanently embedded
- * so users don't need to add it manually.
- *
- * Provider URL:
- * https://raw.githubusercontent.com/muhamadakmal854-svg/Provider/builds/plugins.json
- *
- * This uses SharedPreferences to inject the URL into CloudStream's
- * known preference keys for plugin repositories.
+ * extension list. It performs duplicate removal, URL structure validation,
+ * response code check, and caches the repository for offline use.
  */
 object DefaultRepoSetup {
 
@@ -24,11 +25,10 @@ object DefaultRepoSetup {
     const val MTS_PROVIDER_URL =
         "https://cdn.jsdelivr.net/gh/muhamadakmal854-svg/Provider@builds/repo.json"
 
-    // CloudStream's SharedPreferences name (known from CS3 source)
+    // CloudStream's SharedPreferences name
     private const val CS_PREF_NAME = "cloudstreamapp"
 
     // Known CloudStream preference keys for plugin repositories
-    // (try all known keys across CS3 versions)
     private val REPO_PREF_KEYS = listOf(
         "PluginRepositories",
         "ExtensionRepos",
@@ -38,78 +38,142 @@ object DefaultRepoSetup {
         "repositoryUrls"
     )
 
-    private const val SETUP_DONE_KEY = "mtsflix_repo_setup_done"
-    private const val MTSFLIX_PREF = "mtsflix_license"
+    private const val CACHE_FILE_NAME = "mtsflix_extension_cache.json"
 
-    /**
-     * Call this from MTSFlixInit.initialize(context)
-     * Injects MTS Provider URL into CloudStream's preferences
-     * on first launch, silently.
-     */
     fun setup(context: Context) {
-        val mtsPrefs = context.getSharedPreferences(MTSFLIX_PREF, Context.MODE_PRIVATE)
+        // 1. Clean list, inject provider URL, and strip duplicate URLs
+        cleanAndInjectPrefs(context)
 
-        // Only need to run once (on fresh install or after clear data)
-        // But re-check each time in case user cleared CloudStream prefs
+        // 2. Validate URL online and handle cache/offline fallbacks
+        validateAndCache(context)
+    }
+
+    private fun cleanAndInjectPrefs(context: Context) {
         val csPrefs = context.getSharedPreferences(CS_PREF_NAME, Context.MODE_PRIVATE)
-        var injected = false
+        val editor = csPrefs.edit()
 
         for (key in REPO_PREF_KEYS) {
             val existing = csPrefs.getString(key, null)
             if (existing != null) {
-                Log.d(TAG, "Found repo key: $key = $existing")
-                if (!existing.contains(MTS_PROVIDER_URL)) {
-                    // Inject our URL into existing list
-                    val updated = injectUrl(existing, MTS_PROVIDER_URL)
-                    csPrefs.edit().putString(key, updated).apply()
-                    Log.i(TAG, "✅ MTS repo injected into key: $key")
-                    injected = true
-                } else {
-                    Log.d(TAG, "MTS repo already present in key: $key")
-                    injected = true
-                }
+                val cleaned = cleanList(existing)
+                editor.putString(key, cleaned)
             }
         }
-
-        if (!injected) {
-            // Key not found yet — CloudStream may not have created its prefs yet
-            // Store our URL in a common format that covers most CS3 versions
-            val jsonUrl = "[\"$MTS_PROVIDER_URL\"]"
-            csPrefs.edit()
-                .putString("PluginRepositories", jsonUrl)
-                .putString("ExtensionRepos", jsonUrl)
-                .apply()
-            Log.i(TAG, "✅ MTS repo pre-set in CloudStream preferences")
+        
+        // Ensure default fallback keys are seeded
+        val defaultJson = "[\"$MTS_PROVIDER_URL\"]"
+        if (csPrefs.getString("PluginRepositories", null) == null) {
+            editor.putString("PluginRepositories", defaultJson)
         }
-
-        Log.i(TAG, "Provider URL: $MTS_PROVIDER_URL")
+        if (csPrefs.getString("ExtensionRepos", null) == null) {
+            editor.putString("ExtensionRepos", defaultJson)
+        }
+        editor.apply()
     }
 
-    /**
-     * Injects the URL into a JSON array string
-     * Handles formats: ["url1", "url2"] or url1,url2
-     */
-    private fun injectUrl(existing: String, url: String): String {
+    private fun cleanList(existing: String): String {
         return try {
-            // Try JSON array format
             val trimmed = existing.trim()
             if (trimmed.startsWith("[")) {
                 val inner = trimmed.removePrefix("[").removeSuffix("]")
-                val urls = inner.split(",").map { it.trim().trim('"') }
-                    .filter { it.isNotBlank() }.toMutableList()
-                if (!urls.contains(url)) urls.add(0, url)
+                val urls = inner.split(",")
+                    .map { it.trim().trim('"') }
+                    .filter { it.isNotBlank() && it.startsWith("http") }
+                    .distinct() // Eliminate duplicate entries
+                    .toMutableList()
+                
+                if (!urls.contains(MTS_PROVIDER_URL)) {
+                    urls.add(0, MTS_PROVIDER_URL)
+                }
                 "[${urls.joinToString(",") { "\"$it\"" }}]"
             } else {
-                // Plain comma-separated
-                val urls = existing.split(",").map { it.trim() }
-                    .filter { it.isNotBlank() }.toMutableList()
-                if (!urls.contains(url)) urls.add(0, url)
+                val urls = existing.split(",")
+                    .map { it.trim() }
+                    .filter { it.isNotBlank() && it.startsWith("http") }
+                    .distinct() // Eliminate duplicate entries
+                    .toMutableList()
+                
+                if (!urls.contains(MTS_PROVIDER_URL)) {
+                    urls.add(0, MTS_PROVIDER_URL)
+                }
                 urls.joinToString(",")
             }
         } catch (e: Exception) {
-            Log.w(TAG, "Could not parse existing repos: ${e.message}")
-            // Fallback: append
-            "$existing,$url"
+            MTSFlixLogger.log("EXTENSION", "Failed cleaning repo list: ${e.message}")
+            existing
+        }
+    }
+
+    private fun validateAndCache(context: Context) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                if (!isValidUrl(MTS_PROVIDER_URL)) {
+                    MTSFlixLogger.log("EXTENSION", "❌ Embedded URL structure is invalid: $MTS_PROVIDER_URL")
+                    loadCache(context)
+                    return@launch
+                }
+
+                // Verify connection
+                val connection = URL(MTS_PROVIDER_URL).openConnection() as HttpURLConnection
+                connection.connectTimeout = 5000
+                connection.readTimeout = 5000
+                connection.requestMethod = "GET"
+                connection.connect()
+
+                val responseCode = connection.responseCode
+                if (responseCode == 200) {
+                    val content = connection.inputStream.bufferedReader().use { it.readText() }
+                    if (content.contains("name") || content.contains("url")) {
+                        MTSFlixLogger.log("EXTENSION", "✅ Provider URL validated successfully: 200 OK")
+                        saveCache(context, content)
+                    } else {
+                        MTSFlixLogger.log("EXTENSION", "⚠️ Received invalid JSON content from Provider URL, loading cache fallback.")
+                        loadCache(context)
+                    }
+                } else {
+                    MTSFlixLogger.log("EXTENSION", "❌ Provider URL broken: HTTP $responseCode, loading cache fallback.")
+                    loadCache(context)
+                }
+            } catch (e: Exception) {
+                MTSFlixLogger.log("EXTENSION", "❌ Failed to validate Provider URL (Network offline?): ${e.message}")
+                loadCache(context)
+            }
+        }
+    }
+
+    private fun isValidUrl(urlString: String): Boolean {
+        return try {
+            val url = URL(urlString)
+            url.protocol == "http" || url.protocol == "https"
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    private fun saveCache(context: Context, content: String) {
+        try {
+            val cacheFile = File(context.cacheDir, CACHE_FILE_NAME)
+            cacheFile.writeText(content)
+            MTSFlixLogger.log("EXTENSION", "✅ Provider configuration cached successfully.")
+        } catch (e: Exception) {
+            MTSFlixLogger.log("EXTENSION", "Failed to save provider cache: ${e.message}")
+        }
+    }
+
+    fun loadCache(context: Context): String? {
+        return try {
+            val cacheFile = File(context.cacheDir, CACHE_FILE_NAME)
+            if (cacheFile.exists()) {
+                val content = cacheFile.readText()
+                MTSFlixLogger.log("EXTENSION", "✅ Restored provider configuration from local cache fallback.")
+                content
+            } else {
+                MTSFlixLogger.log("EXTENSION", "No local cache fallback available.")
+                null
+            }
+        } catch (e: Exception) {
+            MTSFlixLogger.log("EXTENSION", "Failed to load cache fallback: ${e.message}")
+            null
         }
     }
 }
