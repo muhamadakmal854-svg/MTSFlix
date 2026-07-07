@@ -28,7 +28,7 @@ try:
 except Exception as e:
     print(f'  WARN: {e}')
 PYEOF
-else:
+else
   echo "  WARN: app/build.gradle.kts not found"
 fi
 
