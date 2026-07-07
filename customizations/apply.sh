@@ -44,39 +44,51 @@ else:
     print(f"  OK: Patched {count} strings.xml files to MTSFlix")
 PYEOF
 
-# --- 3. Copy Custom Branding Assets (Logo & Banner) ------------------------
-echo "[3/3] Copying custom branding assets..."
+# --- 3. Copy Custom Assets (Logo, Banner) ----------------------------------
+echo "[3/7] Copying custom logo and banner (rebranding all icons/drawables)..."
 if [ -f "$MTSFLIX_DIR/logo.png" ]; then
-  # Delete only the default Cloudstream ic_launcher and ic_launcher_round launcher files
-  find "$CS_DIR/app/src/main/res" -name "ic_launcher.png" -delete
-  find "$CS_DIR/app/src/main/res" -name "ic_launcher.webp" -delete
-  find "$CS_DIR/app/src/main/res" -name "ic_launcher.xml" -delete
-  find "$CS_DIR/app/src/main/res" -name "ic_launcher_round.png" -delete
-  find "$CS_DIR/app/src/main/res" -name "ic_launcher_round.webp" -delete
-  find "$CS_DIR/app/src/main/res" -name "ic_launcher_round.xml" -delete
+  # 1. Clean up and replace all launcher icons
+  find "$CS_DIR/app/src/main/res" -name "ic_launcher*" -delete
   
-  # Copy logo.png to standard mipmap folders
-  for dir in mipmap-mdpi mipmap-hdpi mipmap-xhdpi mipmap-xxhdpi mipmap-xxxhdpi; do
-    mkdir -p "$CS_DIR/app/src/main/res/$dir"
-    cp "$MTSFLIX_DIR/logo.png" "$CS_DIR/app/src/main/res/$dir/ic_launcher.png"
-    cp "$MTSFLIX_DIR/logo.png" "$CS_DIR/app/src/main/res/$dir/ic_launcher_round.png"
+  for density in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
+    mkdir -p "$CS_DIR/app/src/main/res/mipmap-$density"
+    cp "$MTSFLIX_DIR/logo.png" "$CS_DIR/app/src/main/res/mipmap-$density/ic_launcher.png"
+    cp "$MTSFLIX_DIR/logo.png" "$CS_DIR/app/src/main/res/mipmap-$density/ic_launcher_round.png"
   done
-  echo "  OK: app logo.png copied to mipmap resource folders"
+
+  # 2. Clean up and replace all CloudStream logos and TV logos
+  find "$CS_DIR/app/src/main/res" -name "ic_cloudstream*.xml" -delete
+  find "$CS_DIR/app/src/main/res" -name "ic_cloudstream*.png" -delete
+  
+  # Copy logo as PNG to fallback drawables
+  mkdir -p "$CS_DIR/app/src/main/res/drawable"
+  cp "$MTSFLIX_DIR/logo.png" "$CS_DIR/app/src/main/res/drawable/ic_cloudstream_monochrome.png"
+  cp "$MTSFLIX_DIR/logo.png" "$CS_DIR/app/src/main/res/drawable/ic_cloudstream_monochrome_big.png"
+  cp "$MTSFLIX_DIR/logo.png" "$CS_DIR/app/src/main/res/drawable/ic_cloudstreamlogotv.png"
+  cp "$MTSFLIX_DIR/logo.png" "$CS_DIR/app/src/main/res/drawable/ic_cloudstreamlogotv_2.png"
+  cp "$MTSFLIX_DIR/logo.png" "$CS_DIR/app/src/main/res/drawable/ic_cloudstreamlogotv_pre.png"
+  cp "$MTSFLIX_DIR/logo.png" "$CS_DIR/app/src/main/res/drawable/ic_cloudstreamlogotv_pre_2.png"
+  
+  echo "  OK: logo.png replaced launcher icons, monochromes and TV logos"
 else
   echo "  WARN: logo.png not found at root"
 fi
 
 if [ -f "$MTSFLIX_DIR/banner.png" ]; then
+  # 3. Clean up and replace all banners
   find "$CS_DIR/app/src/main/res" -name "ic_banner*" -delete
-  mkdir -p "$CS_DIR/app/src/main/res/mipmap-xhdpi"
-  cp "$MTSFLIX_DIR/banner.png" "$CS_DIR/app/src/main/res/mipmap-xhdpi/ic_banner.png"
-  echo "  OK: banner.png copied as ic_banner.png"
+  
+  for density in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
+    mkdir -p "$CS_DIR/app/src/main/res/mipmap-$density"
+    cp "$MTSFLIX_DIR/banner.png" "$CS_DIR/app/src/main/res/mipmap-$density/ic_banner.png"
+  done
+  echo "  OK: banner.png replaced launcher banners"
 else
   echo "  WARN: banner.png not found at root"
 fi
 
 # --- 4. Patch RepositoryManager.kt for legacy MD5 verification fallback ---
-echo "[4/4] Patching RepositoryManager.kt to add legacy MD5 hash validation fallback..."
+echo "[4/7] Patching RepositoryManager.kt to add legacy MD5 hash validation fallback..."
 python3 - << 'PYEOF'
 import os, re
 cs_dir = os.environ.get('CS_DIR','cloudstream')
@@ -146,7 +158,7 @@ else:
 PYEOF
 
 # --- 5. Patch MainActivity.kt for permanent repo & auto-download plugins ---
-echo "[5/6] Patching MainActivity.kt for permanent repo & auto-download plugins..."
+echo "[5/7] Patching MainActivity.kt for permanent repo & auto-download plugins..."
 python3 - << 'PYEOF'
 import os, re
 cs_dir = os.environ.get('CS_DIR','cloudstream')
@@ -221,7 +233,7 @@ else:
 PYEOF
 
 # --- 6. Patch SettingsFragment.kt to hide Extensions menu option ----------
-echo "[6/6] Patching SettingsFragment.kt to hide Extensions option..."
+echo "[6/7] Patching SettingsFragment.kt to hide Extensions option..."
 python3 - << 'PYEOF'
 import os, re
 cs_dir = os.environ.get('CS_DIR','cloudstream')
@@ -243,6 +255,58 @@ else:
         print("  OK: Hided Extensions option in SettingsFragment")
     else:
         print("  INFO: SettingsFragment.kt already patched or target not found")
+PYEOF
+
+# --- 7. Patch strings and settings_general.xml ----------------------------
+echo "[7/7] Patching donottranslate-strings.xml and settings_general.xml..."
+python3 - << 'PYEOF'
+import os, re
+cs_dir = os.environ.get('CS_DIR','cloudstream')
+
+# 1. Translate legal notice text
+donottranslate_path = cs_dir + '/app/src/main/res/values/donottranslate-strings.xml'
+if os.path.exists(donottranslate_path):
+    print("  Patching donottranslate-strings.xml...")
+    content = open(donottranslate_path, encoding='utf-8').read()
+    
+    malay_notice = """Sebarang isu undang-undang mengenai kandungan dalam aplikasi ini perlulah dirujuk kepada hos fail dan penyedia kandungan sebenar kerana kami tidak mempunyai sebarang kaitan dengan mereka.
+
+        Sekiranya berlaku pelanggaran hak cipta, sila hubungi terus pihak yang bertanggungjawab atau laman web penstriman berkenaan.
+
+        Aplikasi ini adalah untuk kegunaan pendidikan dan peribadi sahaja.
+
+        MTSFlix tidak mengehos sebarang kandungan dalam aplikasi ini, dan tidak mempunyai kawalan ke atas media yang dimasukkan atau dikeluarkan.
+        MTSFlix berfungsi seperti mana-mana enjin carian lain, seperti Google. MTSFlix tidak mengehos, memuat naik atau menguruskan sebarang video, filem atau kandungan. Ia hanya merangkak, mengumpul dan memaparkan pautan dalam antara muka yang mudah dan mesra pengguna.
+
+        Ia hanya mengikis laman web pihak ketiga yang boleh diakses secara umum melalui mana-mana pelayar web biasa. Adalah menjadi tanggungjawab pengguna untuk mengelakkan sebarang tindakan yang boleh melanggar undang-undang di kawasan tempatan anda. Gunakan MTSFlix atas risiko anda sendiri."""
+        
+    pattern = r'(<string name="legal_notice_text">)(.*?)(</string>)'
+    
+    # Let's replace the content between <string name="legal_notice_text"> and </string>
+    def repl_func(match):
+        return match.group(1) + malay_notice + match.group(3)
+        
+    new_content = re.sub(pattern, repl_func, content, flags=re.DOTALL)
+    if new_content != content:
+        open(donottranslate_path, 'w', encoding='utf-8').write(new_content)
+        print("    OK: Translated legal_notice_text to Bahasa Melayu and changed CloudStream to MTSFlix")
+
+# 2. Remove benene and links category from settings_general.xml
+xml_path = cs_dir + '/app/src/main/res/xml/settings_general.xml'
+if os.path.exists(xml_path):
+    print("  Patching settings_general.xml...")
+    content = open(xml_path, encoding='utf-8').read()
+    
+    # Remove benene count preference
+    benene_pattern = r'\s*<Preference\s+android:icon="@drawable/benene".*?/>'
+    content = re.sub(benene_pattern, '', content, flags=re.DOTALL)
+    
+    # Remove pref_category_links category
+    links_pattern = r'\s*<PreferenceCategory android:title="@string/pref_category_links">.*?</PreferenceCategory>'
+    content = re.sub(links_pattern, '', content, flags=re.DOTALL)
+    
+    open(xml_path, 'w', encoding='utf-8').write(content)
+    print("    OK: Removed benene count and links category from settings_general.xml")
 PYEOF
 
 echo "======================================================"
