@@ -168,21 +168,12 @@ class LicenseCheckActivity : AppCompatActivity() {
     }
 
     private fun launchMainApp() {
-        try {
-            // Start CloudStream's MainActivity directly (compile-time checked, R8/ProGuard safe)
-            val intent = Intent(this, com.lagradost.cloudstream3.MainActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
-            }
-            startActivity(intent)
-        } catch (e: Exception) {
-            android.util.Log.e("MTSFlix", "Error launching MainActivity: ${e.message}")
-            // Fallback: restart the app
-            val intent = packageManager.getLaunchIntentForPackage(packageName)
-            if (intent != null) {
-                intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
-                startActivity(intent)
-            }
+        // FLAG_ACTIVITY_CLEAR_TASK wipes the entire back stack so the user
+        // can never navigate back to LicenseCheckActivity from the main app.
+        val intent = Intent(this, com.lagradost.cloudstream3.MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         }
+        startActivity(intent)
         finish()
     }
 

@@ -246,19 +246,15 @@ class GoogleLoginActivity : AppCompatActivity() {
     }
 
     private fun launchMainApp() {
-        try {
-            val intent = Intent(this, com.lagradost.cloudstream3.MainActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
-            }
-            startActivity(intent)
-        } catch (e: Exception) {
-            android.util.Log.e("MTSFlix", "Error starting MainActivity: ${e.message}")
-            val intent = packageManager.getLaunchIntentForPackage(packageName)
-            if (intent != null) {
-                intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
-                startActivity(intent)
-            }
+        // FLAG_ACTIVITY_CLEAR_TASK ensures the ENTIRE back stack is wiped.
+        // This prevents LicenseCheckActivity or GoogleLoginActivity from appearing
+        // when the user presses Back inside the main app.
+        // DO NOT use getLaunchIntentForPackage as a fallback — it re-launches the
+        // launcher (LicenseCheckActivity), causing an infinite loop.
+        val intent = Intent(this, com.lagradost.cloudstream3.MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         }
+        startActivity(intent)
         finish()
     }
 
