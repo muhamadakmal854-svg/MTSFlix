@@ -264,7 +264,7 @@ else:
     else:
         print("  INFO: SettingsFragment.kt already patched or target not found")
 PYEOF
-# --- 7. Patch strings and settings_general.xml ----------------------------
+# --- 7. Patch strings and settings_general.xml ----------------------------
 echo "[7/8] Patching donottranslate-strings.xml and settings_general.xml..."
 python3 - << 'PYEOF'
 import os, re
