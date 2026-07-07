@@ -1,6 +1,6 @@
 #!/bin/bash
 # ==============================================================
-#  MTSFlix Customization Script v2.0.1 (Trigger Rebuild)
+#  MTSFlix Customization Script v2.0.2 (Fix Foreground Icon Compile)
 #  Patches CloudStream 3 → MTSFlix
 #  13 steps including: branding, Firebase, provider URL,
 #  device verification, auto-update, AndroidManifest patches
@@ -171,8 +171,13 @@ fi
 # --- 8b. Copy Custom Branding Assets (Logo & Banner) ------------------------
 echo "Copying custom branding assets..."
 if [ -f "$MTSFLIX_DIR/logo.png" ]; then
-  # Delete all default Cloudstream ic_launcher and ic_launcher_round files
-  find "$CS_DIR/app/src/main/res" -name "ic_launcher*" -delete
+  # Delete only the default Cloudstream ic_launcher and ic_launcher_round launcher files
+  find "$CS_DIR/app/src/main/res" -name "ic_launcher.png" -delete
+  find "$CS_DIR/app/src/main/res" -name "ic_launcher.webp" -delete
+  find "$CS_DIR/app/src/main/res" -name "ic_launcher.xml" -delete
+  find "$CS_DIR/app/src/main/res" -name "ic_launcher_round.png" -delete
+  find "$CS_DIR/app/src/main/res" -name "ic_launcher_round.webp" -delete
+  find "$CS_DIR/app/src/main/res" -name "ic_launcher_round.xml" -delete
   
   # Copy logo.png to standard mipmap folders
   for dir in mipmap-mdpi mipmap-hdpi mipmap-xhdpi mipmap-xxhdpi mipmap-xxxhdpi; do
