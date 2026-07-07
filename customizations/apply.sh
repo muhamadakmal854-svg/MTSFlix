@@ -39,22 +39,31 @@ if [ -f "$APP_BUILD" ]; then
 fi
 
 # --- 2. Change App Name ----------------------------------------------------
-echo "[2/13] Setting app name to MTSFlix..."
-STRINGS_FILE="$CS_DIR/app/src/main/res/values/strings.xml"
-if [ -f "$STRINGS_FILE" ]; then
-  sed -i 's|<string name="app_name">[^<]*</string>|<string name="app_name">MTSFlix</string>|g' "$STRINGS_FILE"
-  echo "  OK: app_name = MTSFlix"
-else
-  mkdir -p "$CS_DIR/app/src/main/res/values"
-  cat > "$CS_DIR/app/src/main/res/values/strings_mtsflix.xml" << 'EOF'
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="app_name">MTSFlix</string>
-    <string name="app_description">Tonton movie, series &amp; anime tanpa had</string>
-</resources>
-EOF
-  echo "  OK: strings_mtsflix.xml created"
-fi
+echo "[2/13] Setting app name to MTSFlix in all localized resources..."
+python3 - << 'PYEOF'
+import os, re
+cs_dir = os.environ.get('CS_DIR','cloudstream')
+res_dir = cs_dir + '/app/src/main/res'
+if not os.path.exists(res_dir):
+    print("  WARN: res directory not found")
+else:
+    count = 0
+    for root, dirs, files in os.walk(res_dir):
+        for f in files:
+            if f == 'strings.xml':
+                path = os.path.join(root, f)
+                try:
+                    c = open(path, encoding='utf-8').read()
+                    # Replace app_name tag content
+                    pattern = r'<string name="app_name">[^<]*</string>'
+                    new_c = re.sub(pattern, '<string name="app_name">MTSFlix</string>', c)
+                    if new_c != c:
+                        open(path, 'w', encoding='utf-8').write(new_c)
+                        count += 1
+                except Exception as e:
+                    print(f"  Error patching {path}: {e}")
+    print(f"  OK: Patched {count} strings.xml files to MTSFlix")
+PYEOF
 
 # --- 3. Add google-services classpath to root build ------------------------
 echo "[3/13] Patching root build.gradle for Firebase..."
