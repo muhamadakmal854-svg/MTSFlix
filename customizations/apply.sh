@@ -168,6 +168,32 @@ else
   echo "  WARN: custom_src not found"
 fi
 
+# --- 8b. Copy Custom Branding Assets (Logo & Banner) ------------------------
+echo "Copying custom branding assets..."
+if [ -f "$MTSFLIX_DIR/logo.png" ]; then
+  # Delete all default Cloudstream ic_launcher and ic_launcher_round files
+  find "$CS_DIR/app/src/main/res" -name "ic_launcher*" -delete
+  
+  # Copy logo.png to standard mipmap folders
+  for dir in mipmap-mdpi mipmap-hdpi mipmap-xhdpi mipmap-xxhdpi mipmap-xxxhdpi; do
+    mkdir -p "$CS_DIR/app/src/main/res/$dir"
+    cp "$MTSFLIX_DIR/logo.png" "$CS_DIR/app/src/main/res/$dir/ic_launcher.png"
+    cp "$MTSFLIX_DIR/logo.png" "$CS_DIR/app/src/main/res/$dir/ic_launcher_round.png"
+  done
+  echo "  OK: app logo.png copied to mipmap resource folders"
+else
+  echo "  WARN: logo.png not found at root"
+fi
+
+if [ -f "$MTSFLIX_DIR/banner.png" ]; then
+  find "$CS_DIR/app/src/main/res" -name "ic_banner*" -delete
+  mkdir -p "$CS_DIR/app/src/main/res/mipmap-xhdpi"
+  cp "$MTSFLIX_DIR/banner.png" "$CS_DIR/app/src/main/res/mipmap-xhdpi/ic_banner.png"
+  echo "  OK: banner.png copied as ic_banner.png"
+else
+  echo "  WARN: banner.png not found at root"
+fi
+
 # --- 9. Patch AndroidManifest: LicenseCheckActivity as LAUNCHER ------------
 echo "[9/13] Setting LicenseCheckActivity as LAUNCHER..."
 MANIFEST="$CS_DIR/app/src/main/AndroidManifest.xml"
@@ -178,16 +204,17 @@ import re, os
 path = os.environ.get('CS_DIR','cloudstream') + '/app/src/main/AndroidManifest.xml'
 try:
     c = open(path, encoding='utf-8').read()
-    if 'LicenseCheckActivity' in c:
-        print('  INFO: LicenseCheckActivity already in manifest')
-    else:
-        # Remove MAIN/LAUNCHER from existing activities
-        c = re.sub(
-            r'\s*<intent-filter>\s*<action android:name="android\.intent\.action\.MAIN"\s*/>\s*<category android:name="android\.intent\.category\.LAUNCHER"\s*/>\s*</intent-filter>',
-            '', c
-        )
-        # Add LicenseCheckActivity as launcher before </application>
-        activity = '''
+
+    # 1. Strip ALL existing intent-filters containing LAUNCHER (including LEANBACK_LAUNCHER)
+    pattern = re.compile(r'<intent-filter[\s\S]*?>[\s\S]*?android\.intent\.category\.(?:LEANBACK_)?LAUNCHER[\s\S]*?</intent-filter>')
+    c, count = pattern.subn('', c)
+    print(f"  Removed {count} original launcher intent filters")
+
+    # 2. If LicenseCheckActivity is already present (just in case), remove it first to avoid duplicates
+    c = re.sub(r'\s*<!-- MTSFlix: Device Verification \(LAUNCHER\) -->[\s\S]*?</activity>', '', c)
+
+    # 3. Add LicenseCheckActivity as the sole LAUNCHER before </application>
+    activity = '''
         <!-- MTSFlix: Device Verification (LAUNCHER) -->
         <activity
             android:name="com.mts.mtsflix.license.LicenseCheckActivity"
@@ -197,11 +224,12 @@ try:
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
             </intent-filter>
         </activity>'''
-        c = c.replace('</application>', activity + '\n    </application>')
-        open(path,'w',encoding='utf-8').write(c)
-        print('  OK: LicenseCheckActivity set as LAUNCHER')
+    c = c.replace('</application>', activity + '\n    </application>')
+    open(path,'w',encoding='utf-8').write(c)
+    print('  OK: LicenseCheckActivity set as sole LAUNCHER')
 except Exception as e:
     print(f'  WARN: {e}')
 PYEOF

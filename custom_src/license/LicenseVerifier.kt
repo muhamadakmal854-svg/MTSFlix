@@ -51,6 +51,7 @@ object LicenseVerifier {
 
     enum class Status {
         VALID,           // License found, active, not expired
+        BANNED,          // Device/user is banned by admin
         EXPIRED,         // License found but expired
         INACTIVE,        // License found but deactivated by admin
         NOT_FOUND,       // Device code not in license list
@@ -93,6 +94,16 @@ object LicenseVerifier {
         for (entry in licenses) {
             if (entry.deviceCode.trim().equals(deviceCode.trim(), ignoreCase = true)) {
                 Log.i(TAG, "Found license for: ${entry.username}")
+
+                if (entry.banned) {
+                    val reason = if (entry.bannedReason.isNotBlank()) entry.bannedReason else "Tiada sebab dinyatakan"
+                    return@withContext LicenseResult(
+                        status = Status.BANNED,
+                        username = entry.username,
+                        deviceCode = deviceCode,
+                        message = "Peranti anda telah disekat (Banned). Sebab: $reason"
+                    )
+                }
 
                 if (!entry.active) {
                     return@withContext LicenseResult(
@@ -163,6 +174,8 @@ object LicenseVerifier {
         val email: String,
         val expiredAt: String,
         val active: Boolean,
+        val banned: Boolean,
+        val bannedReason: String,
         val addedAt: String,
         val note: String
     )
@@ -178,6 +191,8 @@ object LicenseVerifier {
                 email = obj.optString("email", ""),
                 expiredAt = obj.optString("expiredAt", "2099-12-31"),
                 active = obj.optBoolean("active", true),
+                banned = obj.optBoolean("banned", false),
+                bannedReason = obj.optString("bannedReason", ""),
                 addedAt = obj.optString("addedAt", ""),
                 note = obj.optString("note", "")
             )

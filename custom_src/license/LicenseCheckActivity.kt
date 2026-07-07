@@ -56,20 +56,15 @@ class LicenseCheckActivity : AppCompatActivity() {
 
         buildUI()
 
+        // Initialize MTSFlix services (Firebase, notifications, extension repo setup)
+        try {
+            com.mts.mtsflix.MTSFlixInit.initialize(applicationContext)
+        } catch (e: Exception) {
+            android.util.Log.e("MTSFlix", "Initialization error: ${e.message}")
+        }
+
         val deviceCode = DeviceCodeManager.getDeviceCode(this)
         tvDeviceCode.text = deviceCode
-
-        // If cached as verified (less than 24h ago), skip straight to app
-        if (DeviceCodeManager.isVerifiedLocally(this)) {
-            val username = DeviceCodeManager.getUsername(this) ?: "User"
-            val expiry = DeviceCodeManager.getExpiryDate(this) ?: ""
-            showVerifiedState(username, expiry)
-            lifecycleScope.launch {
-                delay(1200)
-                launchMainApp()
-            }
-            return
-        }
 
         // Auto-verify on first open
         startVerification(deviceCode)
@@ -94,17 +89,28 @@ class LicenseCheckActivity : AppCompatActivity() {
                     launchMainApp()
                 }
 
+                LicenseVerifier.Status.BANNED -> {
+                    DeviceCodeManager.clearVerification(this@LicenseCheckActivity)
+                    showErrorState(
+                        icon = "🚫",
+                        title = "Peranti Disekat",
+                        message = result.message,
+                        showContact = true
+                    )
+                }
+
                 LicenseVerifier.Status.EXPIRED -> {
+                    DeviceCodeManager.clearVerification(this@LicenseCheckActivity)
                     showErrorState(
                         icon = "⏰",
                         title = "Lesen Tamat Tempoh",
                         message = result.message,
                         showContact = true
                     )
-                    DeviceCodeManager.clearVerification(this@LicenseCheckActivity)
                 }
 
                 LicenseVerifier.Status.INACTIVE -> {
+                    DeviceCodeManager.clearVerification(this@LicenseCheckActivity)
                     showErrorState(
                         icon = "🚫",
                         title = "Lesen Tidak Aktif",
@@ -114,6 +120,7 @@ class LicenseCheckActivity : AppCompatActivity() {
                 }
 
                 LicenseVerifier.Status.NOT_FOUND -> {
+                    DeviceCodeManager.clearVerification(this@LicenseCheckActivity)
                     showErrorState(
                         icon = "🔑",
                         title = "Peranti Belum Didaftarkan",
@@ -123,21 +130,37 @@ class LicenseCheckActivity : AppCompatActivity() {
                 }
 
                 LicenseVerifier.Status.NETWORK_ERROR -> {
-                    showErrorState(
-                        icon = "📡",
-                        title = "Tiada Sambungan",
-                        message = result.message,
-                        showContact = false
-                    )
+                    if (DeviceCodeManager.isVerifiedLocally(this@LicenseCheckActivity)) {
+                        val username = DeviceCodeManager.getUsername(this@LicenseCheckActivity) ?: "User"
+                        val expiry = DeviceCodeManager.getExpiryDate(this@LicenseCheckActivity) ?: ""
+                        showVerifiedState(username, expiry)
+                        delay(1200)
+                        launchMainApp()
+                    } else {
+                        showErrorState(
+                            icon = "📡",
+                            title = "Tiada Sambungan",
+                            message = result.message,
+                            showContact = false
+                        )
+                    }
                 }
 
                 LicenseVerifier.Status.PARSE_ERROR -> {
-                    showErrorState(
-                        icon = "⚠️",
-                        title = "Ralat Sistem",
-                        message = result.message,
-                        showContact = true
-                    )
+                    if (DeviceCodeManager.isVerifiedLocally(this@LicenseCheckActivity)) {
+                        val username = DeviceCodeManager.getUsername(this@LicenseCheckActivity) ?: "User"
+                        val expiry = DeviceCodeManager.getExpiryDate(this@LicenseCheckActivity) ?: ""
+                        showVerifiedState(username, expiry)
+                        delay(1200)
+                        launchMainApp()
+                    } else {
+                        showErrorState(
+                            icon = "⚠️",
+                            title = "Ralat Sistem",
+                            message = result.message,
+                            showContact = true
+                        )
+                    }
                 }
             }
         }
