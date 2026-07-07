@@ -26,20 +26,30 @@ object GoogleSignInHelper {
 
     // ─── Client Setup ─────────────────────────────────────────────────────────
 
-    fun getSignInClient(context: Context): GoogleSignInClient {
+    fun getSignInClient(context: Context): GoogleSignInClient? {
         if (_googleSignInClient == null) {
-            val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                .requestIdToken(getWebClientId(context))
-                .requestEmail()
-                .requestProfile()
-                .build()
-            _googleSignInClient = GoogleSignIn.getClient(context.applicationContext, gso)
+            try {
+                val clientId = getWebClientId(context)
+                if (clientId.isEmpty()) {
+                    Log.e(TAG, "❌ Google Sign-In Web Client ID is empty. Google Auth is unconfigured.")
+                    return null
+                }
+                val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                    .requestIdToken(clientId)
+                    .requestEmail()
+                    .requestProfile()
+                    .build()
+                _googleSignInClient = GoogleSignIn.getClient(context.applicationContext, gso)
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ Failed to initialize GoogleSignInClient: ${e.message}")
+                return null
+            }
         }
-        return _googleSignInClient!!
+        return _googleSignInClient
     }
 
-    fun getSignInIntent(context: Context): Intent {
-        return getSignInClient(context).signInIntent
+    fun getSignInIntent(context: Context): Intent? {
+        return getSignInClient(context)?.signInIntent
     }
 
     // ─── Auth State ───────────────────────────────────────────────────────────

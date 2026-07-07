@@ -39,6 +39,13 @@ class GoogleLoginActivity : AppCompatActivity() {
         // Check if already signed in (just in case)
         if (GoogleSignInHelper.isSignedIn() && SecureSessionManager.isSessionValid(this)) {
             launchMainApp()
+            return
+        }
+
+        // Validate client ID configuration to warn admin immediately
+        val clientId = GoogleSignInHelper.getWebClientId(this)
+        if (clientId.isEmpty()) {
+            showError("Akaun Google belum bersedia. Sila hubungi admin untuk mendaftarkan SHA-1 dalam Firebase Console (default_web_client_id kosong).")
         }
     }
 
@@ -174,6 +181,10 @@ class GoogleLoginActivity : AppCompatActivity() {
         tvStatus.setTextColor(Color.parseColor("#FFA500"))
 
         val signInIntent = GoogleSignInHelper.getSignInIntent(this)
+        if (signInIntent == null) {
+            showError("Akaun Google belum bersedia. Ralat: default_web_client_id kosong. Sila hubungi admin untuk masukkan SHA-1 Google Auth.")
+            return
+        }
         startActivityForResult(signInIntent, GoogleSignInHelper.REQUEST_CODE_SIGN_IN)
     }
 
