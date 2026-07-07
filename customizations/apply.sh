@@ -617,7 +617,7 @@ else:
     setup_nav_patterns = [
         (r'if\s*\(!getKey<Boolean>\(HAS_DONE_SETUP_KEY[^)]*\)[^)]*\)\s*\{[^}]*navigate[^}]*\}',
          '/* MTSFlix: setup wizard disabled - handled by LicenseCheckActivity */'),
-        (r'navigate\(R\.id\.navigation_setup[^)]*\)',
+        (r'navController\.navigate\(R\.id\.navigation_setup[^)]*\)',
          'Log.i("MTSFlix", "setup nav skipped")'),
     ]
     for pattern, replacement in setup_nav_patterns:
