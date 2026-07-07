@@ -168,12 +168,13 @@ class LicenseCheckActivity : AppCompatActivity() {
 
     private fun launchMainApp() {
         try {
-            // Start CloudStream's MainActivity
-            val mainClass = Class.forName("com.lagradost.cloudstream3.MainActivity")
-            startActivity(Intent(this, mainClass).apply {
+            // Start CloudStream's MainActivity directly (compile-time checked, R8/ProGuard safe)
+            val intent = Intent(this, com.lagradost.cloudstream3.MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
-            })
-        } catch (e: ClassNotFoundException) {
+            }
+            startActivity(intent)
+        } catch (e: Exception) {
+            android.util.Log.e("MTSFlix", "Error launching MainActivity: ${e.message}")
             // Fallback: restart the app
             val intent = packageManager.getLaunchIntentForPackage(packageName)
             if (intent != null) {
@@ -188,6 +189,7 @@ class LicenseCheckActivity : AppCompatActivity() {
 
     private fun setLoadingState(message: String) {
         progressBar.visibility = View.VISIBLE
+        btnVerify.visibility = View.VISIBLE
         btnVerify.isEnabled = false
         tvStatus.text = message
         tvStatus.setTextColor(Color.parseColor("#FFA500"))
@@ -199,7 +201,7 @@ class LicenseCheckActivity : AppCompatActivity() {
 
     private fun showVerifiedState(username: String, expiryDate: String) {
         progressBar.visibility = View.GONE
-        btnVerify.isEnabled = true
+        btnVerify.visibility = View.GONE // Hide verify button on success
         tvStatus.text = "✅ Lesen Disahkan!"
         tvStatus.setTextColor(Color.parseColor("#4CAF50"))
         tvMessage.visibility = View.VISIBLE
@@ -214,6 +216,7 @@ class LicenseCheckActivity : AppCompatActivity() {
 
     private fun showErrorState(icon: String, title: String, message: String, showContact: Boolean) {
         progressBar.visibility = View.GONE
+        btnVerify.visibility = View.VISIBLE
         btnVerify.isEnabled = true
         tvStatus.text = "$icon $title"
         tvStatus.setTextColor(Color.parseColor("#FF5252"))
