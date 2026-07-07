@@ -37,13 +37,14 @@ class LicenseCheckActivity : AppCompatActivity() {
     private lateinit var tvDeviceCode: TextView
     private lateinit var tvMessage: TextView
     private lateinit var btnVerify: Button
+    private lateinit var btnContact: Button
     private lateinit var btnCopy: Button
     private lateinit var progressBar: ProgressBar
     private lateinit var cardView: LinearLayout
     private lateinit var tvExpiry: TextView
     private lateinit var tvUsername: TextView
 
-    private val ADMIN_CONTACT = "https://t.me/muhamadakmal854" // Update with your Telegram/WhatsApp
+    private val ADMIN_CONTACT = "https://t.me/mtsadm"
 
     // ─── Lifecycle ────────────────────────────────────────────────────────────
 
@@ -191,6 +192,8 @@ class LicenseCheckActivity : AppCompatActivity() {
         progressBar.visibility = View.VISIBLE
         btnVerify.visibility = View.VISIBLE
         btnVerify.isEnabled = false
+        btnVerify.text = "Menyemak lesen..."
+        btnContact.visibility = View.GONE
         tvStatus.text = message
         tvStatus.setTextColor(Color.parseColor("#FFA500"))
         tvMessage.visibility = View.GONE
@@ -202,6 +205,7 @@ class LicenseCheckActivity : AppCompatActivity() {
     private fun showVerifiedState(username: String, expiryDate: String) {
         progressBar.visibility = View.GONE
         btnVerify.visibility = View.GONE // Hide verify button on success
+        btnContact.visibility = View.GONE
         tvStatus.text = "✅ Lesen Disahkan!"
         tvStatus.setTextColor(Color.parseColor("#4CAF50"))
         tvMessage.visibility = View.VISIBLE
@@ -218,6 +222,12 @@ class LicenseCheckActivity : AppCompatActivity() {
         progressBar.visibility = View.GONE
         btnVerify.visibility = View.VISIBLE
         btnVerify.isEnabled = true
+        btnVerify.text = if (icon == "📡") "🔄 Cuba Semula" else "🔑 Semak Lesen"
+        btnVerify.setOnClickListener {
+            val code = DeviceCodeManager.getDeviceCode(this@LicenseCheckActivity)
+            startVerification(code)
+        }
+
         tvStatus.text = "$icon $title"
         tvStatus.setTextColor(Color.parseColor("#FF5252"))
         tvMessage.visibility = View.VISIBLE
@@ -228,20 +238,9 @@ class LicenseCheckActivity : AppCompatActivity() {
         btnCopy.visibility = View.VISIBLE
 
         if (showContact) {
-            btnVerify.text = "📞 Hubungi Admin"
-            btnVerify.setOnClickListener {
-                try {
-                    startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(ADMIN_CONTACT)))
-                } catch (e: Exception) {
-                    Toast.makeText(this, "Telegram tidak dijumpai", Toast.LENGTH_SHORT).show()
-                }
-            }
+            btnContact.visibility = View.VISIBLE
         } else {
-            btnVerify.text = "🔄 Cuba Semula"
-            btnVerify.setOnClickListener {
-                val deviceCode = DeviceCodeManager.getDeviceCode(this)
-                startVerification(deviceCode)
-            }
+            btnContact.visibility = View.GONE
         }
     }
 
@@ -261,15 +260,13 @@ class LicenseCheckActivity : AppCompatActivity() {
         scroll.addView(root)
 
         // ── Logo / Title ──────────────────────────────────────────────────────
-        val tvLogo = TextView(this).apply {
-            text = "🎬"
-            textSize = 64f
-            gravity = Gravity.CENTER
-            val lp = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
-            lp.bottomMargin = dp(8)
+        val ivLogo = ImageView(this).apply {
+            setImageResource(com.lagradost.cloudstream3.R.mipmap.ic_launcher)
+            val lp = LinearLayout.LayoutParams(dp(80), dp(80))
+            lp.bottomMargin = dp(16)
             layoutParams = lp
         }
-        root.addView(tvLogo)
+        root.addView(ivLogo)
 
         val tvTitle = TextView(this).apply {
             text = "MTSFlix"
@@ -437,7 +434,7 @@ class LicenseCheckActivity : AppCompatActivity() {
 
         // ── Verify / Retry / Contact Button ───────────────────────────────────
         btnVerify = Button(this).apply {
-            text = "🔄 Cuba Semula"
+            text = "🔑 Semak Lesen"
             textSize = 15f
             setTypeface(null, Typeface.BOLD)
             setTextColor(Color.WHITE)
@@ -452,20 +449,41 @@ class LicenseCheckActivity : AppCompatActivity() {
             lp.topMargin = dp(16)
             layoutParams = lp
             setOnClickListener {
-                text = "🔄 Cuba Semula"
-                setOnClickListener {
-                    val code = DeviceCodeManager.getDeviceCode(this@LicenseCheckActivity)
-                    startVerification(code)
-                }
                 val code = DeviceCodeManager.getDeviceCode(this@LicenseCheckActivity)
                 startVerification(code)
             }
         }
         cardView.addView(btnVerify)
 
+        // ── Contact Admin Button (initially hidden) ───────────────────────────
+        btnContact = Button(this).apply {
+            text = "📞 Hubungi Admin"
+            textSize = 15f
+            setTypeface(null, Typeface.BOLD)
+            setTextColor(Color.WHITE)
+            val bg = GradientDrawable().apply {
+                setColor(Color.parseColor("#2A2A2A"))
+                cornerRadius = dp(12).toFloat()
+            }
+            background = bg
+            visibility = View.GONE
+            setPadding(dp(16), dp(14), dp(16), dp(14))
+            val lp = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+            lp.topMargin = dp(12)
+            layoutParams = lp
+            setOnClickListener {
+                try {
+                    startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(ADMIN_CONTACT)))
+                } catch (e: Exception) {
+                    Toast.makeText(context, "Telegram tidak dijumpai", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+        cardView.addView(btnContact)
+
         // ── Footer ────────────────────────────────────────────────────────────
         val tvFooter = TextView(this).apply {
-            text = "MTSFlix v1.0 • Powered by CloudStream 3\nHak Cipta © 2025 MTS"
+            text = "MTSFlix v1.0 • Hak Cipta © 2026 MTS"
             textSize = 11f
             setTextColor(Color.parseColor("#444444"))
             gravity = Gravity.CENTER
