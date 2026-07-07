@@ -31,15 +31,20 @@ object MTSFlixLogger {
     }
 
     @Synchronized
-    fun log(category: String, message: String) {
+    fun log(category: String, message: String, throwable: Throwable? = null) {
         val tag = "$TAG_PREFIX$category"
         // Also print to Logcat for real-time debug console monitoring
-        Log.i(tag, message)
+        if (throwable != null) {
+            Log.i(tag, message, throwable)
+        } else {
+            Log.i(tag, message)
+        }
         
         try {
             logFile?.let { file ->
                 val timestamp = dateFormat.format(Date())
-                val logLine = "[$timestamp] [$category] $message\n"
+                val exceptionMsg = throwable?.let { "\n" + Log.getStackTraceString(it) } ?: ""
+                val logLine = "[$timestamp] [$category] $message$exceptionMsg\n"
                 file.appendText(logLine)
             }
         } catch (e: Exception) {

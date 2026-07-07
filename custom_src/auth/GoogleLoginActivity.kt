@@ -178,7 +178,7 @@ class GoogleLoginActivity : AppCompatActivity() {
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode: Int, data)
+        super.onActivityResult(requestCode, resultCode, data)
 
         if (requestCode == GoogleSignInHelper.REQUEST_CODE_SIGN_IN) {
             GoogleSignInHelper.handleSignInResultFromIntent(data, this,

@@ -515,8 +515,15 @@ if os.path.exists(vm_path):
                             modifyState {
                                 add(link)
                             }
-                            com.mts.mtsflix.MTSFlixLogger.log("EXTRACTION", "Found link: ${link.name} (Source: ${link.source}, URL: ${link.url})")
-                            com.mts.mtsflix.VideoProviderEngine.detectAndRecordPattern(link.url)
+                            val extLink = link.first
+                            val extUri = link.second
+                            val name = extLink?.name ?: extUri?.name ?: "Unknown"
+                            val source = extLink?.source ?: "Local"
+                            val url = extLink?.url ?: extUri?.uri?.toString() ?: ""
+                            com.mts.mtsflix.MTSFlixLogger.log("EXTRACTION", "Found link: $name (Source: $source, URL: $url)")
+                            if (url.isNotEmpty()) {
+                                com.mts.mtsflix.VideoProviderEngine.detectAndRecordPattern(url)
+                            }
                         }
                     },"""
     if cb_target in content:
