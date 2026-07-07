@@ -224,15 +224,22 @@ jobs:
           
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git config user.name "github-actions[bot]"
-          # Fetch latest remote state
-          git fetch origin main
-          # Reset to remote (keeps working tree - version.json is already written)
-          git reset --soft origin/main
-          # Now stage and commit version.json on top of latest remote commit
-          git add version.json
-          git diff --staged --quiet || git commit -m "chore: Update version.json to v${{ env.VER }} [skip ci]"
-          git push origin HEAD:main
-          echo "version.json committed and pushed"
+          
+          # Retry loop to handle concurrent pushes
+          for i in {1..5}; do
+            echo "Attempt $i to push version.json..."
+            git fetch origin main
+            git reset --soft origin/main
+            git add version.json
+            git diff --staged --quiet || git commit -m "chore: Update version.json to v${{ env.VER }} [skip ci]"
+            if git push origin HEAD:main; then
+              echo "✅ version.json committed and pushed successfully"
+              break
+            else
+              echo "⚠️ Push failed, retrying in 5 seconds..."
+              sleep 5
+            fi
+          done
 
       # ─── Upload Artifact ───────────────────────────────────────────────────
       - name: 📤 Upload APK Artifact
