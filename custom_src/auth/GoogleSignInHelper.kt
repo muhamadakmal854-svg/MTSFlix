@@ -115,8 +115,14 @@ object GoogleSignInHelper {
 
     fun signOut(context: Context, onComplete: () -> Unit = {}) {
         auth.signOut()
-        getSignInClient(context).signOut().addOnCompleteListener {
-            Log.i(TAG, "✅ Signed out")
+        val client = getSignInClient(context)
+        if (client != null) {
+            client.signOut().addOnCompleteListener {
+                Log.i(TAG, "✅ Signed out")
+                onComplete()
+            }
+        } else {
+            Log.i(TAG, "✅ Signed out (Client was null)")
             onComplete()
         }
     }
@@ -133,7 +139,7 @@ object GoogleSignInHelper {
 
     // ─── Helpers ──────────────────────────────────────────────────────────────
 
-    private fun getWebClientId(context: Context): String {
+    fun getWebClientId(context: Context): String {
         // Try to get from resources (set by google-services plugin)
         return try {
             val resourceId = context.resources.getIdentifier(
