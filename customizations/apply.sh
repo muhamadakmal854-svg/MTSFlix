@@ -96,7 +96,7 @@ else
 fi
 
 # --- 4. Patch RepositoryManager.kt for legacy MD5 verification fallback ---
-echo "[4/11] Patching RepositoryManager.kt to add legacy MD5 hash validation fallback..."
+echo "[4/11] Patching RepositoryManager.kt to add legacy MD5 hash validation fallback & ensure permanent MTS Repo..."
 python3 - << 'PYEOF'
 import os, re
 cs_dir = os.environ.get('CS_DIR','cloudstream')
@@ -157,6 +157,40 @@ else:
         content = content.replace(verify_target, verify_replacement)
         changed = True
         print("  OK: md5 verification check injected")
+
+    # 3. Intercept getRepositories() to make sure MTS Repo is ALWAYS returned
+    get_repos_target = '''    fun getRepositories(): Array<RepositoryData> {
+        return getKey(REPOSITORIES_KEY) ?: emptyArray()
+    }'''
+    
+    get_repos_replacement = '''    fun getRepositories(): Array<RepositoryData> {
+        val repoUrl = "https://cdn.jsdelivr.net/gh/muhamadakmal854-svg/Provider@builds/repo.json"
+        val repoName = "MTS Repo"
+        val list = getKey<Array<RepositoryData>>(REPOSITORIES_KEY) ?: emptyArray()
+        if (list.none { it.url == repoUrl }) {
+            val newRepo = RepositoryData(null, repoName, repoUrl)
+            return list + newRepo
+        }
+        return list
+    }'''
+    
+    if get_repos_target in content:
+        content = content.replace(get_repos_target, get_repos_replacement)
+        changed = True
+        print("  OK: getRepositories intercepted to enforce MTS Repo")
+
+    # 4. Intercept removeRepository() to prevent deletion of MTS Repo
+    remove_repo_target = '''    suspend fun removeRepository(context: Context, repository: RepositoryData) {
+        val extensionsDir = File(context.filesDir, ONLINE_PLUGINS_FOLDER)'''
+        
+    remove_repo_replacement = '''    suspend fun removeRepository(context: Context, repository: RepositoryData) {
+        if (repository.url == "https://cdn.jsdelivr.net/gh/muhamadakmal854-svg/Provider@builds/repo.json") return
+        val extensionsDir = File(context.filesDir, ONLINE_PLUGINS_FOLDER)'''
+        
+    if remove_repo_target in content:
+        content = content.replace(remove_repo_target, remove_repo_replacement)
+        changed = True
+        print("  OK: removeRepository intercepted to protect MTS Repo")
         
     if changed:
         open(repo_mgr_path, 'w', encoding='utf-8').write(content)
@@ -179,7 +213,7 @@ else:
     content = open(main_path, encoding='utf-8').read()
     changed = False
 
-    # Inject the permanent repo and auto-download logic right after super.onCreate(savedInstanceState)
+    # 1. Inject the permanent repo and auto-download logic right after super.onCreate(savedInstanceState)
     oncreate_target = 'super.onCreate(savedInstanceState)'
     oncreate_marker = '// MTSFlix: Permanent repo & Auto-download plugins'
     
@@ -231,7 +265,28 @@ else:
         }'''
         content = content.replace(oncreate_target, bypass_code, 1)
         changed = True
-        print("  OK: Permanent repo and auto-loader injected into MainActivity")
+        print("  OK: Permanent repo and auto-loader injected into MainActivity.onCreate()")
+
+    # 2. Inject permanent repo check into onNewIntent
+    onnewintent_target = 'override fun onNewIntent(intent: Intent) {'
+    onnewintent_marker = '// MTSFlix: Ensure permanent repo before handling deep link'
+    
+    if onnewintent_marker not in content and onnewintent_target in content:
+        onnewintent_code = '''override fun onNewIntent(intent: Intent) {
+        // MTSFlix: Ensure permanent repo before handling deep link
+        try {
+            val repoUrl = "https://cdn.jsdelivr.net/gh/muhamadakmal854-svg/Provider@builds/repo.json"
+            val repoName = "MTS Repo"
+            val key = "REPOSITORIES_KEY"
+            val currentRepos = getKey<Array<com.lagradost.cloudstream3.ui.settings.extensions.RepositoryData>>(key) ?: emptyArray()
+            if (currentRepos.none { it.url == repoUrl }) {
+                val newRepo = com.lagradost.cloudstream3.ui.settings.extensions.RepositoryData(null, repoName, repoUrl)
+                setKey(key, currentRepos + newRepo)
+            }
+        } catch (e: Exception) {}'''
+        content = content.replace(onnewintent_target, onnewintent_code, 1)
+        changed = True
+        print("  OK: Permanent repo check injected into MainActivity.onNewIntent()")
 
     if changed:
         open(main_path, 'w', encoding='utf-8').write(content)
