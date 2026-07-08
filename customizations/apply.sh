@@ -454,11 +454,14 @@ try:
     if 'LicenseCheckActivity' in c:
         print('  INFO: LicenseCheckActivity already in manifest')
     else:
-        # Remove MAIN/LAUNCHER intent-filters from existing activities
-        c = re.sub(
-            r'\s*<intent-filter>\s*<action android:name="android\.intent\.action\.MAIN"\s*/>\s*<category android:name="android\.intent\.category\.LAUNCHER"\s*/>\s*</intent-filter>',
-            '', c
-        )
+        # Remove all existing MAIN/LAUNCHER/LEANBACK_LAUNCHER intent-filters
+        pattern = re.compile(r'<intent-filter[\s\S]*?</intent-filter>')
+        def repl(match):
+            text = match.group(0)
+            if 'android.intent.action.MAIN' in text and ('android.intent.category.LAUNCHER' in text or 'android.intent.category.LEANBACK_LAUNCHER' in text):
+                return ''
+            return text
+        c = pattern.sub(repl, c)
         # Add LicenseCheckActivity as launcher before </application>
         activity = '''
         <!-- MTSFlix: Device Verification (LAUNCHER) -->
