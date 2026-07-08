@@ -44,6 +44,20 @@
       "deviceInfo": "Tidak dinyatakan",
       "note": "",
       "lastModified": "2026-07-08T14:28:21"
+    },
+    {
+      "id": "LIC-20260708-5CAF7490",
+      "deviceCode": "MTSF-4F2A-0073-91BA",
+      "username": "TV RUANG TAMU AKU",
+      "email": "tvruangtamuaku@gmail.com",
+      "expiredAt": "2099-12-30",
+      "active": true,
+      "banned": false,
+      "bannedReason": "",
+      "addedAt": "2026-07-08",
+      "deviceInfo": "XIAOMI STICK 1080P",
+      "note": "UNTUK RUMAH AKU",
+      "lastModified": "2026-07-08T20:15:00"
     }
   ]
 }
