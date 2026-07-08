@@ -289,26 +289,10 @@ else:
         print("  OK: Permanent repo check injected into MainActivity.onNewIntent()")
 
     # 3. Disable setup wizard navigation (language & extensions)
-    setup_target = '''        try {
-            if (getKey(HAS_DONE_SETUP_KEY, false) != true) {
-                navController.navigate(R.id.navigation_setup_language)
-                // If no plugins bring up extensions screen
-            } else if (PluginManager.getPluginsOnline().isEmpty()
-                && PluginManager.getPluginsLocal().isEmpty()
-            ) {
-                navController.navigate(
-                    R.id.navigation_setup_extensions,
-                    SetupFragmentExtensions.newInstance(false)
-                )
-            }
-        } catch (e: Exception) {
-            logError(e)
-        }'''
-    setup_replacement = '''        // MTSFlix: Setup wizard bypassed entirely
-        Log.i("MTSFlix", "Setup wizard bypassed entirely")'''
-        
-    if setup_target in content:
-        content = content.replace(setup_target, setup_replacement)
+    pattern_setup = re.compile(r'try\s*\{\s*if\s*\(\s*getKey\(\s*HAS_DONE_SETUP_KEY[\s\S]*?logError\(e\)\s*\}')
+    new_content, count = pattern_setup.subn('// MTSFlix: Setup wizard bypassed entirely\n        Log.i("MTSFlix", "Setup wizard bypassed entirely")', content)
+    if count > 0:
+        content = new_content
         changed = True
         print("  OK: Setup wizard navigation disabled")
 
