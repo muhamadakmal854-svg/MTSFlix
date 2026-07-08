@@ -37,13 +37,14 @@
       "username": "Nox Player",
       "email": "noxplayer@gmail.com",
       "expiredAt": "2099-07-08",
-      "active": true,
-      "banned": false,
-      "bannedReason": "",
+      "active": false,
+      "banned": true,
+      "bannedReason": "Melanggar syarat penggunaan MTSFlix",
       "addedAt": "2026-07-08",
       "deviceInfo": "Emulator",
       "note": "Test",
-      "lastModified": "2026-07-08T09:53:39"
+      "lastModified": "2026-07-08T14:15:49",
+      "bannedAt": "2026-07-08T14:15:49"
     }
   ]
 }
