@@ -288,6 +288,30 @@ else:
         changed = True
         print("  OK: Permanent repo check injected into MainActivity.onNewIntent()")
 
+    # 3. Disable setup wizard navigation (language & extensions)
+    setup_target = '''        try {
+            if (getKey(HAS_DONE_SETUP_KEY, false) != true) {
+                navController.navigate(R.id.navigation_setup_language)
+                // If no plugins bring up extensions screen
+            } else if (PluginManager.getPluginsOnline().isEmpty()
+                && PluginManager.getPluginsLocal().isEmpty()
+            ) {
+                navController.navigate(
+                    R.id.navigation_setup_extensions,
+                    SetupFragmentExtensions.newInstance(false)
+                )
+            }
+        } catch (e: Exception) {
+            logError(e)
+        }'''
+    setup_replacement = '''        // MTSFlix: Setup wizard bypassed entirely
+        Log.i("MTSFlix", "Setup wizard bypassed entirely")'''
+        
+    if setup_target in content:
+        content = content.replace(setup_target, setup_replacement)
+        changed = True
+        print("  OK: Setup wizard navigation disabled")
+
     if changed:
         open(main_path, 'w', encoding='utf-8').write(content)
         print("  OK: MainActivity.kt patched successfully")
@@ -468,7 +492,7 @@ try:
         <activity
             android:name="com.mts.mtsflix.license.LicenseCheckActivity"
             android:exported="true"
-            android:screenOrientation="portrait"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboard|keyboardHidden"
             android:theme="@style/AppTheme">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

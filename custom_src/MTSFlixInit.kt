@@ -39,13 +39,13 @@ object MTSFlixInit {
         val key = "HAS_DONE_SETUP"
         try {
             context.getSharedPreferences("rebuild_preference", Context.MODE_PRIVATE)
-                .edit().putBoolean(key, true).apply()
+                .edit().putString(key, "true").apply()
         } catch (e: Exception) {
             Log.w("MTSFlix", "markSetupComplete rebuild_preference: ${e.message}")
         }
         try {
             PreferenceManager.getDefaultSharedPreferences(context)
-                .edit().putBoolean(key, true).apply()
+                .edit().putString(key, "true").apply()
         } catch (e: Exception) {
             Log.w("MTSFlix", "markSetupComplete defaultPrefs: ${e.message}")
         }

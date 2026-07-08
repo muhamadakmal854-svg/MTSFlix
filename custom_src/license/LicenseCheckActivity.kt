@@ -51,6 +51,25 @@ class LicenseCheckActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // Set orientation based on device type (Phone: Portrait, TV: Landscape, Tablet: Unspecified)
+        try {
+            val uiModeManager = getSystemService(Context.UI_MODE_SERVICE) as android.app.UiModeManager
+            if (uiModeManager.currentModeType == android.content.res.Configuration.UI_MODE_TYPE_TELEVISION) {
+                requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+            } else {
+                val isTablet = (resources.configuration.screenLayout and 
+                        android.content.res.Configuration.SCREENLAYOUT_SIZE_MASK) >= 
+                        android.content.res.Configuration.SCREENLAYOUT_SIZE_LARGE
+                if (isTablet) {
+                    requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+                } else {
+                    requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+                }
+            }
+        } catch (e: Exception) {
+            requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+        }
+
         // Set status bar dark
         window.statusBarColor = Color.parseColor("#0D0D0D")
         window.decorView.systemUiVisibility = 0
@@ -186,14 +205,15 @@ class LicenseCheckActivity : AppCompatActivity() {
     private fun markSetupComplete() {
         // CloudStream DataStore uses SharedPreferences file named "rebuild_preference"
         // (PREFERENCES_NAME in DataStore.kt). HAS_DONE_SETUP_KEY = "HAS_DONE_SETUP".
+        // DataStore reads everything as JSON literals (strings), so we must write booleans as "true" string.
         val key = "HAS_DONE_SETUP"
         try {
             getSharedPreferences("rebuild_preference", android.content.Context.MODE_PRIVATE)
-                .edit().putBoolean(key, true).apply()
+                .edit().putString(key, "true").apply()
         } catch (e: Exception) { android.util.Log.w("MTSFlix", "setup bypass fail: ${e.message}") }
         try {
             androidx.preference.PreferenceManager.getDefaultSharedPreferences(this)
-                .edit().putBoolean(key, true).apply()
+                .edit().putString(key, "true").apply()
         } catch (e: Exception) { android.util.Log.w("MTSFlix", "setup bypass2 fail: ${e.message}") }
     }
 
