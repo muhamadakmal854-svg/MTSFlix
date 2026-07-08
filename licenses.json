@@ -30,6 +30,20 @@
       "deviceInfo": "Honor",
       "note": "active",
       "lastModified": "2026-07-07T11:22:54"
+    },
+    {
+      "id": "LIC-20260708-7437A95D",
+      "deviceCode": "MTSF-7D37-FC44-51E1",
+      "username": "Nox Player",
+      "email": "noxpayer",
+      "expiredAt": "2027-07-08",
+      "active": true,
+      "banned": false,
+      "bannedReason": "",
+      "addedAt": "2026-07-08",
+      "deviceInfo": "Tidak dinyatakan",
+      "note": "",
+      "lastModified": "2026-07-08T14:28:21"
     }
   ]
 }
