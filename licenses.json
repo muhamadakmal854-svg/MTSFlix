@@ -1,7 +1,7 @@
 {
   "version": 1,
   "description": "MTSFlix Device License Registry",
-  "lastUpdated": "2026-07-08",
+  "lastUpdated": "2026-07-09",
   "licenses": [
     {
       "id": "LIC-EXAMPLE-00000001",
@@ -58,6 +58,20 @@
       "deviceInfo": "XIAOMI STICK 1080P",
       "note": "UNTUK RUMAH AKU",
       "lastModified": "2026-07-08T20:15:00"
+    },
+    {
+      "id": "LIC-20260709-145F3D28",
+      "deviceCode": "MTSF-57E2-7F9A-1C42",
+      "username": "FIQ",
+      "email": "fiq@gmail.com",
+      "expiredAt": "2099-07-09",
+      "active": true,
+      "banned": false,
+      "bannedReason": "",
+      "addedAt": "2026-07-09",
+      "deviceInfo": "Tidak Dinyatakan",
+      "note": "Done",
+      "lastModified": "2026-07-09T07:56:15"
     }
   ]
 }
