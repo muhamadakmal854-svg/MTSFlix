@@ -1,7 +1,7 @@
 {
   "version": 1,
   "description": "MTSFlix Device License Registry",
-  "lastUpdated": "2026-07-09",
+  "lastUpdated": "2026-07-11",
   "licenses": [
     {
       "id": "LIC-EXAMPLE-00000001",
@@ -72,6 +72,20 @@
       "deviceInfo": "Tidak Dinyatakan",
       "note": "Done",
       "lastModified": "2026-07-09T07:56:15"
+    },
+    {
+      "id": "LIC-20260711-6E01A400",
+      "deviceCode": "MTSF-7DA3-DE9D-8572",
+      "username": "TV DALAM BILIK AKU",
+      "email": "tvdalam",
+      "expiredAt": "2099-12-30",
+      "active": true,
+      "banned": false,
+      "bannedReason": "",
+      "addedAt": "2026-07-11",
+      "deviceInfo": "PINERGY",
+      "note": "DONE",
+      "lastModified": "2026-07-11T12:09:14"
     }
   ]
 }
