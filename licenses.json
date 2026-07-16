@@ -44,6 +44,20 @@
       "deviceInfo": "Tidak dinyatakan",
       "note": "",
       "lastModified": "2026-07-08T14:28:21"
+    },
+        {
+      "id": "LIC-20260716-D69C2CBC",
+      "deviceCode": "MTSF-2841-A5E5-9474",
+      "username": "K.ANUAR",
+      "email": "ANUAR",
+      "expiredAt": "2099-12-30",
+      "active": true,
+      "banned": false,
+      "bannedReason": "",
+      "addedAt": "2026-07-16",
+      "deviceInfo": "Tidak dinyatakan",
+      "note": "",
+      "lastModified": "2026-07-16T13:46:53"
     }
   ]
 }
