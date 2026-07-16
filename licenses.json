@@ -45,11 +45,53 @@
       "note": "",
       "lastModified": "2026-07-08T14:28:21"
     },
-        {
+    {
+      "id": "LIC-20260708-5CAF7490",
+      "deviceCode": "MTSF-4F2A-0073-91BA",
+      "username": "TV RUANG TAMU AKU",
+      "email": "tvruangtamuaku@gmail.com",
+      "expiredAt": "2099-12-30",
+      "active": true,
+      "banned": false,
+      "bannedReason": "",
+      "addedAt": "2026-07-08",
+      "deviceInfo": "XIAOMI STICK 1080P",
+      "note": "UNTUK RUMAH AKU",
+      "lastModified": "2026-07-08T20:15:00"
+    },
+    {
+      "id": "LIC-20260709-145F3D28",
+      "deviceCode": "MTSF-57E2-7F9A-1C42",
+      "username": "FIQ",
+      "email": "fiq@gmail.com",
+      "expiredAt": "2099-07-09",
+      "active": true,
+      "banned": false,
+      "bannedReason": "",
+      "addedAt": "2026-07-09",
+      "deviceInfo": "Tidak Dinyatakan",
+      "note": "Done",
+      "lastModified": "2026-07-09T07:56:15"
+    },
+    {
+      "id": "LIC-20260711-6E01A400",
+      "deviceCode": "MTSF-7DA3-DE9D-8572",
+      "username": "TV DALAM BILIK AKU",
+      "email": "tvdalam",
+      "expiredAt": "2099-12-30",
+      "active": true,
+      "banned": false,
+      "bannedReason": "",
+      "addedAt": "2026-07-11",
+      "deviceInfo": "PINERGY",
+      "note": "DONE",
+      "lastModified": "2026-07-11T12:09:14"
+    },
+    {
       "id": "LIC-20260716-D69C2CBC",
       "deviceCode": "MTSF-2841-A5E5-9474",
       "username": "K.ANUAR",
-      "email": "ANUAR",
+      "email": "anuar@gmail.com",
       "expiredAt": "2099-12-30",
       "active": true,
       "banned": false,
@@ -59,7 +101,7 @@
       "note": "",
       "lastModified": "2026-07-16T13:46:53"
     },
-        {
+    {
       "id": "LIC-20260716-D2E2763C",
       "deviceCode": "MTSF-6073-E4B7-5DA7",
       "username": "EN RENGOLD",
