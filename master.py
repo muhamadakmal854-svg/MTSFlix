@@ -558,7 +558,7 @@ class GitHubManager:
             # Pull & Rebase in case remote has changes (e.g. from GitHub Actions builds)
             branch = Config.get("branch","main")
             print("  Menyelaraskan dengan remote (git pull --rebase)...")
-            pull_result = subprocess.run(["git","pull","--rebase","origin", branch],
+            pull_result = subprocess.run(["git","pull","--rebase","--autostash","origin", branch],
                                          capture_output=True, text=True)
             if pull_result.returncode != 0:
                 err(f"Gagal menyelaraskan dengan remote (pull --rebase): {pull_result.stderr}")
