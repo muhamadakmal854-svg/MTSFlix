@@ -1,7 +1,7 @@
 {
   "version": 1,
   "description": "MTSFlix Device License Registry",
-  "lastUpdated": "2026-07-11",
+  "lastUpdated": "2026-07-16",
   "licenses": [
     {
       "id": "LIC-EXAMPLE-00000001",
@@ -86,20 +86,20 @@
       "deviceInfo": "PINERGY",
       "note": "DONE",
       "lastModified": "2026-07-11T12:09:14"
-    }.
-        {
-      "id": "LIC-20260711-6E01A500",
-      "deviceCode": "MTSF-7DA3-DE9D-8572",
+    },
+    {
+      "id": "LIC-20260716-D69C2CBC",
+      "deviceCode": "MTSF-2841-A5E5-9474",
       "username": "K.ANUAR",
-      "email": "anuar98@gmail.com",
-      "expiredAt": "2099-12-30",
+      "email": "anuar@gmail.com",
+      "expiredAt": "2029-12-30",
       "active": true,
       "banned": false,
       "bannedReason": "",
       "addedAt": "2026-07-16",
-      "deviceInfo": "PINERGY",
-      "note": "DONE",
-      "lastModified": "2026-07-116T13:36:14"
+      "deviceInfo": "Tidak dinyatakan",
+      "note": "",
+      "lastModified": "2026-07-16T13:40:00"
     }
   ]
 }
