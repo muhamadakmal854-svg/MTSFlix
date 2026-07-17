@@ -1,7 +1,7 @@
 {
   "version": 1,
   "description": "MTSFlix Device License Registry",
-  "lastUpdated": "2026-07-16",
+  "lastUpdated": "2026-07-17",
   "licenses": [
     {
       "id": "LIC-EXAMPLE-00000001",
@@ -114,6 +114,20 @@
       "deviceInfo": "Tidak dinyatakan",
       "note": "",
       "lastModified": "2026-07-16T20:16:54"
+    },
+    {
+      "id": "LIC-20260717-46614A2E",
+      "deviceCode": "MTSF-734E-69F2-AC90",
+      "username": "MAT DEN",
+      "email": "matden@gmail.com",
+      "expiredAt": "2099-12-30",
+      "active": true,
+      "banned": false,
+      "bannedReason": "",
+      "addedAt": "2026-07-17",
+      "deviceInfo": "Tidak dinyatakan",
+      "note": "",
+      "lastModified": "2026-07-17T20:12:41"
     }
   ]
 }
