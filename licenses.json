@@ -1,7 +1,7 @@
 {
   "version": 1,
   "description": "MTSFlix Device License Registry",
-  "lastUpdated": "2026-07-17",
+  "lastUpdated": "2026-07-21",
   "licenses": [
     {
       "id": "LIC-EXAMPLE-00000001",
@@ -128,6 +128,20 @@
       "deviceInfo": "Tidak dinyatakan",
       "note": "",
       "lastModified": "2026-07-17T20:12:41"
+    },
+    {
+      "id": "LIC-20260721-D0BEBC5C",
+      "deviceCode": "MTSF-ACA3-9DFE-04D7",
+      "username": "Cukman",
+      "email": "cukman@gmail.com",
+      "expiredAt": "2099-12-30",
+      "active": true,
+      "banned": false,
+      "bannedReason": "",
+      "addedAt": "2026-07-21",
+      "deviceInfo": "OPPO",
+      "note": "ACTIVATED",
+      "lastModified": "2026-07-21T08:42:25"
     }
   ]
 }
