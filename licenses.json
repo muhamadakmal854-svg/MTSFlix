@@ -156,6 +156,20 @@
       "deviceInfo": "Tidak dinyatakan",
       "note": "",
       "lastModified": "2026-07-21T09:34:06"
+    },
+    {
+      "id": "LIC-20260721-8195DFAC",
+      "deviceCode": "MTSF-1D25-D07E-76FF",
+      "username": "mat",
+      "email": "mat@gmail.com",
+      "expiredAt": "2099-12-30",
+      "active": true,
+      "banned": false,
+      "bannedReason": "",
+      "addedAt": "2026-07-21",
+      "deviceInfo": "OPPO F11 PRO",
+      "note": "ACTIVATED",
+      "lastModified": "2026-07-21T16:43:38"
     }
   ]
 }
