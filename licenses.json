@@ -142,6 +142,20 @@
       "deviceInfo": "OPPO",
       "note": "ACTIVATED",
       "lastModified": "2026-07-21T08:42:25"
+    },
+    {
+      "id": "LIC-20260721-A7BE21C8",
+      "deviceCode": "MTSF-06BC-2A67-D23E",
+      "username": "@ald1S",
+      "email": "ald1S@gmail.com",
+      "expiredAt": "2031-12-30",
+      "active": true,
+      "banned": false,
+      "bannedReason": "",
+      "addedAt": "2026-07-21",
+      "deviceInfo": "Tidak dinyatakan",
+      "note": "",
+      "lastModified": "2026-07-21T09:34:06"
     }
   ]
 }
