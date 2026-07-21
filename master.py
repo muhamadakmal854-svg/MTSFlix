@@ -147,7 +147,71 @@ class LicenseManager:
                 json.dumps(data, indent=2, ensure_ascii=False), encoding='utf-8'
             )
             return data
-        return json.loads(LICENSE_FILE.read_text(encoding='utf-8'))
+        try:
+            content = LICENSE_FILE.read_text(encoding='utf-8')
+            return json.loads(content)
+        except Exception as e:
+            warn(f"Pangkalan data licenses.json terdapat ralat/konflik ({e}). Membaiki secara automatik...")
+            return LicenseManager._repair_and_load()
+
+    @staticmethod
+    def _repair_and_load() -> dict:
+        # 1. Batal rebase jika tersangkut
+        try:
+            subprocess.run(["git", "rebase", "--abort"], capture_output=True, cwd=BASE_DIR)
+        except Exception:
+            pass
+
+        # 2. Cuba ambil fail bersih dari origin/main
+        branch = Config.get("branch", "main")
+        try:
+            subprocess.run(["git", "fetch", "origin", branch], capture_output=True, cwd=BASE_DIR)
+            r = subprocess.run(["git", "show", f"origin/{branch}:licenses.json"], capture_output=True, text=True, cwd=BASE_DIR)
+            if r.returncode == 0 and r.stdout:
+                data = json.loads(r.stdout)
+                LicenseManager._save(data)
+                ok("Berjaya memulihkan licenses.json dari remote!")
+                return data
+        except Exception:
+            pass
+
+        # 3. Imbas entri JSON yang sah dari fail rosak
+        try:
+            content = LICENSE_FILE.read_text(encoding='utf-8', errors='ignore')
+            matches = re.findall(r'\{[^{}]*"deviceCode"[^{}]*\}', content)
+            licenses = []
+            seen_codes = set()
+            for m in matches:
+                try:
+                    obj = json.loads(m)
+                    code = obj.get("deviceCode")
+                    if code and code not in seen_codes:
+                        seen_codes.add(code)
+                        licenses.append(obj)
+                except Exception:
+                    pass
+            if licenses:
+                data = {
+                    "version": 1,
+                    "description": "MTSFlix Device License Registry",
+                    "lastUpdated": date.today().strftime("%Y-%m-%d"),
+                    "licenses": licenses
+                }
+                LicenseManager._save(data)
+                ok(f"Berjaya memulihkan {len(licenses)} lesen daripada fail rosak!")
+                return data
+        except Exception:
+            pass
+
+        # 4. Template asas jika semua gagal
+        data = {
+            "version": 1,
+            "description": "MTSFlix Device License Registry",
+            "lastUpdated": date.today().strftime("%Y-%m-%d"),
+            "licenses": []
+        }
+        LicenseManager._save(data)
+        return data
 
     @staticmethod
     def _save(data: dict):
@@ -517,6 +581,51 @@ class LicenseManager:
 # ═══════════════════════════════════════════════════════════════════════════
 class GitHubManager:
 
+    @staticmethod
+    def _smart_merge_licenses(branch: str = "main"):
+        """Menggabungkan fail licenses.json remote dengan tempatan dalam Python sebelum commit untuk mengelakkan konflik Git."""
+        try:
+            r = subprocess.run(["git", "show", f"origin/{branch}:licenses.json"], capture_output=True, text=True, cwd=BASE_DIR)
+            if r.returncode != 0 or not r.stdout:
+                return
+            remote_data = json.loads(r.stdout)
+            local_data = LicenseManager._load()
+
+            remote_licenses = {l.get("deviceCode"): l for l in remote_data.get("licenses", []) if l.get("deviceCode")}
+            local_licenses = {l.get("deviceCode"): l for l in local_data.get("licenses", []) if l.get("deviceCode")}
+
+            merged_dict = dict(remote_licenses)
+            for code, local_item in local_licenses.items():
+                if code not in merged_dict:
+                    merged_dict[code] = local_item
+                else:
+                    remote_item = merged_dict[code]
+                    r_mod = remote_item.get("lastModified", "")
+                    l_mod = local_item.get("lastModified", "")
+                    if l_mod >= r_mod:
+                        merged_dict[code] = local_item
+
+            local_data["licenses"] = list(merged_dict.values())
+            LicenseManager._save(local_data)
+        except Exception:
+            pass
+
+    @staticmethod
+    def _auto_resolve_rebase_conflict(branch: str = "main") -> bool:
+        """Membaiki fail licenses.json yang berkonflik secara automatik dan meneruskan rebase."""
+        try:
+            data = LicenseManager._repair_and_load()
+            LicenseManager._save(data)
+            subprocess.run(["git", "add", "licenses.json"], cwd=BASE_DIR, check=True)
+            r = subprocess.run(["git", "-c", "core.editor=true", "rebase", "--continue"], capture_output=True, cwd=BASE_DIR)
+            return r.returncode == 0
+        except Exception:
+            try:
+                subprocess.run(["git", "rebase", "--abort"], capture_output=True, cwd=BASE_DIR)
+            except Exception:
+                pass
+            return False
+
     # ── PUSH KE GITHUB ────────────────────────────────────────────────────
     @staticmethod
     def push(message: str = None, files: List[str] = None) -> bool:
@@ -540,7 +649,16 @@ class GitHubManager:
                 info("Jalankan: git init && git remote add origin <url>")
                 return False
 
-            # Stage fail-fail yang berubah
+            branch = Config.get("branch","main")
+
+            # 1. Fetch remote dulu & gabungkan JSON secara pintar
+            print("  Menyelaraskan dengan remote (git fetch)...")
+            subprocess.run(["git", "fetch", "origin", branch], capture_output=True, text=True)
+
+            if "licenses.json" in files:
+                GitHubManager._smart_merge_licenses(branch)
+
+            # 2. Stage fail-fail yang berubah
             for f in files:
                 fp = BASE_DIR / f
                 if fp.exists():
@@ -552,20 +670,25 @@ class GitHubManager:
                 warn("Tiada perubahan untuk di-commit.")
                 return True
 
-            # Commit
+            # 3. Commit
             subprocess.run(["git","commit","-m", message], check=True)
 
-            # Pull & Rebase in case remote has changes (e.g. from GitHub Actions builds)
-            branch = Config.get("branch","main")
+            # 4. Pull & Rebase dengan autostash
             print("  Menyelaraskan dengan remote (git pull --rebase)...")
             pull_result = subprocess.run(["git","pull","--rebase","--autostash","origin", branch],
                                          capture_output=True, text=True)
             if pull_result.returncode != 0:
-                err(f"Gagal menyelaraskan dengan remote (pull --rebase): {pull_result.stderr}")
-                info("Sila jalankan 'git pull' secara manual atau selesaikan konflik jika ada.")
+                # Membaiki sebarang konflik rebase secara automatik
+                if GitHubManager._auto_resolve_rebase_conflict(branch):
+                    pull_result = subprocess.run(["git","pull","--rebase","--autostash","origin", branch],
+                                                 capture_output=True, text=True)
+
+            if pull_result.returncode != 0:
+                subprocess.run(["git", "rebase", "--abort"], capture_output=True)
+                err(f"Gagal menyelaraskan dengan remote: {pull_result.stderr}")
                 return False
 
-            # Push
+            # 5. Push
             result = subprocess.run(["git","push","origin", branch],
                                     capture_output=True, text=True)
             if result.returncode != 0:
