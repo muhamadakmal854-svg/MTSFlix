@@ -184,6 +184,20 @@
       "deviceInfo": "Blackshark 5 Pro",
       "note": "VIP",
       "lastModified": "2026-07-22T16:01:26"
+    },
+    {
+      "id": "LIC-20260722-9762FCD5",
+      "deviceCode": "MTSF-4EA9-5680-D126",
+      "username": "FIQ",
+      "email": "fiq@gmail.com",
+      "expiredAt": "2099-12-30",
+      "active": true,
+      "banned": false,
+      "bannedReason": "",
+      "addedAt": "2026-07-22",
+      "deviceInfo": "Android TV",
+      "note": "VIP",
+      "lastModified": "2026-07-22T16:31:15"
     }
   ]
 }
