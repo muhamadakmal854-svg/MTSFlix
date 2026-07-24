@@ -1,7 +1,7 @@
 {
   "version": 1,
   "description": "MTSFlix Device License Registry",
-  "lastUpdated": "2026-07-22",
+  "lastUpdated": "2026-07-24",
   "licenses": [
     {
       "id": "LIC-EXAMPLE-00000001",
@@ -198,6 +198,20 @@
       "deviceInfo": "Android TV",
       "note": "VIP",
       "lastModified": "2026-07-22T16:31:15"
+    },
+    {
+      "id": "LIC-20260724-B7580C67",
+      "deviceCode": "MTSF-834C-C832-9A71",
+      "username": "ADMIN MTS",
+      "email": "muhamadakmal854@gmail.com",
+      "expiredAt": "2999-12-30",
+      "active": true,
+      "banned": false,
+      "bannedReason": "",
+      "addedAt": "2026-07-24",
+      "deviceInfo": "Realme C100",
+      "note": "VIP",
+      "lastModified": "2026-07-24T17:43:11"
     }
   ]
 }
