@@ -1,6 +1,6 @@
 #!/bin/bash
 # ==============================================================
-#  MTSFlix Customization Script v4.0 (Zero Setup Screen & Direct KV Cloud Sync)
+#  MTSFlix Customization Script v4.1 (Clean Extensions & Hidden Accounts Section)
 #  Patches CloudStream 3 → MTSFlix
 # ==============================================================
 set -e
@@ -219,7 +219,7 @@ if os.path.exists(dsh_path):
 PYEOF
 
 # --- 5. Patch MainActivity.kt, SetupFragmentExtensions.kt & SetupFragmentLanguage.kt ---
-echo "[5/12] Patching setup fragments to FORCE BYPASS Extensions screen..."
+echo "[5/12] Patching setup fragments to FORCE BYPASS Extensions screen without forcing auto-download on launch..."
 python3 - << 'PYEOF'
 import os, re
 cs_dir = os.environ.get('CS_DIR','cloudstream')
@@ -231,12 +231,6 @@ if os.path.exists(ext_path):
     t1 = r'override fun onBindingCreated\(binding: FragmentSetupExtensionsBinding\) \{'
     r1 = '''override fun onBindingCreated(binding: FragmentSetupExtensionsBinding) {
         safe {
-            try {
-                val repositories = RepositoryManager.getRepositories() + PREBUILT_REPOSITORIES
-                for (repo in repositories) {
-                    PluginsViewModel.downloadAll(activity, repo, null)
-                }
-            } catch (e: Exception) {}
             findNavController().navigate(R.id.navigation_home)
             return@safe
         }'''
@@ -303,14 +297,6 @@ if os.path.exists(main_path):
 
     r3_1 = '''        try {
             setKey(HAS_DONE_SETUP_KEY, true)
-            ioSafe {
-                try {
-                    val repos = com.lagradost.cloudstream3.plugins.RepositoryManager.getRepositories()
-                    for (r in repos) {
-                        com.lagradost.cloudstream3.ui.settings.extensions.PluginsViewModel.downloadAll(this@MainActivity, r, null)
-                    }
-                } catch (e: Exception) {}
-            }
         } catch (e: Exception) {
             logError(e)
         }'''
@@ -357,13 +343,13 @@ if os.path.exists(main_path):
         print("  OK: MainActivity.kt patched successfully")
 PYEOF
 
-# --- 6. Patch SettingsFragment.kt ---
-echo "[6/12] Patching SettingsFragment.kt to ensure Extensions option is VISIBLE..."
+# --- 6. Patch SettingsFragment.kt & settings_account.xml -------------------
+echo "[6/12] Hiding Accounts category in settings_account.xml..."
 python3 - << 'PYEOF'
-import os
+import os, re
 cs_dir = os.environ.get('CS_DIR','cloudstream')
-settings_frag_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/ui/settings/SettingsFragment.kt'
 
+settings_frag_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/ui/settings/SettingsFragment.kt'
 if os.path.exists(settings_frag_path):
     content = open(settings_frag_path, encoding='utf-8').read()
     target = 'settingsExtensions.visibility = View.GONE'
@@ -372,6 +358,14 @@ if os.path.exists(settings_frag_path):
         content = content.replace(target, replacement)
         open(settings_frag_path, 'w', encoding='utf-8').write(content)
         print("  OK: Ensured Extensions option is VISIBLE in SettingsFragment")
+
+xml_acc_path = cs_dir + '/app/src/main/res/xml/settings_account.xml'
+if os.path.exists(xml_acc_path):
+    c = open(xml_acc_path, encoding='utf-8').read()
+    # Remove pref_category_accounts (MAL, Kitsu, AniList, Simkl, OpenSubtitles, SubDL, AnimeSkip, skip account prompt)
+    c = re.sub(r'<PreferenceCategory\s+android:title="@string/pref_category_accounts">.*?</PreferenceCategory>', '', c, flags=re.DOTALL)
+    open(xml_acc_path, 'w', encoding='utf-8').write(c)
+    print("  OK: Removed Accounts section from settings_account.xml")
 PYEOF
 
 # --- 7. Patch strings and settings_general.xml ----------------------------
