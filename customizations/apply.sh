@@ -1,6 +1,6 @@
 #!/bin/bash
 # ==============================================================
-#  MTSFlix Customization Script v3.4 (Fresh Minimal Rebuild)
+#  MTSFlix Customization Script v3.5 (Auto Update & Adult Filter)
 #  Patches CloudStream 3 → MTSFlix
 # ==============================================================
 set -e
@@ -192,8 +192,8 @@ if os.path.exists(repo_mgr_path):
         print("  OK: RepositoryManager.kt patched successfully")
 PYEOF
 
-# --- 5. Patch MainActivity.kt for permanent repo & setup wizard bypass ---
-echo "[5/12] Patching MainActivity.kt for permanent repo..."
+# --- 5. Patch MainActivity.kt for permanent repo, setup bypass & AUTO UPDATE CHECK ---
+echo "[5/12] Patching MainActivity.kt for permanent repo & automatic update pop-up..."
 python3 - << 'PYEOF'
 import os, re
 cs_dir = os.environ.get('CS_DIR','cloudstream')
@@ -246,9 +246,14 @@ if os.path.exists(main_path):
         content = new_content
         changed = True
 
+    # Force auto update popup on every launch
+    if 'runAutoUpdate()' in content:
+        content = content.replace('runAutoUpdate()', 'runAutoUpdate(checkAutoUpdate = false)')
+        changed = True
+
     if changed:
         open(main_path, 'w', encoding='utf-8').write(content)
-        print("  OK: MainActivity.kt patched successfully")
+        print("  OK: MainActivity.kt patched with auto-update pop-up on launch")
 PYEOF
 
 # --- 6. Patch SettingsFragment.kt ---
@@ -367,13 +372,13 @@ except Exception as e:
 PYEOF
 fi
 
-# --- 12. RIGID 18+ / 18x / NSFW / KELAS BINTANG / INEM FILTER AT ALL LEVELS ---
-echo "[12/12] Patching RIGID 18+ / 18x / NSFW / Kelas Bintang filters across all UI components..."
+# --- 12. COMPREHENSIVE 18+ / 18x / HENTAI / VIVAMAX TRACE & BLOCK FILTER ---
+echo "[12/12] Patching COMPREHENSIVE adult, Hentai & Vivamax item/row filters..."
 python3 - << 'PYEOF'
 import os, re
 cs_dir = os.environ.get('CS_DIR','cloudstream')
 
-# A. HomeViewModel.kt: Filter out 18+ / Kelas Bintang / Inem / Vivamax / Bokep / Hentai / Semi / Adult categories & items
+# HomeViewModel.kt: Filter out all 18+ categories AND individual Hentai/Vivamax items
 hvm_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/ui/home/HomeViewModel.kt'
 if os.path.exists(hvm_path):
     c = open(hvm_path, encoding='utf-8').read()
@@ -384,7 +389,8 @@ if os.path.exists(hvm_path):
                                           rowName.contains("adult") || rowName.contains("nsfw") || rowName.contains("bokep") ||
                                           rowName.contains("hentai") || rowName.contains("porn") || rowName.contains("vivamax") ||
                                           rowName.contains("semi") || rowName.contains("jav") || rowName.contains("xxx") || rowName.contains("sex") ||
-                                          rowName.contains("kelas bintang") || rowName.contains("kelasbintang") || rowName.contains("inem") || rowName.contains("bintang")
+                                          rowName.contains("kelas bintang") || rowName.contains("kelasbintang") || rowName.contains("inem") || rowName.contains("bintang") ||
+                                          rowName.contains("philiphines") || rowName.contains("philippines") || rowName.contains("philippine") || rowName.contains("tagalog 18")
                             if (is18Row) return@forEach
                             
                             val cleanItems = list.list.filter { item ->
@@ -394,16 +400,26 @@ if os.path.exists(hvm_path):
                                                iName.contains("hentai") || iName.contains("vivamax") || iName.contains("semi") ||
                                                iName.contains("inem") || iName.contains("kelas bintang") || iName.contains("kelasbintang") ||
                                                iName.contains("onaj") || iName.contains("someya") || iName.contains("jav") ||
-                                               iUrl.contains("18+") || iUrl.contains("18x") || iUrl.contains("bokep") || iUrl.contains("hentai") || iUrl.contains("vivamax") || iUrl.contains("semi") || iUrl.contains("inem") || iUrl.contains("kelasbintang")
+                                               iName.contains("love wa gal") || iName.contains("gal kara") || iName.contains("hamehara") ||
+                                               iName.contains("sekuhara") || iName.contains("enjo kouhai") || iName.contains("enjo") ||
+                                               iName.contains("kouhai") || iName.contains("nuki nuki") || iName.contains("nuki") ||
+                                               iName.contains("zupposism") || iName.contains("paihame") || iName.contains("hajimaru unmei") ||
+                                               iName.contains("donselya") || iName.contains("kesong puti") || iName.contains("kesong") ||
+                                               iName.contains("kulong") || iName.contains("virgin") || iName.contains("netorare") ||
+                                               iName.contains("ntr") || iName.contains("taimanin") || iName.contains("chikan") ||
+                                               iName.contains("oppai") || iName.contains("oyakodon") ||
+                                               iUrl.contains("18+") || iUrl.contains("18x") || iUrl.contains("bokep") || iUrl.contains("hentai") ||
+                                               iUrl.contains("vivamax") || iUrl.contains("semi") || iUrl.contains("inem") || iUrl.contains("kelasbintang") ||
+                                               iUrl.contains("hamehara") || iUrl.contains("enjo") || iUrl.contains("nuki") || iUrl.contains("paihame") || iUrl.contains("donselya")
                                 !is18Item
                             }
                             val list = list.copy(list = java.util.concurrent.CopyOnWriteArrayList(cleanItems))'''
     if target_row in c and 'is18Row' not in c:
         c = c.replace(target_row, replacement_row)
         open(hvm_path, 'w', encoding='utf-8').write(c)
-        print("  OK: Patched HomeViewModel.kt to filter 18+ & Kelas Bintang homepage rows and items")
+        print("  OK: Patched HomeViewModel.kt to filter 18+ Hentai/Vivamax categories & items")
 
-# B. PluginsViewModel.kt: Hide 18+ plugins in Extensions Download screen
+# PluginsViewModel.kt: Hide 18+ plugins in Extensions Download screen
 pvm_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/ui/settings/extensions/PluginsViewModel.kt'
 if os.path.exists(pvm_path):
     c = open(pvm_path, encoding='utf-8').read()
@@ -420,7 +436,7 @@ if os.path.exists(pvm_path):
         open(pvm_path, 'w', encoding='utf-8').write(c)
         print("  OK: Patched PluginsViewModel.kt to filter 18+ extensions")
 
-# C. PluginManager.kt: Prevent loading 18+ plugins
+# PluginManager.kt: Prevent loading 18+ plugins
 pm_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/plugins/PluginManager.kt'
 if os.path.exists(pm_path):
     c = open(pm_path, encoding='utf-8').read()
@@ -441,7 +457,7 @@ if os.path.exists(pm_path):
         open(pm_path, 'w', encoding='utf-8').write(c)
         print("  OK: Patched PluginManager.kt to omit 18+ plugins")
 
-# D. MainAPI.kt: Filter apis list
+# MainAPI.kt: Filter apis list
 mainapi_path = cs_dir + '/library/src/commonMain/kotlin/com/lagradost/cloudstream3/MainAPI.kt'
 if os.path.exists(mainapi_path):
     c = open(mainapi_path, encoding='utf-8').read()
@@ -461,7 +477,7 @@ if os.path.exists(mainapi_path):
         open(mainapi_path, 'w', encoding='utf-8').write(c)
         print("  OK: Filtered 18+ providers in MainAPI.kt")
 
-# E. HomeFragment.kt: Comment out NSFW chip
+# HomeFragment.kt: Comment out NSFW chip
 hf_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/ui/home/HomeFragment.kt'
 if os.path.exists(hf_path):
     c = open(hf_path, encoding='utf-8').read()
