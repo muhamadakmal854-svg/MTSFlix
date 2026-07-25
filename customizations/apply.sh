@@ -1,6 +1,6 @@
 #!/bin/bash
 # ==============================================================
-#  MTSFlix Customization Script v3.8 (Zero Setup Screen & Gist Cloud Sync)
+#  MTSFlix Customization Script v4.0 (Zero Setup Screen & Direct KV Cloud Sync)
 #  Patches CloudStream 3 → MTSFlix
 # ==============================================================
 set -e
@@ -101,13 +101,14 @@ else
   echo "  WARN: banner.png not found at root"
 fi
 
-# --- 4. Patch RepositoryManager.kt for legacy MD5 verification fallback ---
-echo "[4/12] Patching RepositoryManager.kt to add legacy MD5 hash validation fallback & ensure permanent MTS Repo..."
+# --- 4. Patch RepositoryManager.kt & DataStoreHelper.kt --------------------
+echo "[4/12] Patching RepositoryManager.kt & DataStoreHelper.kt for instant cloud sync..."
 python3 - << 'PYEOF'
 import os, re
 cs_dir = os.environ.get('CS_DIR','cloudstream')
-repo_mgr_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/plugins/RepositoryManager.kt'
 
+# 1. RepositoryManager.kt
+repo_mgr_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/plugins/RepositoryManager.kt'
 if os.path.exists(repo_mgr_path):
     content = open(repo_mgr_path, encoding='utf-8').read()
     changed = False
@@ -190,6 +191,31 @@ if os.path.exists(repo_mgr_path):
     if changed:
         open(repo_mgr_path, 'w', encoding='utf-8').write(content)
         print("  OK: RepositoryManager.kt patched successfully")
+
+# 2. DataStoreHelper.kt (Auto sync history to cloud on every video watch & resume position change)
+dsh_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/utils/DataStoreHelper.kt'
+if os.path.exists(dsh_path):
+    c = open(dsh_path, encoding='utf-8').read()
+    t_lw = 'isFromDownload\n            )\n        )'
+    r_lw = '''isFromDownload
+            )
+        )
+        try {
+            context?.let { com.mts.mtsflix.cloud.MTSFlixCloudSync.saveWatchHistory(it) }
+        } catch (e: Exception) {}'''
+    if t_lw in c and 'saveWatchHistory' not in c:
+        c = c.replace(t_lw, r_lw, 1)
+    
+    t_vp = 'setKey("$currentAccount/$VIDEO_POS_DUR", id.toString(), PosDur(pos, dur))'
+    r_vp = '''setKey("$currentAccount/$VIDEO_POS_DUR", id.toString(), PosDur(pos, dur))
+        try {
+            context?.let { com.mts.mtsflix.cloud.MTSFlixCloudSync.saveWatchHistory(it) }
+        } catch (e: Exception) {}'''
+    if t_vp in c:
+        c = c.replace(t_vp, r_vp, 1)
+        
+    open(dsh_path, 'w', encoding='utf-8').write(c)
+    print("  OK: DataStoreHelper.kt patched for instant cloud sync on playback")
 PYEOF
 
 # --- 5. Patch MainActivity.kt, SetupFragmentExtensions.kt & SetupFragmentLanguage.kt ---
