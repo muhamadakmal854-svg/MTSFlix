@@ -1,11 +1,11 @@
 {
   "version": "1.0.7",
-  "versionCode": 2,
+  "versionCode": 1,
   "downloadUrl": "https://github.com/muhamadakmal854-svg/MTSFlix/releases/download/v1.0.7/MTSFlix-v1.0.7.apk",
-  "releaseNotes": "MTSFlix v1.0.7 - Extensions Setup Bypass & Auto Watch History Cloud Restore",
+  "releaseNotes": "MTSFlix v1.0.7",
   "mandatory": false,
   "sha256": "",
-  "publishedAt": "2026-07-25T16:45:40Z",
+  "publishedAt": "2026-07-25T16:50:44Z",
   "minAndroid": 21,
   "providerUrl": "https://cdn.jsdelivr.net/gh/muhamadakmal854-svg/Provider@builds/repo.json"
 }
