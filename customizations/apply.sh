@@ -1,6 +1,6 @@
 #!/bin/bash
 # ==============================================================
-#  MTSFlix Customization Script v3.6 (Bypass Extensions & Auto Cloud Sync)
+#  MTSFlix Customization Script v3.7 (Zero Setup Screen & Gist Cloud Sync)
 #  Patches CloudStream 3 → MTSFlix
 # ==============================================================
 set -e
@@ -192,23 +192,57 @@ if os.path.exists(repo_mgr_path):
         print("  OK: RepositoryManager.kt patched successfully")
 PYEOF
 
-# --- 5. Patch MainActivity.kt to BYPASS EXTENSIONS SETUP & auto-sync history ---
-echo "[5/12] Patching MainActivity.kt to bypass Extensions setup screen & auto save history..."
+# --- 5. Patch MainActivity.kt, SetupFragmentExtensions.kt & SetupFragmentLanguage.kt ---
+echo "[5/12] Patching setup fragments to FORCE BYPASS Extensions screen..."
 python3 - << 'PYEOF'
 import os, re
 cs_dir = os.environ.get('CS_DIR','cloudstream')
-main_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/MainActivity.kt'
 
+# 1. SetupFragmentExtensions.kt
+ext_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/ui/setup/SetupFragmentExtensions.kt'
+if os.path.exists(ext_path):
+    c = open(ext_path, encoding='utf-8').read()
+    target = 'override fun onBindingCreated(binding: FragmentSetupExtensionsBinding) {'
+    replacement = '''override fun onBindingCreated(binding: FragmentSetupExtensionsBinding) {
+        safe {
+            try {
+                val repositories = RepositoryManager.getRepositories() + PREBUILT_REPOSITORIES
+                for (repo in repositories) {
+                    PluginsViewModel.downloadAll(activity, repo, null)
+                }
+            } catch (e: Exception) {}
+            findNavController().navigate(R.id.navigation_home)
+        }'''
+    if target in c and 'R.id.navigation_home' not in c:
+        c = c.replace(target, replacement)
+        open(ext_path, 'w', encoding='utf-8').write(c)
+        print("  OK: Patched SetupFragmentExtensions.kt to auto-download and navigate home immediately")
+
+# 2. SetupFragmentLanguage.kt
+lang_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/ui/setup/SetupFragmentLanguage.kt'
+if os.path.exists(lang_path):
+    c = open(lang_path, encoding='utf-8').read()
+    target = 'override fun onBindingCreated(binding: FragmentSetupLanguageBinding) {'
+    replacement = '''override fun onBindingCreated(binding: FragmentSetupLanguageBinding) {
+        safe {
+            setKey(HAS_DONE_SETUP_KEY, true)
+            findNavController().navigate(R.id.navigation_home)
+        }'''
+    if target in c and 'HAS_DONE_SETUP_KEY' not in c:
+        c = c.replace(target, replacement)
+        open(lang_path, 'w', encoding='utf-8').write(c)
+        print("  OK: Patched SetupFragmentLanguage.kt to auto-navigate home immediately")
+
+# 3. MainActivity.kt
+main_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/MainActivity.kt'
 if os.path.exists(main_path):
-    content = open(main_path, encoding='utf-8').read()
+    c = open(main_path, encoding='utf-8').read()
     changed = False
 
     oncreate_target = 'super.onCreate(savedInstanceState)'
-    oncreate_marker = '// MTSFlix: Permanent repo'
-    
-    if oncreate_marker not in content and oncreate_target in content:
+    if 'setKey(HAS_DONE_SETUP_KEY, true)' not in c and oncreate_target in c:
         bypass_code = '''super.onCreate(savedInstanceState)
-        // MTSFlix: Permanent repo
+        setKey(HAS_DONE_SETUP_KEY, true)
         try {
             val repoUrl = "https://cdn.jsdelivr.net/gh/muhamadakmal854-svg/Provider@builds/repo.json"
             val repoName = "MTS Repo"
@@ -218,20 +252,43 @@ if os.path.exists(main_path):
                 val newRepo = com.lagradost.cloudstream3.ui.settings.extensions.RepositoryData(null, repoName, repoUrl)
                 setKey(key, currentRepos + newRepo)
             }
-            setKey(HAS_DONE_SETUP_KEY, true)
         } catch (e: Exception) {}'''
-        content = content.replace(oncreate_target, bypass_code, 1)
+        c = c.replace(oncreate_target, bypass_code, 1)
         changed = True
 
-    # Completely remove navigation to navigation_setup_extensions & navigation_setup_language
+    # Intercept setup screens in destination listener
+    listener_target = 'navController.addOnDestinationChangedListener {'
+    listener_replacement = '''navController.addOnDestinationChangedListener { _, destination, _ ->
+            if (destination.id == R.id.navigation_setup_extensions ||
+                destination.id == R.id.navigation_setup_language ||
+                destination.id == R.id.navigation_setup_provider_languages ||
+                destination.id == R.id.navigation_setup_media ||
+                destination.id == R.id.navigation_setup_layout) {
+                setKey(HAS_DONE_SETUP_KEY, true)
+                ioSafe {
+                    try {
+                        val repos = RepositoryManager.getRepositories()
+                        for (r in repos) {
+                            PluginsViewModel.downloadAll(this@MainActivity, r, null)
+                        }
+                    } catch (e: Exception) {}
+                }
+                try {
+                    navController.navigate(R.id.navigation_home)
+                } catch (e: Exception) {}
+            }'''
+    if listener_target in c and 'destination.id == R.id.navigation_setup_extensions' not in c:
+        c = c.replace(listener_target, listener_replacement)
+        changed = True
+
+    # Remove default setup checks
     pattern_setup = re.compile(r'try\s*\{\s*if\s*\(\s*getKey\(\s*HAS_DONE_SETUP_KEY[\s\S]*?logError\(e\)\s*\}')
-    new_content, count = pattern_setup.subn('// MTSFlix: Setup wizard & extensions screen completely bypassed\n        setKey(HAS_DONE_SETUP_KEY, true)', content)
+    c, count = pattern_setup.subn('// MTSFlix: Setup screens completely bypassed\n        setKey(HAS_DONE_SETUP_KEY, true)', c)
     if count > 0:
-        content = new_content
         changed = True
 
-    # Add auto save history onPause
-    if 'override fun onPause() {' not in content:
+    # Auto save history onPause
+    if 'override fun onPause() {' not in c:
         onpause_code = '''
     override fun onPause() {
         super.onPause()
@@ -240,17 +297,16 @@ if os.path.exists(main_path):
         } catch (e: Exception) {}
     }
 '''
-        content = content.replace('override fun onDestroy() {', onpause_code + '\n    override fun onDestroy() {')
+        c = c.replace('override fun onDestroy() {', onpause_code + '\n    override fun onDestroy() {')
         changed = True
 
-    # Force auto update popup on launch
-    if 'runAutoUpdate()' in content:
-        content = content.replace('runAutoUpdate()', 'runAutoUpdate(checkAutoUpdate = false)')
+    if 'runAutoUpdate()' in c:
+        c = c.replace('runAutoUpdate()', 'runAutoUpdate(checkAutoUpdate = false)')
         changed = True
 
     if changed:
-        open(main_path, 'w', encoding='utf-8').write(content)
-        print("  OK: MainActivity.kt patched (bypassed Extensions setup & auto save history onPause)")
+        open(main_path, 'w', encoding='utf-8').write(c)
+        print("  OK: MainActivity.kt patched for 100% Extensions setup bypass & auto cloud save")
 PYEOF
 
 # --- 6. Patch SettingsFragment.kt ---
