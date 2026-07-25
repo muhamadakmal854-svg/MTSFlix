@@ -1,7 +1,6 @@
 package com.mts.mtsflix.license
 
 import android.accounts.AccountManager
-import android.animation.ObjectAnimator
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -13,21 +12,16 @@ import android.net.Uri
 import android.os.Bundle
 import android.view.Gravity
 import android.view.View
-import android.view.animation.DecelerateInterpolator
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
- * MTSFlix License Check & Google Sign-In Activity
- *
- * This is the LAUNCHER activity. It:
- * 1. Generates/shows device code
- * 2. Verifies against GitHub licenses.json
- * 3. Prompts Google Sign-In for watch history preservation upon verification
- * 4. Launches CloudStream MainActivity
+ * MTSFlix License Check & Google Sign-In Activity v2.0
  */
 class LicenseCheckActivity : AppCompatActivity() {
 
@@ -199,13 +193,22 @@ class LicenseCheckActivity : AppCompatActivity() {
         val savedGoogleEmail = prefs.getString("GOOGLE_ACCOUNT_EMAIL", null)
 
         if (!savedGoogleEmail.isNullOrEmpty()) {
-            tvStatus.text = "✅ Akaun Google Terhubung!"
-            tvMessage.text = "Logged in: $savedGoogleEmail\nSejarah tontonan disimpan secara automatik."
-            btnGoogleSignIn.visibility = View.GONE
-            btnSkipGoogle.visibility = View.GONE
-            lifecycleScope.launch {
-                delay(1200)
-                launchMainApp()
+            tvStatus.text = "🔄 Memulihkan Sejarah Tontonan..."
+            tvStatus.setTextColor(Color.parseColor("#FFA500"))
+
+            lifecycleScope.launch(Dispatchers.IO) {
+                try {
+                    com.mts.mtsflix.cloud.MTSFlixCloudSync.restoreWatchHistory(this@LicenseCheckActivity, savedGoogleEmail)
+                } catch (e: Exception) {}
+
+                withContext(Dispatchers.Main) {
+                    tvStatus.text = "✅ Akaun Google Terhubung!"
+                    tvMessage.text = "Logged in: $savedGoogleEmail\nSejarah tontonan dipulihkan secara automatik."
+                    btnGoogleSignIn.visibility = View.GONE
+                    btnSkipGoogle.visibility = View.GONE
+                    delay(1200)
+                    launchMainApp()
+                }
             }
         } else {
             showGoogleSignInPrompt(username)
@@ -236,7 +239,6 @@ class LicenseCheckActivity : AppCompatActivity() {
             )
             startActivityForResult(intent, REQUEST_CODE_GOOGLE_PICKER)
         } catch (e: Exception) {
-            // Fallback: prompt text dialog input for email
             promptManualEmailInput()
         }
     }
@@ -277,30 +279,34 @@ class LicenseCheckActivity : AppCompatActivity() {
     private fun saveGoogleAccount(email: String) {
         val prefs = androidx.preference.PreferenceManager.getDefaultSharedPreferences(this)
         prefs.edit().putString("GOOGLE_ACCOUNT_EMAIL", email).apply()
-        
-        var restored = false
-        try {
-            restored = com.mts.mtsflix.cloud.MTSFlixCloudSync.restoreWatchHistory(this, email)
-        } catch (e: Exception) {
-            android.util.Log.e("MTSFlix", "Cloud restore error: ${e.message}")
-        }
-        
-        if (restored) {
-            Toast.makeText(this, "Sejarah Tontonan Berjaya Dipulihkan! 🔄✅", Toast.LENGTH_LONG).show()
-        } else {
-            Toast.makeText(this, "Akaun Google ($email) Berjaya Log Masuk! ✅", Toast.LENGTH_LONG).show()
-        }
-        
-        tvStatus.text = "✅ Log Masuk Google Berjaya!"
-        tvStatus.setTextColor(Color.parseColor("#4CAF50"))
-        tvMessage.text = if (restored) "Akaun: $email\nSejarah tontonan dipulihkan secara automatik! 🔄" else "Akaun: $email\nRekod sejarah tontonan selamat disimpan."
 
-        btnGoogleSignIn.visibility = View.GONE
-        btnSkipGoogle.visibility = View.GONE
+        tvStatus.text = "🔄 Memulihkan Sejarah Tontonan..."
+        tvStatus.setTextColor(Color.parseColor("#FFA500"))
 
-        lifecycleScope.launch {
-            delay(1500)
-            launchMainApp()
+        lifecycleScope.launch(Dispatchers.IO) {
+            val restored = try {
+                com.mts.mtsflix.cloud.MTSFlixCloudSync.restoreWatchHistory(this@LicenseCheckActivity, email)
+            } catch (e: Exception) {
+                false
+            }
+
+            withContext(Dispatchers.Main) {
+                if (restored) {
+                    Toast.makeText(this@LicenseCheckActivity, "Sejarah Tontonan Berjaya Dipulihkan! 🔄✅", Toast.LENGTH_LONG).show()
+                } else {
+                    Toast.makeText(this@LicenseCheckActivity, "Akaun Google ($email) Berjaya Log Masuk! ✅", Toast.LENGTH_LONG).show()
+                }
+
+                tvStatus.text = "✅ Log Masuk Google Berjaya!"
+                tvStatus.setTextColor(Color.parseColor("#4CAF50"))
+                tvMessage.text = if (restored) "Akaun: $email\nSejarah tontonan dipulihkan secara automatik! 🔄" else "Akaun: $email\nRekod sejarah tontonan selamat disimpan."
+
+                btnGoogleSignIn.visibility = View.GONE
+                btnSkipGoogle.visibility = View.GONE
+
+                delay(1500)
+                launchMainApp()
+            }
         }
     }
 
@@ -575,14 +581,13 @@ class LicenseCheckActivity : AppCompatActivity() {
         }
         cardView.addView(btnVerify)
 
-        // ── Google Sign-In Button (Promoted after License Verification) ───────
         btnGoogleSignIn = Button(this).apply {
             text = "🌐 Log Masuk Akaun Google"
             textSize = 15f
             setTypeface(null, Typeface.BOLD)
             setTextColor(Color.WHITE)
             val bg = GradientDrawable().apply {
-                setColor(Color.parseColor("#4285F4")) // Google Blue
+                setColor(Color.parseColor("#4285F4"))
                 cornerRadius = dp(12).toFloat()
             }
             background = bg
@@ -597,7 +602,6 @@ class LicenseCheckActivity : AppCompatActivity() {
         }
         cardView.addView(btnGoogleSignIn)
 
-        // ── Skip Google Button ────────────────────────────────────────────────
         btnSkipGoogle = Button(this).apply {
             text = "Teruskan ke MTSFlix ➔"
             textSize = 14f
