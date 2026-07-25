@@ -574,16 +574,24 @@ class LicenseCheckActivity : AppCompatActivity() {
             textSize = 15f
             setTypeface(null, Typeface.BOLD)
             setTextColor(Color.WHITE)
-            val bg = GradientDrawable().apply {
+            background = GradientDrawable().apply {
                 setColor(Color.parseColor("#E50914"))
                 cornerRadius = dp(12).toFloat()
             }
-            background = bg
             isEnabled = false
+            isFocusable = true
             setPadding(dp(16), dp(14), dp(16), dp(14))
             val lp = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
             lp.topMargin = dp(16)
             layoutParams = lp
+            setOnFocusChangeListener { v, hasFocus ->
+                v.animate().scaleX(if (hasFocus) 1.04f else 1f).scaleY(if (hasFocus) 1.04f else 1f).setDuration(120).start()
+                v.background = GradientDrawable().apply {
+                    setColor(Color.parseColor("#E50914"))
+                    cornerRadius = dp(12).toFloat()
+                    if (hasFocus) setStroke(dp(3), Color.WHITE)
+                }
+            }
             setOnClickListener {
                 val code = DeviceCodeManager.getDeviceCode(this@LicenseCheckActivity)
                 startVerification(code)
@@ -596,19 +604,25 @@ class LicenseCheckActivity : AppCompatActivity() {
             textSize = 15f
             setTypeface(null, Typeface.BOLD)
             setTextColor(Color.WHITE)
-            val bg = GradientDrawable().apply {
+            background = GradientDrawable().apply {
                 setColor(Color.parseColor("#4285F4"))
                 cornerRadius = dp(12).toFloat()
             }
-            background = bg
             visibility = View.GONE
+            isFocusable = true
             setPadding(dp(16), dp(14), dp(16), dp(14))
             val lp = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
             lp.topMargin = dp(16)
             layoutParams = lp
-            setOnClickListener {
-                triggerGoogleAccountPicker()
+            setOnFocusChangeListener { v, hasFocus ->
+                v.animate().scaleX(if (hasFocus) 1.04f else 1f).scaleY(if (hasFocus) 1.04f else 1f).setDuration(120).start()
+                v.background = GradientDrawable().apply {
+                    setColor(Color.parseColor("#4285F4"))
+                    cornerRadius = dp(12).toFloat()
+                    if (hasFocus) setStroke(dp(3), Color.WHITE)
+                }
             }
+            setOnClickListener { triggerGoogleAccountPicker() }
         }
         cardView.addView(btnGoogleSignIn)
 
@@ -616,17 +630,17 @@ class LicenseCheckActivity : AppCompatActivity() {
             text = "Teruskan ke MTSFlix ➔"
             textSize = 14f
             setTextColor(Color.parseColor("#888888"))
-            val bg = GradientDrawable().apply {
-                setColor(Color.TRANSPARENT)
-            }
-            background = bg
+            background = GradientDrawable().apply { setColor(Color.TRANSPARENT) }
             visibility = View.GONE
+            isFocusable = true
             val lp = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
             lp.topMargin = dp(8)
             layoutParams = lp
-            setOnClickListener {
-                launchMainApp()
+            setOnFocusChangeListener { v, hasFocus ->
+                v.animate().scaleX(if (hasFocus) 1.04f else 1f).scaleY(if (hasFocus) 1.04f else 1f).setDuration(120).start()
+                (v as Button).setTextColor(if (hasFocus) Color.WHITE else Color.parseColor("#888888"))
             }
+            setOnClickListener { launchMainApp() }
         }
         cardView.addView(btnSkipGoogle)
 
