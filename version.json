@@ -1,11 +1,11 @@
 {
   "version": "1.0.7",
-  "versionCode": 4,
+  "versionCode": 5,
   "downloadUrl": "https://github.com/muhamadakmal854-svg/MTSFlix/releases/download/v1.0.7/MTSFlix-v1.0.7.apk",
-  "releaseNotes": "MTSFlix v1.0.7 - Profile Switch + Cross-Device Auto Sync v6.0",
+  "releaseNotes": "MTSFlix v1.0.7 - Fix AccountManager static method",
   "mandatory": false,
   "sha256": "",
-  "publishedAt": "2026-07-25T19:09:18Z",
+  "publishedAt": "2026-07-25T19:16:40Z",
   "minAndroid": 21,
   "providerUrl": "https://cdn.jsdelivr.net/gh/muhamadakmal854-svg/Provider@builds/repo.json"
 }
