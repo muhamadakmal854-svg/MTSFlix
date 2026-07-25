@@ -36,6 +36,7 @@ class LicenseCheckActivity : AppCompatActivity() {
     private lateinit var btnCopy: Button
     private lateinit var btnGoogleSignIn: Button
     private lateinit var btnSkipGoogle: Button
+    private lateinit var btnQrPairing: Button
     private lateinit var progressBar: ProgressBar
     private lateinit var cardView: LinearLayout
     private lateinit var tvExpiry: TextView
@@ -234,13 +235,20 @@ class LicenseCheckActivity : AppCompatActivity() {
 
         tvStatus.text = "🌐 Log Masuk Akaun Google"
         tvStatus.setTextColor(Color.parseColor("#4285F4"))
-        
+
         tvMessage.visibility = View.VISIBLE
         tvMessage.text = "Sila log masuk dengan Google untuk menyimpan sejarah tontonan & senarai kegemaran supaya rekod tidak hilang sekiranya peranti di-clear data atau uninstall."
         tvMessage.setTextColor(Color.parseColor("#CCCCCC"))
 
         btnGoogleSignIn.visibility = View.VISIBLE
         btnSkipGoogle.visibility = View.VISIBLE
+
+        // Show QR Pairing button (especially useful for Android TV / Google TV)
+        if (btnQrPairing.parent == null) {
+            val cardView = btnGoogleSignIn.parent as? android.view.ViewGroup
+            cardView?.addView(btnQrPairing)
+        }
+        btnQrPairing.visibility = View.VISIBLE
     }
 
     private fun triggerGoogleAccountPicker() {
@@ -643,6 +651,37 @@ class LicenseCheckActivity : AppCompatActivity() {
             setOnClickListener { launchMainApp() }
         }
         cardView.addView(btnSkipGoogle)
+
+        btnQrPairing = Button(this).apply {
+            text = "📺 Log Masuk via QR Code (Android TV)"
+            textSize = 14f
+            setTypeface(null, Typeface.BOLD)
+            setTextColor(Color.WHITE)
+            background = GradientDrawable().apply {
+                setColor(Color.parseColor("#1a3a1a"))
+                cornerRadius = dp(12).toFloat()
+                setStroke(dp(1), Color.parseColor("#2e7d32"))
+            }
+            visibility = View.GONE
+            isFocusable = true
+            setPadding(dp(16), dp(12), dp(16), dp(12))
+            val lp = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+            lp.topMargin = dp(10)
+            layoutParams = lp
+            setOnFocusChangeListener { v, hasFocus ->
+                v.animate().scaleX(if (hasFocus) 1.04f else 1f).scaleY(if (hasFocus) 1.04f else 1f).setDuration(120).start()
+                v.background = GradientDrawable().apply {
+                    setColor(if (hasFocus) Color.parseColor("#2e7d32") else Color.parseColor("#1a3a1a"))
+                    cornerRadius = dp(12).toFloat()
+                    if (hasFocus) setStroke(dp(2), Color.WHITE)
+                    else setStroke(dp(1), Color.parseColor("#2e7d32"))
+                }
+            }
+            setOnClickListener {
+                startActivity(Intent(this@LicenseCheckActivity, com.mts.mtsflix.license.TVPairingActivity::class.java))
+            }
+        }
+        // btnQrPairing will be added to cardView dynamically in showGoogleSignInPrompt()
 
         btnContact = Button(this).apply {
             text = "📞 Hubungi Admin"

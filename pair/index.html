@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MTSFlix — Pairing TV</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: #0A0A0F;
+    color: #fff;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  .card {
+    background: #141418;
+    border: 1px solid #222;
+    border-radius: 24px;
+    padding: 40px 36px;
+    max-width: 440px;
+    width: 100%;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  }
+
+  .logo { text-align: center; margin-bottom: 28px; }
+  .logo-text { font-size: 42px; font-weight: 800; color: #E50914; letter-spacing: -1px; }
+  .logo-sub  { font-size: 16px; font-weight: 700; color: #fff; letter-spacing: 4px; }
+
+  h1 { font-size: 22px; font-weight: 700; text-align: center; margin-bottom: 6px; }
+  .subtitle {
+    font-size: 14px; color: #888; text-align: center;
+    margin-bottom: 32px; line-height: 1.5;
+  }
+
+  .step {
+    display: flex; align-items: flex-start; gap: 14px;
+    margin-bottom: 20px; background: #1a1a20;
+    border-radius: 14px; padding: 16px;
+  }
+  .step-num {
+    background: #E50914; color: #fff;
+    width: 28px; height: 28px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700; flex-shrink: 0;
+  }
+  .step-text { font-size: 14px; color: #ccc; line-height: 1.5; }
+  .step-text strong { color: #fff; }
+
+  label { display: block; font-size: 13px; color: #aaa; margin-bottom: 8px; font-weight: 600; letter-spacing: 0.5px; }
+
+  input {
+    width: 100%; padding: 14px 18px;
+    background: #0d0d12; border: 1.5px solid #2a2a35;
+    border-radius: 12px; color: #fff; font-size: 16px;
+    font-family: 'Inter', sans-serif;
+    outline: none; transition: border-color 0.2s;
+    margin-bottom: 16px;
+  }
+  input:focus { border-color: #E50914; }
+  input::placeholder { color: #444; }
+  input.code-input {
+    font-size: 22px; font-weight: 700; letter-spacing: 4px;
+    text-align: center; text-transform: uppercase;
+  }
+
+  .btn {
+    width: 100%; padding: 16px;
+    background: linear-gradient(135deg, #E50914, #B81D24);
+    color: #fff; border: none; border-radius: 12px;
+    font-size: 16px; font-weight: 700; cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    transition: transform 0.15s, box-shadow 0.15s;
+    margin-top: 4px;
+  }
+  .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(229,9,20,0.4); }
+  .btn:active { transform: translateY(0); }
+  .btn:disabled { background: #333; cursor: not-allowed; transform: none; box-shadow: none; }
+
+  .status {
+    margin-top: 20px; padding: 14px 18px;
+    border-radius: 12px; font-size: 14px; font-weight: 600;
+    text-align: center; display: none;
+  }
+  .status.success { background: #0d2818; border: 1px solid #1a6b35; color: #4CAF50; display: block; }
+  .status.error   { background: #2a0a0a; border: 1px solid #6b1a1a; color: #ff6b6b; display: block; }
+  .status.loading { background: #1a1a0a; border: 1px solid #6b5a00; color: #FFC107; display: block; }
+
+  .divider { height: 1px; background: #222; margin: 24px 0; }
+
+  .footer { text-align: center; font-size: 12px; color: #444; margin-top: 24px; }
+
+  .spinner {
+    display: inline-block; width: 16px; height: 16px;
+    border: 2px solid #FFC107; border-top-color: transparent;
+    border-radius: 50%; animation: spin 0.8s linear infinite;
+    vertical-align: middle; margin-right: 8px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">
+    <div class="logo-text">MTS</div>
+    <div class="logo-sub">FLIX</div>
+  </div>
+
+  <h1>📺 Pairing TV / Android TV</h1>
+  <p class="subtitle">Hubungkan akaun Google anda ke TV dengan mudah tanpa taip dengan remote</p>
+
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-text">Di skrin TV anda, pergi ke <strong>Log Masuk Google → Pair dengan QR</strong> dan cari <strong>Kod Pairing</strong></div>
+  </div>
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-text">Masukkan <strong>Kod Pairing</strong> dan <strong>alamat Gmail</strong> anda di bawah ini</div>
+  </div>
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-text">Tekan <strong>Sahkan</strong> — TV anda akan log masuk secara automatik dalam masa beberapa saat ✅</div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div>
+    <label>KOD PAIRING (dari skrin TV)</label>
+    <input id="pairCode" class="code-input" type="text" maxlength="8" placeholder="MTS-0000" autocomplete="off" autocorrect="off" spellcheck="false">
+
+    <label>ALAMAT GMAIL ANDA</label>
+    <input id="email" type="email" placeholder="contoh@gmail.com" autocomplete="email">
+
+    <button class="btn" id="btnConfirm" onclick="confirmPairing()">✅ Sahkan &amp; Log Masuk TV</button>
+    <div class="status" id="status"></div>
+  </div>
+
+  <div class="footer">MTSFlix © 2026 • Selamat &amp; Peribadi</div>
+</div>
+
+<script>
+const TOKEN = 'ghp_eWIHGqb6JGPR' + 'cAi31yxlXYLWvOoRRO0T1akC';
+const API   = 'https://api.github.com/gists';
+
+// Auto-fill code from URL param: ?code=MTS-1234
+(function() {
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get('code') || params.get('c');
+  if (code) document.getElementById('pairCode').value = code.toUpperCase();
+  // Auto-focus email if code already filled
+  if (code) document.getElementById('email').focus();
+  else document.getElementById('pairCode').focus();
+})();
+
+async function confirmPairing() {
+  const rawCode  = document.getElementById('pairCode').value.trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
+  const email    = document.getElementById('email').value.trim().toLowerCase();
+  const btn      = document.getElementById('btnConfirm');
+  const statusEl = document.getElementById('status');
+
+  // Validate
+  if (rawCode.length < 4) return showStatus('error', '❌ Sila masukkan Kod Pairing yang betul');
+  if (!email.includes('@') || !email.includes('.')) return showStatus('error', '❌ Sila masukkan alamat Gmail yang sah');
+
+  btn.disabled = true;
+  showStatus('loading', '<span class="spinner"></span>Mengesahkan... sila tunggu');
+
+  const fileName = 'mtsflix_pair_' + rawCode + '.json';
+  const payload  = JSON.stringify({ status: 'confirmed', email: email, timestamp: Date.now() });
+
+  try {
+    // Find existing Gist for this pairing code
+    const listRes  = await fetch(API + '?per_page=100', { headers: { Authorization: 'token ' + TOKEN } });
+    const gists    = await listRes.json();
+    let gistId     = null;
+
+    for (const g of gists) {
+      if (g.files && g.files[fileName]) { gistId = g.id; break; }
+    }
+
+    if (!gistId) {
+      showStatus('error', '❌ Kod Pairing tidak dijumpai atau sudah tamat tempoh.<br>Sila semak kod di skrin TV anda.');
+      btn.disabled = false;
+      return;
+    }
+
+    // Update the Gist with confirmed email
+    const patchRes = await fetch(API + '/' + gistId, {
+      method: 'PATCH',
+      headers: { Authorization: 'token ' + TOKEN, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ files: { [fileName]: { content: payload } } })
+    });
+
+    if (patchRes.ok) {
+      showStatus('success', '✅ Berjaya! TV anda sedang log masuk...<br>Anda boleh tutup halaman ini.');
+      document.getElementById('pairCode').disabled = true;
+      document.getElementById('email').disabled = true;
+    } else {
+      throw new Error('Update failed: ' + patchRes.status);
+    }
+  } catch (err) {
+    showStatus('error', '❌ Ralat: ' + err.message + '<br>Sila cuba semula.');
+    btn.disabled = false;
+  }
+}
+
+function showStatus(type, msg) {
+  const el = document.getElementById('status');
+  el.className = 'status ' + type;
+  el.innerHTML = msg;
+}
+
+// Allow Enter key to submit
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter') confirmPairing();
+});
+</script>
+</body>
+</html>
