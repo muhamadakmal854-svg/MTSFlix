@@ -1,7 +1,7 @@
 {
   "version": 1,
   "description": "MTSFlix Device License Registry",
-  "lastUpdated": "2026-07-24",
+  "lastUpdated": "2026-07-25",
   "licenses": [
     {
       "id": "LIC-EXAMPLE-00000001",
@@ -212,6 +212,20 @@
       "deviceInfo": "Realme C100",
       "note": "VIP",
       "lastModified": "2026-07-24T17:43:11"
+    },
+    {
+      "id": "LIC-20260725-B25EF391",
+      "deviceCode": "MTSF-CA77-2238-8908",
+      "username": "Wan",
+      "email": "wan@gmail.com",
+      "expiredAt": "2099-12-30",
+      "active": true,
+      "banned": false,
+      "bannedReason": "",
+      "addedAt": "2026-07-25",
+      "deviceInfo": "Redmi 9C",
+      "note": "",
+      "lastModified": "2026-07-25T10:39:49"
     }
   ]
 }
