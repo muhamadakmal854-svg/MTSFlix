@@ -1,6 +1,6 @@
 #!/bin/bash
 # ==============================================================
-#  MTSFlix Customization Script v3.3 (Fresh Minimal Rebuild)
+#  MTSFlix Customization Script v3.4 (Fresh Minimal Rebuild)
 #  Patches CloudStream 3 → MTSFlix
 # ==============================================================
 set -e
@@ -109,7 +109,6 @@ cs_dir = os.environ.get('CS_DIR','cloudstream')
 repo_mgr_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/plugins/RepositoryManager.kt'
 
 if os.path.exists(repo_mgr_path):
-    print("  Patching RepositoryManager.kt...")
     content = open(repo_mgr_path, encoding='utf-8').read()
     changed = False
     
@@ -368,13 +367,13 @@ except Exception as e:
 PYEOF
 fi
 
-# --- 12. RIGID 18+ / 18x / NSFW FILTER AT ALL LEVELS (HOMEPAGE, PROVIDERS, SEARCH) ---
-echo "[12/12] Patching RIGID 18+ / 18x / NSFW filters across all UI components..."
+# --- 12. RIGID 18+ / 18x / NSFW / KELAS BINTANG / INEM FILTER AT ALL LEVELS ---
+echo "[12/12] Patching RIGID 18+ / 18x / NSFW / Kelas Bintang filters across all UI components..."
 python3 - << 'PYEOF'
 import os, re
 cs_dir = os.environ.get('CS_DIR','cloudstream')
 
-# A. HomeViewModel.kt: Filter out 18+ / 18x / Bokep / Hentai / Vivamax / Semi / Adult categories from Homepage Rows
+# A. HomeViewModel.kt: Filter out 18+ / Kelas Bintang / Inem / Vivamax / Bokep / Hentai / Semi / Adult categories & items
 hvm_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/ui/home/HomeViewModel.kt'
 if os.path.exists(hvm_path):
     c = open(hvm_path, encoding='utf-8').read()
@@ -384,12 +383,25 @@ if os.path.exists(hvm_path):
                             val is18Row = rowName.contains("18+") || rowName.contains("18x") || rowName.contains("18") ||
                                           rowName.contains("adult") || rowName.contains("nsfw") || rowName.contains("bokep") ||
                                           rowName.contains("hentai") || rowName.contains("porn") || rowName.contains("vivamax") ||
-                                          rowName.contains("semi") || rowName.contains("jav") || rowName.contains("xxx") || rowName.contains("sex")
-                            if (is18Row) return@forEach'''
+                                          rowName.contains("semi") || rowName.contains("jav") || rowName.contains("xxx") || rowName.contains("sex") ||
+                                          rowName.contains("kelas bintang") || rowName.contains("kelasbintang") || rowName.contains("inem") || rowName.contains("bintang")
+                            if (is18Row) return@forEach
+                            
+                            val cleanItems = list.list.filter { item ->
+                                val iName = item.name.lowercase()
+                                val iUrl = item.url.lowercase()
+                                val is18Item = iName.contains("18+") || iName.contains("18x") || iName.contains("bokep") ||
+                                               iName.contains("hentai") || iName.contains("vivamax") || iName.contains("semi") ||
+                                               iName.contains("inem") || iName.contains("kelas bintang") || iName.contains("kelasbintang") ||
+                                               iName.contains("onaj") || iName.contains("someya") || iName.contains("jav") ||
+                                               iUrl.contains("18+") || iUrl.contains("18x") || iUrl.contains("bokep") || iUrl.contains("hentai") || iUrl.contains("vivamax") || iUrl.contains("semi") || iUrl.contains("inem") || iUrl.contains("kelasbintang")
+                                !is18Item
+                            }
+                            val list = list.copy(list = java.util.concurrent.CopyOnWriteArrayList(cleanItems))'''
     if target_row in c and 'is18Row' not in c:
         c = c.replace(target_row, replacement_row)
         open(hvm_path, 'w', encoding='utf-8').write(c)
-        print("  OK: Patched HomeViewModel.kt to filter 18+ homepage rows")
+        print("  OK: Patched HomeViewModel.kt to filter 18+ & Kelas Bintang homepage rows and items")
 
 # B. PluginsViewModel.kt: Hide 18+ plugins in Extensions Download screen
 pvm_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/ui/settings/extensions/PluginsViewModel.kt'
@@ -400,8 +412,8 @@ if os.path.exists(pvm_path):
             val name = it.plugin.name.lowercase()
             val internalName = it.plugin.internalName.lowercase()
             val is18 = tvTypes.any { t -> t.equals(TvType.NSFW.name, ignoreCase = true) || t.contains("18") || t.lowercase().contains("adult") || t.lowercase().contains("nsfw") } ||
-                       name.contains("18") || name.contains("adult") || name.contains("nsfw") || name.contains("porn") || name.contains("hentai") || name.contains("xxx") || name.contains("bokep") || name.contains("vivamax") || name.contains("semi") || name.contains("jav") ||
-                       internalName.contains("18") || internalName.contains("adult") || internalName.contains("nsfw") || internalName.contains("porn") || internalName.contains("hentai") || internalName.contains("xxx") || internalName.contains("bokep") || internalName.contains("vivamax") || internalName.contains("semi") || internalName.contains("jav")
+                       name.contains("18") || name.contains("adult") || name.contains("nsfw") || name.contains("porn") || name.contains("hentai") || name.contains("xxx") || name.contains("bokep") || name.contains("vivamax") || name.contains("semi") || name.contains("jav") || name.contains("kelasbintang") || name.contains("inem") ||
+                       internalName.contains("18") || internalName.contains("adult") || internalName.contains("nsfw") || internalName.contains("porn") || internalName.contains("hentai") || internalName.contains("xxx") || internalName.contains("bokep") || internalName.contains("vivamax") || internalName.contains("semi") || internalName.contains("jav") || internalName.contains("kelasbintang") || internalName.contains("inem")
             !is18'''
     if target in c:
         c = c.replace(target, replacement)
@@ -413,12 +425,12 @@ pm_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/plugins/Plugin
 if os.path.exists(pm_path):
     c = open(pm_path, encoding='utf-8').read()
     pm_target = '//Omit NSFW, if disabled'
-    pm_replacement = '''// Omit 18+ / 18x / NSFW / Vivamax / Bokep providers
+    pm_replacement = '''// Omit 18+ / 18x / NSFW / Vivamax / Bokep / Kelas Bintang providers
             val siteNameLower = sitePlugin.name.lowercase()
             val siteInternalLower = sitePlugin.internalName.lowercase()
             val is18Plus = tvtypes.any { t -> t.equals(TvType.NSFW.name, ignoreCase = true) || t.contains("18") || t.lowercase().contains("adult") || t.lowercase().contains("nsfw") } ||
-                           siteNameLower.contains("18") || siteNameLower.contains("adult") || siteNameLower.contains("nsfw") || siteNameLower.contains("porn") || siteNameLower.contains("hentai") || siteNameLower.contains("xxx") || siteNameLower.contains("bokep") || siteNameLower.contains("vivamax") || siteNameLower.contains("semi") || siteNameLower.contains("jav") ||
-                           siteInternalLower.contains("18") || siteInternalLower.contains("adult") || siteInternalLower.contains("nsfw") || siteInternalLower.contains("porn") || siteInternalLower.contains("hentai") || siteInternalLower.contains("xxx") || siteInternalLower.contains("bokep") || siteInternalLower.contains("vivamax") || siteInternalLower.contains("semi") || siteInternalLower.contains("jav")
+                           siteNameLower.contains("18") || siteNameLower.contains("adult") || siteNameLower.contains("nsfw") || siteNameLower.contains("porn") || siteNameLower.contains("hentai") || siteNameLower.contains("xxx") || siteNameLower.contains("bokep") || siteNameLower.contains("vivamax") || siteNameLower.contains("semi") || siteNameLower.contains("jav") || siteNameLower.contains("kelasbintang") || siteNameLower.contains("inem") ||
+                           siteInternalLower.contains("18") || siteInternalLower.contains("adult") || siteInternalLower.contains("nsfw") || siteInternalLower.contains("porn") || siteInternalLower.contains("hentai") || siteInternalLower.contains("xxx") || siteInternalLower.contains("bokep") || siteInternalLower.contains("vivamax") || siteInternalLower.contains("semi") || siteInternalLower.contains("jav") || siteInternalLower.contains("kelasbintang") || siteInternalLower.contains("inem")
             if (is18Plus) {
                 Log.i(TAG, "Omit 18+ provider > ${sitePlugin.internalName}")
                 return@mapNotNull null
@@ -439,7 +451,7 @@ if os.path.exists(mainapi_path):
             val is18 = plugin.supportedTypes.contains(TvType.NSFW) ||
                        pName.contains("18") || pName.contains("nsfw") || pName.contains("adult") ||
                        pName.contains("porn") || pName.contains("hentai") || pName.contains("xxx") ||
-                       pName.contains("bokep") || pName.contains("vivamax") || pName.contains("semi") || pName.contains("jav")
+                       pName.contains("bokep") || pName.contains("vivamax") || pName.contains("semi") || pName.contains("jav") || pName.contains("kelasbintang") || pName.contains("inem")
             if (!is18) {
                 apis = apis + plugin
             }
@@ -447,7 +459,7 @@ if os.path.exists(mainapi_path):
     if api_target in c:
         c = c.replace(api_target, api_replacement)
         open(mainapi_path, 'w', encoding='utf-8').write(c)
-        print("  OK: Patched MainAPI.kt")
+        print("  OK: Filtered 18+ providers in MainAPI.kt")
 
 # E. HomeFragment.kt: Comment out NSFW chip
 hf_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/ui/home/HomeFragment.kt'
@@ -455,7 +467,7 @@ if os.path.exists(hf_path):
     c = open(hf_path, encoding='utf-8').read()
     c = c.replace('Pair(nsfw, listOf(TvType.NSFW)),', '// Pair(nsfw, listOf(TvType.NSFW)),')
     open(hf_path, 'w', encoding='utf-8').write(c)
-    print("  OK: Patched HomeFragment.kt")
+    print("  OK: Disabled NSFW category chip in HomeFragment.kt")
 PYEOF
 
 echo "======================================================"
