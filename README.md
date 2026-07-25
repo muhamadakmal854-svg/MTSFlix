@@ -1,202 +1,222 @@
-<p align="center">
-  <img src="banner.png" alt="MTSFlix Banner" width="100%"/>
-</p>
+# 🎬 MTSFlix v1.0.7
 
-<p align="center">
-  <img src="logo.png" alt="MTSFlix Logo" width="150"/>
-</p>
+<div align="center">
 
-<h1 align="center">MTSFlix</h1>
+![MTSFlix Logo](https://img.shields.io/badge/MTS-FLIX-E50914?style=for-the-badge&labelColor=141414&color=E50914)
+![Version](https://img.shields.io/badge/Versi-1.0.7-white?style=for-the-badge&labelColor=141414)
+![Android](https://img.shields.io/badge/Android-5.0%2B-3DDC84?style=for-the-badge&logo=android&logoColor=white&labelColor=141414)
+![TV](https://img.shields.io/badge/Android%20TV-Supported-blue?style=for-the-badge&labelColor=141414)
 
-<p align="center">
-  <strong>Aplikasi Penstriman Video Premium untuk Android</strong><br/>
-  Dibina di atas <a href="https://github.com/recloudstream/cloudstream">CloudStream 3</a> dengan ciri eksklusif MTS
-</p>
+**Aplikasi streaming video peribadi berasaskan CloudStream 3**
+*Dengan sistem Cloud Sync & Multi-Device support*
 
-<p align="center">
-  <a href="https://github.com/muhamadakmal854-svg/MTSFlix/releases/latest">
-    <img src="https://img.shields.io/github/v/release/muhamadakmal854-svg/MTSFlix?style=for-the-badge&logo=android&color=4f46e5&labelColor=1e1b4b" alt="Latest Release"/>
-  </a>
-  <a href="https://github.com/muhamadakmal854-svg/MTSFlix/releases/latest">
-    <img src="https://img.shields.io/github/downloads/muhamadakmal854-svg/MTSFlix/total?style=for-the-badge&color=7c3aed&labelColor=1e1b4b" alt="Downloads"/>
-  </a>
-  <a href="https://github.com/muhamadakmal854-svg/MTSFlix/actions">
-    <img src="https://img.shields.io/github/actions/workflow/status/muhamadakmal854-svg/MTSFlix/build_release.yml?style=for-the-badge&logo=githubactions&color=059669&labelColor=1e1b4b" alt="Build Status"/>
-  </a>
-  <img src="https://img.shields.io/badge/Android-5.0%2B-brightgreen?style=for-the-badge&logo=android&labelColor=1e1b4b" alt="Android 5.0+"/>
-</p>
+[📥 Muat Turun APK](https://github.com/muhamadakmal854-svg/MTSFlix/releases/download/v1.0.7/MTSFlix-v1.0.7.apk) • [📊 Pantau Build](https://github.com/muhamadakmal854-svg/MTSFlix/actions) • [📺 TV Pairing](https://cdn.jsdelivr.net/gh/muhamadakmal854-svg/MTSFlix@main/pair/index.html)
+
+</div>
 
 ---
 
-## 📥 Download APK
+## 🆕 Apa Yang Baru — v1.0.7
 
-> **Download terkini:** [MTSFlix Latest Release](https://github.com/muhamadakmal854-svg/MTSFlix/releases/latest)
+### ☁️ Cloud Sync v6.0 — Cross-Device Auto Sync
 
-| Versi | Saiz | Platform |
-|-------|------|----------|
-| v1.0.0 | ~70 MB | Android 5.0+ (API 21+) |
+Sejarah tontonan kini disimpan dan dipulihkan secara automatik melalui **GitHub Gist Cloud**.
 
----
+| Ciri | Penerangan |
+|---|---|
+| 💾 **Auto Save** | Simpan ke cloud setiap kali tonton, skip, atau tukar status |
+| 🔄 **Auto Restore** | Pulih semua data selepas install semula atau clear data |
+| 📱 **Multi-Device** | Sync antara 5 device atau lebih dengan akaun Google yang sama |
+| ⏱️ **Smart Timestamp** | Hanya restore jika data cloud lebih baru dari data tempatan |
+| 🔇 **Senyap** | Semua sync berlaku di balik layar tanpa ganggu pengalaman menonton |
 
-## ✨ Ciri-Ciri Utama
+**Data yang disimpan:**
+- ▶️ Continue Watching (posisi video)
+- ✅ Watching / Completed / On-Hold / Dropped
+- 📌 Plan to Watch
+- ⭐ Favorites
+- 📢 Subscribed
 
-| Ciri | Keterangan |
-|------|-----------|
-| 🔐 **Pengesahan Peranti** | Kod unik untuk setiap peranti — kawalan akses selamat |
-| 🔑 **Login Google** | Daftar masuk dengan akaun Google via Firebase |
-| 🔔 **Notifikasi Episod** | Pemberitahuan automatik bila episod baru keluar |
-| 🔌 **Provider Auto-Sync** | Extension provider dikemas kini tanpa perlu reinstall |
-| 📥 **Auto-Update APK** | Kemaskini APK terus dalam aplikasi |
-| 🚫 **Tiada Iklan** | Pengalaman menonton tanpa gangguan iklan |
-| 🌐 **Multi-Bahasa** | Kandungan dengan subtitle pelbagai bahasa |
-| 📺 **Multi-Server** | Putar dari pelbagai pelayan video |
-
----
-
-## 🔌 Provider MTS (Extension)
-
-MTSFlix menggunakan sistem extension untuk mengakses sumber video. Provider MTS dikonfigurasikan secara automatik semasa pemasangan.
-
-**Repo Provider:**
-```
-https://cdn.jsdelivr.net/gh/muhamadakmal854-svg/Provider@builds/repo.json
-```
-
-| Provider | Domain | Kandungan |
-|----------|--------|-----------|
-| 🎬 Anichin | anichin.moe | Anime Sub Indonesia |
-| 🎭 Animexin | animexin.dev | Anime Multi-Bahasa |
-| 🎥 KlikXXI | flagsio.com | Filem & TV Melayu |
-| *(lebih akan ditambah)* | | |
-
----
-
-## 🚀 Cara Pasang
-
-### Pasang Baru
-1. **Download APK** dari [Releases](https://github.com/muhamadakmal854-svg/MTSFlix/releases/latest)
-2. Pergi ke **Tetapan → Keselamatan → Allow Unknown Sources**
-3. Pasang fail APK
-4. Buka MTSFlix → Login dengan Google
-5. Provider akan dimuat turun secara automatik ✅
-
-### Kemaskini (Update)
-App MTSFlix akan **memaparkan notifikasi update** secara automatik bila versi baru tersedia.
-
-Klik **"Kemaskini Sekarang"** dalam app → APK baru akan dimuat turun dan dipasang automatik.
-
-> ⚠️ Data & tetapan anda **tidak akan hilang** semasa update (gunakan signing key yang sama)
-
----
-
-## 🔄 Auto-Update
-
-MTSFlix mempunyai sistem auto-update yang menyemak `version.json` di repo ini:
+#### Aliran Cross-Device Sync
 
 ```
-https://raw.githubusercontent.com/muhamadakmal854-svg/MTSFlix/main/version.json
-```
+Phone A tonton episod 5
+        ↓
+Auto simpan ke GitHub Gist Cloud ✅
 
-Setiap kali versi baru dibina, `version.json` dikemas kini secara automatik oleh GitHub Actions.
-
----
-
-## 🏗️ Cara Build (Untuk Pembangun)
-
-Repository ini menggunakan **GitHub Actions** untuk membina APK secara automatik.
-
-### Prasyarat (GitHub Secrets)
-
-| Secret | Keterangan |
-|--------|-----------|
-| `KEYSTORE_BASE64` | Fail keystore `.jks` dikodkan dalam base64 |
-| `KEYSTORE_PASSWORD` | Kata laluan keystore |
-| `KEY_ALIAS` | Alias kunci dalam keystore |
-| `KEY_PASSWORD` | Kata laluan kunci |
-
-> 💡 Jalankan `python master.py setup` untuk arahan persediaan penuh
-
-### Trigger Build Manual
-
-```bash
-# Build versi baru
-python master.py build 1.2.0 "Deskripsi kemaskini"
-
-# Semak status build
-python master.py status
-
-# Buka GitHub Actions
-python master.py open
-```
-
-### Struktur Folder
-
-```
-MTSFlix/
-├── .github/
-│   └── workflows/
-│       └── build_release.yml   # Workflow GitHub Actions
-├── customizations/
-│   └── apply.sh                # Skrip patch CloudStream
-├── custom_src/                 # Kod sumber khas MTSFlix
-│   ├── auth/                   # Google Sign-In & Firebase Auth
-│   ├── license/                # Sistem pengesahan peranti
-│   ├── notifications/          # Worker notifikasi episod
-│   └── update/                 # Sistem auto-update APK
-├── google-services.json        # Konfigurasi Firebase
-├── version.json                # Maklumat versi semasa (auto-update)
-├── licenses.json               # Senarai peranti berlesen
-├── logo.png                    # Logo MTSFlix
-└── master.py                   # Skrip pengurusan build
+Phone B / C / D / E buka app
+        ↓
+Auto tarik dari cloud (setiap kali buka app)
+        ↓
+Toast: "✅ Sejarah tontonan dikemas kini dari cloud"
+        ↓
+Continue Watching dikemas kini ✅
 ```
 
 ---
 
-## 📱 Tangkapan Skrin
+### 👤 Sistem Profil — Multi-Profile Support
 
-*Akan ditambah dalam versi akan datang*
+Pilih profil sebelum masuk ke app — seperti Netflix!
 
----
+```
+Install App → Verify Lesen → Login Google
+        ↓
+┌─────────────────────────────┐
+│         MTSFlix             │
+│      Pilih Profil           │
+│  "Siapa yang menonton?"     │
+│                             │
+│  🔴 A  ahmad@gmail.com ●   │ ← Aktif
+│  🔴 F  fatimah@gmail.com   │
+│  🔴 S  siti@gmail.com      │
+│                             │
+│  [+ Tambah Profil Google]   │
+└─────────────────────────────┘
+        ↓
+Restore sejarah profil tersebut
+        ↓
+Continue Watching profil itu ✅
+```
 
-## 🔧 Penyelesaian Masalah
-
-### App tidak mahu buka / stuck di skrin lesen
-- Pastikan peranti anda telah didaftarkan dalam `licenses.json`
-- Hubungi admin untuk tambah ID peranti anda
-
-### Provider tidak load / tiada video
-- Pergi ke **Tetapan → Provider** → Refresh repo
-- Semak sambungan internet anda
-- Cuba tukar server video dalam pilihan player
-
-### Update gagal dimuat turun
-- Pergi ke **Tetapan → Kemas kini** → Muat turun semula
-- Atau download APK terus dari [Releases](https://github.com/muhamadakmal854-svg/MTSFlix/releases/latest)
-
----
-
-## 📋 Rekod Perubahan (Changelog)
-
-### v1.0.0 — Julai 2026
-- 🎉 Pelancaran pertama MTSFlix
-- ✅ Sistem pengesahan peranti (LicenseCheckActivity)
-- ✅ Login Google + Firebase Auth
-- ✅ Notifikasi episod baru (WorkManager)
-- ✅ Auto-update APK dalam app
-- ✅ Provider MTS: Anichin, Animexin, KlikXXI
-- ✅ Firebase Firestore untuk senarai tontonan
-- ✅ Build pipeline GitHub Actions sepenuhnya automatik
+**Ciri Profil:**
+- Tambah & padam profil Google
+- Setiap profil ada sejarah tontonan tersendiri
+- Data di cloud kekal walaupun profil dipadam dari device
 
 ---
 
-## 📄 Lesen
+### 📺 Android TV / Google TV Support
 
-Projek ini adalah perisian proprietari. Hak cipta terpelihara © 2026 MTS.
+Semua skrin kini boleh digunakan dengan **remote D-pad**.
 
-Dibina menggunakan [CloudStream 3](https://github.com/recloudstream/cloudstream) — Lesen LGPL-3.0.
+| Skrin | TV Support |
+|---|---|
+| Verify Lesen | ✅ D-pad navigation + focus indicator |
+| Google Sign-In | ✅ D-pad navigation + focus indicator |
+| Pilih Profil | ✅ D-pad navigation + scale animation |
+| QR Code Pairing | ✅ Scan dengan telefon, tanpa taip dengan remote |
+
+**Focus Indicator:**
+- 🔴 Border merah terang apabila butang/profil dipilih dengan remote
+- 📏 Saiz sedikit membesar (scale) untuk pengesahan visual
+- 📝 Subtitle "Gunakan ▲▼ untuk navigasi, OK untuk pilih" di TV
 
 ---
 
-<p align="center">
-  Dibina dengan ❤️ oleh MTS &nbsp;|&nbsp; Dikuasakan oleh <a href="https://github.com/recloudstream/cloudstream">CloudStream 3</a>
-</p>
+### 📺 QR Code TV Pairing — Log Masuk Tanpa Remote Keyboard
+
+Log masuk Google di Android TV kini **semudah scan QR Code**!
+
+#### Cara Guna:
+
+**Langkah 1** — Di skrin TV, pilih:
+> `Log Masuk Google` → `📺 Log Masuk via QR Code (Android TV)`
+
+**Langkah 2** — Skrin TV akan papar:
+```
+┌─────────────────────────────────┐
+│  ┌──────────┐  KOD PAIRING:     │
+│  │ QR CODE  │  MTS-7K4P         │
+│  └──────────┘                   │
+│  Atau buka: cdn.jsdelivr.net/   │
+│  gh/muhamadakmal854-svg/        │
+│  MTSFlix@main/pair/             │
+│  ⏳ Menunggu... 4:52            │
+└─────────────────────────────────┘
+```
+
+**Langkah 3** — Telefon scan QR / buka URL:
+```
+┌─────────────────────────┐
+│  MTSFlix Pairing TV     │
+│  Kod: [MTS-7K4P] ←auto │
+│  Gmail: ___@gmail.com   │
+│  [✅ Sahkan & Log Masuk]│
+└─────────────────────────┘
+```
+
+**Langkah 4** — TV auto log masuk dalam **5 saat** ✅
+
+> **Pairing URL:** https://cdn.jsdelivr.net/gh/muhamadakmal854-svg/MTSFlix@main/pair/index.html
+
+---
+
+### 🔒 Keselamatan & Privasi
+
+| Aspek | Perlindungan |
+|---|---|
+| Extensions Menu | ❌ Disembunyikan (untuk elak kecurian URL) |
+| Download Extension | ✅ Automatik di balik layar sahaja |
+| Data Cloud | 🔐 Private GitHub Gist (hanya pemilik akaun yang boleh akses) |
+| Pairing Code | ⏰ Tamat tempoh dalam 5 minit & Gist dipadam selepas guna |
+| Akaun Google | 💾 Disimpan secara tempatan di device sahaja |
+
+---
+
+## 📋 Sejarah Versi
+
+| Versi | Tarikh | Perubahan Utama |
+|---|---|---|
+| **v1.0.7** | 26 Jul 2026 | Cloud Sync v6.0, Multi-Profile, Android TV D-pad, QR Pairing |
+| v1.0.6 | — | Cloud Sync v5.0, Hooks setViewPos & setBookmarkedData |
+| v1.0.5 | — | Bug fix Extensions bypass, silent background download |
+| v1.0.4 | — | Hide Extensions menu, remove Accounts section |
+| v1.0.3 | — | Verify Lesen & Google Sign-In |
+| v1.0.0 | — | Pelancaran awal MTSFlix |
+
+---
+
+## 🧪 Cara Test Cloud Sync
+
+### Test Asas (1 Device)
+1. Install APK v1.0.7
+2. Verify lesen → Login Google → Pilih profil
+3. Tonton beberapa episod (tunggu 5-10 saat)
+4. **Clear Data** atau **Uninstall** app
+5. Install semula → Verify → Login dengan email yang **sama**
+6. Continue Watching akan muncul semula ✅
+
+### Test Cross-Device (2+ Device)
+1. Install & login di **Phone A** dengan `email@gmail.com`
+2. Tonton episod di Phone A
+3. Buka app di **Phone B** (sama email, sudah login)
+4. Continue Watching di Phone B dikemas kini ✅
+5. Toast `"✅ Sejarah tontonan dikemas kini dari cloud"` akan muncul
+
+> ⚠️ **Nota Penting:** Kali pertama guna v1.0.7, data lama (dari APK sebelumnya) belum ada di cloud. Tonton semula sekurang-kurangnya 5 saat dulu baru data tersimpan ke cloud.
+
+---
+
+## 🛠️ Maklumat Teknikal
+
+| Komponen | Teknologi |
+|---|---|
+| Base App | CloudStream 3 |
+| Cloud Storage | GitHub Gist (Private) |
+| Sync Engine | MTSFlixCloudSync v6.0 |
+| Pairing Relay | GitHub Gist API |
+| Pairing Web | jsDelivr CDN (Static HTML) |
+| QR Generator | api.qrserver.com |
+| Threading | `Thread{}.start()` (background) |
+| Data Format | JSON Key-Value dengan typed encoding |
+
+---
+
+## 📦 Muat Turun
+
+| Platform | Link |
+|---|---|
+| 📱 Android Phone/Tablet | [MTSFlix-v1.0.7.apk](https://github.com/muhamadakmal854-svg/MTSFlix/releases/download/v1.0.7/MTSFlix-v1.0.7.apk) |
+| 📺 Android TV / Google TV | [MTSFlix-v1.0.7.apk](https://github.com/muhamadakmal854-svg/MTSFlix/releases/download/v1.0.7/MTSFlix-v1.0.7.apk) (sama) |
+| 🌐 TV Pairing Web | [cdn.jsdelivr.net/...pair/](https://cdn.jsdelivr.net/gh/muhamadakmal854-svg/MTSFlix@main/pair/index.html) |
+
+---
+
+<div align="center">
+
+**MTSFlix © 2026 MTS • Hak Cipta Terpelihara**
+
+*Dibina dengan ❤️ berasaskan [CloudStream 3](https://github.com/recloudstream/cloudstream)*
+
+</div>
