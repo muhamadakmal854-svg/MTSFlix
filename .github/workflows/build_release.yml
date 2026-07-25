@@ -149,21 +149,24 @@ jobs:
         run: |
           chmod +x gradlew
           if [ "$HAS_KEYSTORE" = "true" ]; then
-            ./gradlew assembleRelease \
+            ./gradlew assembleStableRelease \
               -Pandroid.injected.signing.store.file="$HOME/keystore/mtsflix.jks" \
               -Pandroid.injected.signing.store.password="${{ secrets.KEYSTORE_PASSWORD }}" \
               -Pandroid.injected.signing.key.alias="${{ secrets.KEY_ALIAS }}" \
               -Pandroid.injected.signing.key.password="${{ secrets.KEY_PASSWORD }}" \
-              --no-daemon --stacktrace
+              --no-daemon --stacktrace || ./gradlew assembleRelease --no-daemon --stacktrace
           else
-            ./gradlew assembleRelease --no-daemon --stacktrace
+            ./gradlew assembleStableRelease --no-daemon --stacktrace || ./gradlew assembleRelease --no-daemon --stacktrace
           fi
 
       # ─── Collect & Rename APK ─────────────────────────────────────────────
       - name: 📦 Prepare APK
         run: |
           mkdir -p release_output
-          APK=$(find cloudstream/app/build/outputs/apk -name '*.apk' | head -1)
+          APK=$(find cloudstream/app/build/outputs/apk -name '*stable*.apk' 2>/dev/null | head -1)
+          if [ -z "$APK" ]; then
+            APK=$(find cloudstream/app/build/outputs/apk -name '*.apk' 2>/dev/null | head -1)
+          fi
           if [ -z "$APK" ]; then
             echo "❌ APK not found!"
             find cloudstream/app/build -name '*.apk' 2>/dev/null

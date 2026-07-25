@@ -1,6 +1,6 @@
 #!/bin/bash
 # ==============================================================
-#  MTSFlix Customization Script v3.1 (Fresh Minimal Rebuild)
+#  MTSFlix Customization Script v3.2 (Fresh Minimal Rebuild)
 #  Patches CloudStream 3 → MTSFlix
 # ==============================================================
 set -e
@@ -10,85 +10,95 @@ CS_DIR="${CS_DIR:-$(pwd)/cloudstream}"
 
 [ ! -d "$CS_DIR" ] && { echo "ERROR: CloudStream dir not found: $CS_DIR"; exit 1; }
 
-# --- 1. Change applicationId -----------------------------------------------
-echo "[1/12] Changing applicationId to com.mts.mtsflix..."
-APP_BUILD="$CS_DIR/app/build.gradle.kts"
-if [ -f "$APP_BUILD" ]; then
-  sed -i 's|applicationId = "com\.lagradost\.cloudstream3"|applicationId = "com.mts.mtsflix"|g' "$APP_BUILD"
-  echo "  OK: applicationId = com.mts.mtsflix"
-fi
-
-# --- 2. Change App Name ----------------------------------------------------
-echo "[2/12] Setting app name to MTSFlix in all localized resources..."
+# --- 1. Change applicationId and strip prerelease suffixes ----------------
+echo "[1/12] Patching build.gradle.kts to set applicationId com.mts.mtsflix and remove suffixes..."
 python3 - << 'PYEOF'
 import os, re
 cs_dir = os.environ.get('CS_DIR','cloudstream')
-res_dir = cs_dir + '/app/src/main/res'
-if not os.path.exists(res_dir):
-    print("  WARN: res directory not found")
-else:
-    count = 0
-    for root, dirs, files in os.walk(res_dir):
-        for f in files:
-            if f == 'strings.xml':
-                path = os.path.join(root, f)
-                try:
-                    c = open(path, encoding='utf-8').read()
-                    pattern = r'<string name="app_name">[^<]*</string>'
-                    new_c = re.sub(pattern, '<string name="app_name">MTSFlix</string>', c)
-                    if new_c != c:
-                        open(path, 'w', encoding='utf-8').write(new_c)
-                        count += 1
-                except Exception as e:
-                    print(f"  Error patching {path}: {e}")
-    print(f"  OK: Patched {count} strings.xml files to MTSFlix")
+app_build = cs_dir + '/app/build.gradle.kts'
+if os.path.exists(app_build):
+    c = open(app_build, encoding='utf-8').read()
+    # 1. Change applicationId
+    c = re.sub(r'applicationId\s*=\s*"com\.lagradost\.cloudstream3"', 'applicationId = "com.mts.mtsflix"', c)
+    # 2. Remove applicationIdSuffix = ".prerelease" and ".debug"
+    c = re.sub(r'applicationIdSuffix\s*=\s*"\.(prerelease|debug)"', 'applicationIdSuffix = ""', c)
+    # 3. Remove versionNameSuffix = "-PRE"
+    c = re.sub(r'versionNameSuffix\s*=\s*"-PRE"', 'versionNameSuffix = ""', c)
+    open(app_build, 'w', encoding='utf-8').write(c)
+    print("  OK: build.gradle.kts patched with clean applicationId com.mts.mtsflix")
+PYEOF
+
+# --- 2. Change App Name ----------------------------------------------------
+echo "[2/12] Setting app name to MTSFlix in all localized resources & flavor directories..."
+python3 - << 'PYEOF'
+import os, re
+cs_dir = os.environ.get('CS_DIR','cloudstream')
+res_dirs = [
+    cs_dir + '/app/src/main/res',
+    cs_dir + '/app/src/prerelease/res',
+    cs_dir + '/app/src/stable/res'
+]
+count = 0
+for res_dir in res_dirs:
+    if os.path.exists(res_dir):
+        for root, dirs, files in os.walk(res_dir):
+            for f in files:
+                if f == 'strings.xml':
+                    path = os.path.join(root, f)
+                    try:
+                        c = open(path, encoding='utf-8').read()
+                        pattern = r'<string name="app_name">[^<]*</string>'
+                        new_c = re.sub(pattern, '<string name="app_name">MTSFlix</string>', c)
+                        if new_c != c:
+                            open(path, 'w', encoding='utf-8').write(new_c)
+                            count += 1
+                    except Exception as e:
+                        print(f"  Error patching {path}: {e}")
+print(f"  OK: Patched {count} strings.xml files to MTSFlix")
 PYEOF
 
 # --- 3. Copy Custom Assets (Logo, Banner) ----------------------------------
 echo "[3/12] Copying custom logo and banner (rebranding all icons/drawables)..."
 if [ -f "$MTSFLIX_DIR/logo.png" ]; then
-  # 1. Clean up and replace launcher icons & foreground
-  find "$CS_DIR/app/src/main/res" -name "ic_launcher.png" -delete
-  find "$CS_DIR/app/src/main/res" -name "ic_launcher.webp" -delete
-  find "$CS_DIR/app/src/main/res" -name "ic_launcher.xml" -delete
-  find "$CS_DIR/app/src/main/res" -name "ic_launcher_round.png" -delete
-  find "$CS_DIR/app/src/main/res" -name "ic_launcher_round.webp" -delete
-  find "$CS_DIR/app/src/main/res" -name "ic_launcher_round.xml" -delete
-  find "$CS_DIR/app/src/main/res" -name "ic_launcher_foreground.xml" -delete
-  find "$CS_DIR/app/src/main/res" -name "ic_launcher_foreground.png" -delete
-  
-  for density in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
-    mkdir -p "$CS_DIR/app/src/main/res/mipmap-$density"
-    cp "$MTSFLIX_DIR/logo.png" "$CS_DIR/app/src/main/res/mipmap-$density/ic_launcher.png"
-    cp "$MTSFLIX_DIR/logo.png" "$CS_DIR/app/src/main/res/mipmap-$density/ic_launcher_round.png"
-  done
+  # Clean up existing CloudStream logos in all flavor resource dirs
+  for target_res in "$CS_DIR/app/src/main/res" "$CS_DIR/app/src/prerelease/res" "$CS_DIR/app/src/stable/res"; do
+    if [ -d "$target_res" ]; then
+      find "$target_res" -name "ic_launcher*.png" -delete
+      find "$target_res" -name "ic_launcher*.webp" -delete
+      find "$target_res" -name "ic_launcher*.xml" -delete
+      find "$target_res" -name "ic_cloudstream*.xml" -delete
+      find "$target_res" -name "ic_cloudstream*.png" -delete
 
-  # 2. Clean up and replace all CloudStream logos and TV logos
-  find "$CS_DIR/app/src/main/res" -name "ic_cloudstream*.xml" -delete
-  find "$CS_DIR/app/src/main/res" -name "ic_cloudstream*.png" -delete
-  
-  # Copy logo as PNG to fallback drawables
-  mkdir -p "$CS_DIR/app/src/main/res/drawable"
-  cp "$MTSFLIX_DIR/logo.png" "$CS_DIR/app/src/main/res/drawable/ic_launcher_foreground.png"
-  cp "$MTSFLIX_DIR/logo.png" "$CS_DIR/app/src/main/res/drawable/ic_cloudstream_monochrome.png"
-  cp "$MTSFLIX_DIR/logo.png" "$CS_DIR/app/src/main/res/drawable/ic_cloudstream_monochrome_big.png"
-  cp "$MTSFLIX_DIR/logo.png" "$CS_DIR/app/src/main/res/drawable/ic_cloudstreamlogotv.png"
-  cp "$MTSFLIX_DIR/logo.png" "$CS_DIR/app/src/main/res/drawable/ic_cloudstreamlogotv_2.png"
-  cp "$MTSFLIX_DIR/logo.png" "$CS_DIR/app/src/main/res/drawable/ic_cloudstreamlogotv_pre.png"
-  cp "$MTSFLIX_DIR/logo.png" "$CS_DIR/app/src/main/res/drawable/ic_cloudstreamlogotv_pre_2.png"
-  
-  echo "  OK: logo.png replaced launcher icons, foregrounds, monochromes and TV logos"
+      for density in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
+        mkdir -p "$target_res/mipmap-$density"
+        cp "$MTSFLIX_DIR/logo.png" "$target_res/mipmap-$density/ic_launcher.png"
+        cp "$MTSFLIX_DIR/logo.png" "$target_res/mipmap-$density/ic_launcher_round.png"
+      done
+
+      mkdir -p "$target_res/drawable"
+      cp "$MTSFLIX_DIR/logo.png" "$target_res/drawable/ic_launcher_foreground.png"
+      cp "$MTSFLIX_DIR/logo.png" "$target_res/drawable/ic_cloudstream_monochrome.png"
+      cp "$MTSFLIX_DIR/logo.png" "$target_res/drawable/ic_cloudstream_monochrome_big.png"
+      cp "$MTSFLIX_DIR/logo.png" "$target_res/drawable/ic_cloudstreamlogotv.png"
+      cp "$MTSFLIX_DIR/logo.png" "$target_res/drawable/ic_cloudstreamlogotv_2.png"
+      cp "$MTSFLIX_DIR/logo.png" "$target_res/drawable/ic_cloudstreamlogotv_pre.png"
+      cp "$MTSFLIX_DIR/logo.png" "$target_res/drawable/ic_cloudstreamlogotv_pre_2.png"
+    fi
+  done
+  echo "  OK: logo.png replaced launcher icons in all flavor directories"
 else
   echo "  WARN: logo.png not found at root"
 fi
 
 if [ -f "$MTSFLIX_DIR/banner.png" ]; then
-  # 3. Clean up and replace all banners
-  find "$CS_DIR/app/src/main/res" -name "ic_banner*" -delete
-  
-  for density in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
-    mkdir -p "$CS_DIR/app/src/main/res/mipmap-$density"
-    cp "$MTSFLIX_DIR/banner.png" "$CS_DIR/app/src/main/res/mipmap-$density/ic_banner.png"
+  for target_res in "$CS_DIR/app/src/main/res" "$CS_DIR/app/src/prerelease/res" "$CS_DIR/app/src/stable/res"; do
+    if [ -d "$target_res" ]; then
+      find "$target_res" -name "ic_banner*" -delete
+      for density in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
+        mkdir -p "$target_res/mipmap-$density"
+        cp "$MTSFLIX_DIR/banner.png" "$target_res/mipmap-$density/ic_banner.png"
+      done
+    fi
   done
   echo "  OK: banner.png replaced launcher banners"
 else
