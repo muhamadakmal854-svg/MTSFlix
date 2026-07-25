@@ -1,11 +1,11 @@
 {
   "version": "1.0.7",
-  "versionCode": 1,
+  "versionCode": 2,
   "downloadUrl": "https://github.com/muhamadakmal854-svg/MTSFlix/releases/download/v1.0.7/MTSFlix-v1.0.7.apk",
-  "releaseNotes": "MTSFlix v1.0.7",
+  "releaseNotes": "MTSFlix v1.0.7 - Interactive Google Sign-In Prompt After Verification",
   "mandatory": false,
   "sha256": "",
-  "publishedAt": "2026-07-25T16:18:41Z",
+  "publishedAt": "2026-07-25T16:24:27Z",
   "minAndroid": 21,
   "providerUrl": "https://cdn.jsdelivr.net/gh/muhamadakmal854-svg/Provider@builds/repo.json"
 }
