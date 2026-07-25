@@ -362,7 +362,7 @@ if os.path.exists(main_path):
     if t3_2 in c3 and 'navDestination.id == R.id.navigation_setup_extensions' not in c3:
         c3 = c3.replace(t3_2, r3_2, 1)
         changed = True
-
+        
     if 'override fun onPause() {' not in c3:
         onpause_code = '''
     override fun onPause() {
@@ -375,10 +375,52 @@ if os.path.exists(main_path):
 '''
         c3 = c3.replace('override fun onDestroy() {', onpause_code + '\n    override fun onDestroy() {')
         changed = True
+    else:
+        # onPause already exists — inject saveWatchHistory INTO existing onPause
+        old_onpause = 'override fun onPause() {\n        super.onPause()'
+        new_onpause = '''override fun onPause() {
+        super.onPause()
+        try {
+            val ctx = this
+            Thread { com.mts.mtsflix.cloud.MTSFlixCloudSync.saveWatchHistory(ctx) }.start()
+        } catch (e: Exception) {}'''
+        if old_onpause in c3 and 'saveWatchHistory' not in c3:
+            c3 = c3.replace(old_onpause, new_onpause, 1)
+            changed = True
 
-    # Auto-sync on every app open (cross-device support: Phone A watches, Phone B opens app -> sync!)
+    # Auto-sync on every app open (cross-device support)
+    # Inject INTO existing onResume (do NOT add duplicate function)
     if 'autoSyncFromCloud' not in c3:
-        onresume_code = '''
+        if 'override fun onResume() {' in c3:
+            # Inject at END of existing onResume — find the closing brace after super.onResume()
+            old_onresume = 'override fun onResume() {\n        super.onResume()'
+            new_onresume = '''override fun onResume() {
+        super.onResume()
+        try {
+            val ctx = this
+            Thread {
+                try {
+                    val updated = com.mts.mtsflix.cloud.MTSFlixCloudSync.autoSyncFromCloud(ctx)
+                    if (updated) {
+                        runOnUiThread {
+                            try {
+                                android.widget.Toast.makeText(ctx, "✅ Sejarah tontonan dikemas kini dari cloud", android.widget.Toast.LENGTH_SHORT).show()
+                                try {
+                                    val nav = navHostFragment.navController
+                                    nav.navigate(com.lagradost.cloudstream3.R.id.navigation_home)
+                                } catch (e: Exception) {}
+                            } catch (e: Exception) {}
+                        }
+                    }
+                } catch (e: Exception) {}
+            }.start()
+        } catch (e: Exception) {}'''
+            if old_onresume in c3:
+                c3 = c3.replace(old_onresume, new_onresume, 1)
+                changed = True
+        else:
+            # No onResume exists — add new one
+            onresume_code = '''
     override fun onResume() {
         super.onResume()
         try {
@@ -389,11 +431,7 @@ if os.path.exists(main_path):
                     if (updated) {
                         runOnUiThread {
                             try {
-                                android.widget.Toast.makeText(ctx, "\u2705 Sejarah tontonan dikemas kini dari cloud", android.widget.Toast.LENGTH_SHORT).show()
-                                // Navigate to home to refresh Continue Watching
-                                try {
-                                    navController.navigate(com.lagradost.cloudstream3.R.id.navigation_home)
-                                } catch (e: Exception) {}
+                                android.widget.Toast.makeText(ctx, "✅ Sejarah tontonan dikemas kini dari cloud", android.widget.Toast.LENGTH_SHORT).show()
                             } catch (e: Exception) {}
                         }
                     }
@@ -402,8 +440,8 @@ if os.path.exists(main_path):
         } catch (e: Exception) {}
     }
 '''
-        c3 = c3.replace('override fun onDestroy() {', onresume_code + '\n    override fun onDestroy() {')
-        changed = True
+            c3 = c3.replace('override fun onDestroy() {', onresume_code + '\n    override fun onDestroy() {')
+            changed = True
 
     if 'runAutoUpdate()' in c3:
         c3 = c3.replace('runAutoUpdate()', 'runAutoUpdate(checkAutoUpdate = false)')
