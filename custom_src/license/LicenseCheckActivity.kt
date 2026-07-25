@@ -179,36 +179,47 @@ class LicenseCheckActivity : AppCompatActivity() {
     }
 
     private fun launchMainApp() {
-        val intent = Intent(this, com.lagradost.cloudstream3.MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        val prefs = androidx.preference.PreferenceManager.getDefaultSharedPreferences(this)
+        val savedProfiles = prefs.getString(com.mts.mtsflix.license.ProfileSwitchActivity.KEY_PROFILES, null)
+
+        // If no profiles saved yet, go directly to MainActivity (skip profile screen)
+        if (savedProfiles.isNullOrBlank()) {
+            val intent = Intent(this, com.lagradost.cloudstream3.MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            }
+            startActivity(intent)
+            finish()
+        } else {
+            // Profiles exist — show Profile Picker screen
+            val intent = Intent(this, com.mts.mtsflix.license.ProfileSwitchActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            }
+            startActivity(intent)
+            finish()
         }
-        startActivity(intent)
-        finish()
     }
 
     private fun checkGoogleLoginAndNavigate(username: String) {
         markSetupComplete()
-        
+
         val prefs = androidx.preference.PreferenceManager.getDefaultSharedPreferences(this)
         val savedGoogleEmail = prefs.getString("GOOGLE_ACCOUNT_EMAIL", null)
 
         if (!savedGoogleEmail.isNullOrEmpty()) {
-            tvStatus.text = "🔄 Memulihkan Sejarah Tontonan..."
-            tvStatus.setTextColor(Color.parseColor("#FFA500"))
-
-            lifecycleScope.launch(Dispatchers.IO) {
-                try {
-                    com.mts.mtsflix.cloud.MTSFlixCloudSync.restoreWatchHistory(this@LicenseCheckActivity, savedGoogleEmail)
-                } catch (e: Exception) {}
-
-                withContext(Dispatchers.Main) {
-                    tvStatus.text = "✅ Akaun Google Terhubung!"
-                    tvMessage.text = "Logged in: $savedGoogleEmail\nSejarah tontonan dipulihkan secara automatik."
-                    btnGoogleSignIn.visibility = View.GONE
-                    btnSkipGoogle.visibility = View.GONE
-                    delay(1200)
-                    launchMainApp()
-                }
+            // Profile already exists — save to profiles list and go to profile picker
+            val profiles = prefs.getString(com.mts.mtsflix.license.ProfileSwitchActivity.KEY_PROFILES, "")
+            val list = if (profiles.isNullOrBlank()) mutableListOf() else profiles.split(com.mts.mtsflix.license.ProfileSwitchActivity.SEPARATOR).toMutableList()
+            if (!list.contains(savedGoogleEmail)) {
+                list.add(savedGoogleEmail)
+                prefs.edit().putString(com.mts.mtsflix.license.ProfileSwitchActivity.KEY_PROFILES, list.joinToString(com.mts.mtsflix.license.ProfileSwitchActivity.SEPARATOR)).commit()
+            }
+            tvStatus.text = "✅ Akaun Google Terhubung!"
+            tvStatus.setTextColor(Color.parseColor("#4CAF50"))
+            btnGoogleSignIn.visibility = View.GONE
+            btnSkipGoogle.visibility = View.GONE
+            lifecycleScope.launch(Dispatchers.Main) {
+                delay(800)
+                launchMainApp()
             }
         } else {
             showGoogleSignInPrompt(username)
@@ -278,33 +289,32 @@ class LicenseCheckActivity : AppCompatActivity() {
 
     private fun saveGoogleAccount(email: String) {
         val prefs = androidx.preference.PreferenceManager.getDefaultSharedPreferences(this)
-        prefs.edit().putString("GOOGLE_ACCOUNT_EMAIL", email).apply()
+        prefs.edit().putString("GOOGLE_ACCOUNT_EMAIL", email).commit()
+
+        // Add to profiles list
+        val profiles = prefs.getString(com.mts.mtsflix.license.ProfileSwitchActivity.KEY_PROFILES, "")
+        val list = if (profiles.isNullOrBlank()) mutableListOf() else profiles.split(com.mts.mtsflix.license.ProfileSwitchActivity.SEPARATOR).toMutableList()
+        if (!list.contains(email)) {
+            list.add(email)
+            prefs.edit().putString(com.mts.mtsflix.license.ProfileSwitchActivity.KEY_PROFILES, list.joinToString(com.mts.mtsflix.license.ProfileSwitchActivity.SEPARATOR)).commit()
+        }
 
         tvStatus.text = "🔄 Memulihkan Sejarah Tontonan..."
         tvStatus.setTextColor(Color.parseColor("#FFA500"))
 
         lifecycleScope.launch(Dispatchers.IO) {
-            val restored = try {
+            try {
                 com.mts.mtsflix.cloud.MTSFlixCloudSync.restoreWatchHistory(this@LicenseCheckActivity, email)
-            } catch (e: Exception) {
-                false
-            }
+            } catch (e: Exception) {}
 
             withContext(Dispatchers.Main) {
-                if (restored) {
-                    Toast.makeText(this@LicenseCheckActivity, "Sejarah Tontonan Berjaya Dipulihkan! 🔄✅", Toast.LENGTH_LONG).show()
-                } else {
-                    Toast.makeText(this@LicenseCheckActivity, "Akaun Google ($email) Berjaya Log Masuk! ✅", Toast.LENGTH_LONG).show()
-                }
-
+                Toast.makeText(this@LicenseCheckActivity, "Akaun Google ($email) Berjaya Log Masuk! ✅", Toast.LENGTH_LONG).show()
                 tvStatus.text = "✅ Log Masuk Google Berjaya!"
                 tvStatus.setTextColor(Color.parseColor("#4CAF50"))
-                tvMessage.text = if (restored) "Akaun: $email\nSejarah tontonan dipulihkan secara automatik! 🔄" else "Akaun: $email\nRekod sejarah tontonan selamat disimpan."
-
+                tvMessage.text = "Akaun: $email\nProfil disimpan. Pilih profil untuk teruskan."
                 btnGoogleSignIn.visibility = View.GONE
                 btnSkipGoogle.visibility = View.GONE
-
-                delay(1500)
+                delay(1200)
                 launchMainApp()
             }
         }

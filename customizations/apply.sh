@@ -392,7 +392,7 @@ if os.path.exists(main_path):
     # Inject INTO existing onResume (do NOT add duplicate function)
     if 'autoSyncFromCloud' not in c3:
         if 'override fun onResume() {' in c3:
-            # Inject at END of existing onResume — find the closing brace after super.onResume()
+            # Inject at start of existing onResume after super.onResume()
             old_onresume = 'override fun onResume() {\n        super.onResume()'
             new_onresume = '''override fun onResume() {
         super.onResume()
@@ -404,10 +404,10 @@ if os.path.exists(main_path):
                     if (updated) {
                         runOnUiThread {
                             try {
-                                android.widget.Toast.makeText(ctx, "✅ Sejarah tontonan dikemas kini dari cloud", android.widget.Toast.LENGTH_SHORT).show()
+                                android.widget.Toast.makeText(ctx, "\u2705 Sejarah tontonan dikemas kini dari cloud", android.widget.Toast.LENGTH_SHORT).show()
                                 try {
-                                    val nav = navHostFragment.navController
-                                    nav.navigate(com.lagradost.cloudstream3.R.id.navigation_home)
+                                    val navFrag = supportFragmentManager.findFragmentById(com.lagradost.cloudstream3.R.id.nav_host_fragment) as? androidx.navigation.fragment.NavHostFragment
+                                    navFrag?.navController?.navigate(com.lagradost.cloudstream3.R.id.navigation_home)
                                 } catch (e: Exception) {}
                             } catch (e: Exception) {}
                         }
@@ -570,6 +570,18 @@ try:
         </activity>'''
         c = c.replace('</application>', activity + '\n    </application>')
         open(path,'w',encoding='utf-8').write(c)
+    if 'ProfileSwitchActivity' not in c:
+        profile_activity = '''
+        <!-- MTSFlix: Profile Switch Screen -->
+        <activity
+            android:name="com.mts.mtsflix.license.ProfileSwitchActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboard|keyboardHidden"
+            android:theme="@style/AppTheme" />
+        <!-- MTSFlix: Device Verification (LAUNCHER) -->'''
+        c = c.replace('<!-- MTSFlix: Device Verification (LAUNCHER) -->', profile_activity)
+        open(path,'w',encoding='utf-8').write(c)
+        print('  OK: ProfileSwitchActivity registered in AndroidManifest')
 except Exception as e:
     print(f'  WARN: {e}')
 PYEOF
