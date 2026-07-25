@@ -198,7 +198,13 @@ class LicenseCheckActivity : AppCompatActivity() {
 
     private fun checkGoogleLoginAndNavigate() {
         markSetupComplete()
-        // Go directly to the main menu after license validation as requested
+        try {
+            val username = DeviceCodeManager.getUsername(this) ?: "MTSFlix User"
+            val prefs = androidx.preference.PreferenceManager.getDefaultSharedPreferences(this)
+            prefs.edit().putString("ACCOUNT_USER_NAME", username).apply()
+        } catch (e: Exception) {
+            android.util.Log.w("MTSFlix", "Profile setup error: ${e.message}")
+        }
         launchMainApp()
     }
 
