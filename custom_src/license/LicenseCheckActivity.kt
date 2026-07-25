@@ -278,11 +278,22 @@ class LicenseCheckActivity : AppCompatActivity() {
         val prefs = androidx.preference.PreferenceManager.getDefaultSharedPreferences(this)
         prefs.edit().putString("GOOGLE_ACCOUNT_EMAIL", email).apply()
         
-        Toast.makeText(this, "Akaun Google ($email) Berjaya Log Masuk! ✅", Toast.LENGTH_LONG).show()
+        var restored = false
+        try {
+            restored = com.mts.mtsflix.cloud.MTSFlixCloudSync.restoreWatchHistory(this, email)
+        } catch (e: Exception) {
+            android.util.Log.e("MTSFlix", "Cloud restore error: ${e.message}")
+        }
+        
+        if (restored) {
+            Toast.makeText(this, "Sejarah Tontonan Berjaya Dipulihkan! 🔄✅", Toast.LENGTH_LONG).show()
+        } else {
+            Toast.makeText(this, "Akaun Google ($email) Berjaya Log Masuk! ✅", Toast.LENGTH_LONG).show()
+        }
         
         tvStatus.text = "✅ Log Masuk Google Berjaya!"
         tvStatus.setTextColor(Color.parseColor("#4CAF50"))
-        tvMessage.text = "Akaun: $email\nRekod sejarah tontonan selamat disimpan."
+        tvMessage.text = if (restored) "Akaun: $email\nSejarah tontonan dipulihkan secara automatik! 🔄" else "Akaun: $email\nRekod sejarah tontonan selamat disimpan."
 
         btnGoogleSignIn.visibility = View.GONE
         btnSkipGoogle.visibility = View.GONE

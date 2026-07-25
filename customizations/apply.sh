@@ -1,6 +1,6 @@
 #!/bin/bash
 # ==============================================================
-#  MTSFlix Customization Script v3.5 (Auto Update & Adult Filter)
+#  MTSFlix Customization Script v3.6 (Bypass Extensions & Auto Cloud Sync)
 #  Patches CloudStream 3 → MTSFlix
 # ==============================================================
 set -e
@@ -192,8 +192,8 @@ if os.path.exists(repo_mgr_path):
         print("  OK: RepositoryManager.kt patched successfully")
 PYEOF
 
-# --- 5. Patch MainActivity.kt for permanent repo, setup bypass & AUTO UPDATE CHECK ---
-echo "[5/12] Patching MainActivity.kt for permanent repo & automatic update pop-up..."
+# --- 5. Patch MainActivity.kt to BYPASS EXTENSIONS SETUP & auto-sync history ---
+echo "[5/12] Patching MainActivity.kt to bypass Extensions setup screen & auto save history..."
 python3 - << 'PYEOF'
 import os, re
 cs_dir = os.environ.get('CS_DIR','cloudstream')
@@ -218,42 +218,39 @@ if os.path.exists(main_path):
                 val newRepo = com.lagradost.cloudstream3.ui.settings.extensions.RepositoryData(null, repoName, repoUrl)
                 setKey(key, currentRepos + newRepo)
             }
+            setKey(HAS_DONE_SETUP_KEY, true)
         } catch (e: Exception) {}'''
         content = content.replace(oncreate_target, bypass_code, 1)
         changed = True
 
-    onnewintent_target = 'override fun onNewIntent(intent: Intent) {'
-    onnewintent_marker = '// MTSFlix: Ensure permanent repo'
-    if onnewintent_marker not in content and onnewintent_target in content:
-        onnewintent_code = '''override fun onNewIntent(intent: Intent) {
-        // MTSFlix: Ensure permanent repo
-        try {
-            val repoUrl = "https://cdn.jsdelivr.net/gh/muhamadakmal854-svg/Provider@builds/repo.json"
-            val repoName = "MTS Repo"
-            val key = "REPOSITORIES_KEY"
-            val currentRepos = getKey<Array<com.lagradost.cloudstream3.ui.settings.extensions.RepositoryData>>(key) ?: emptyArray()
-            if (currentRepos.none { it.url == repoUrl }) {
-                val newRepo = com.lagradost.cloudstream3.ui.settings.extensions.RepositoryData(null, repoName, repoUrl)
-                setKey(key, currentRepos + newRepo)
-            }
-        } catch (e: Exception) {}'''
-        content = content.replace(onnewintent_target, onnewintent_code, 1)
-        changed = True
-
+    # Completely remove navigation to navigation_setup_extensions & navigation_setup_language
     pattern_setup = re.compile(r'try\s*\{\s*if\s*\(\s*getKey\(\s*HAS_DONE_SETUP_KEY[\s\S]*?logError\(e\)\s*\}')
-    new_content, count = pattern_setup.subn('// MTSFlix: Setup wizard bypassed entirely\n        Log.i("MTSFlix", "Setup wizard bypassed")', content)
+    new_content, count = pattern_setup.subn('// MTSFlix: Setup wizard & extensions screen completely bypassed\n        setKey(HAS_DONE_SETUP_KEY, true)', content)
     if count > 0:
         content = new_content
         changed = True
 
-    # Force auto update popup on every launch
+    # Add auto save history onPause
+    if 'override fun onPause() {' not in content:
+        onpause_code = '''
+    override fun onPause() {
+        super.onPause()
+        try {
+            com.mts.mtsflix.cloud.MTSFlixCloudSync.saveWatchHistory(this)
+        } catch (e: Exception) {}
+    }
+'''
+        content = content.replace('override fun onDestroy() {', onpause_code + '\n    override fun onDestroy() {')
+        changed = True
+
+    # Force auto update popup on launch
     if 'runAutoUpdate()' in content:
         content = content.replace('runAutoUpdate()', 'runAutoUpdate(checkAutoUpdate = false)')
         changed = True
 
     if changed:
         open(main_path, 'w', encoding='utf-8').write(content)
-        print("  OK: MainActivity.kt patched with auto-update pop-up on launch")
+        print("  OK: MainActivity.kt patched (bypassed Extensions setup & auto save history onPause)")
 PYEOF
 
 # --- 6. Patch SettingsFragment.kt ---
