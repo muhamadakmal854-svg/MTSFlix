@@ -1,6 +1,6 @@
 #!/bin/bash
 # ==============================================================
-#  MTSFlix Customization Script v3.0 (Fresh Minimal Rebuild)
+#  MTSFlix Customization Script v3.1 (Fresh Minimal Rebuild)
 #  Patches CloudStream 3 → MTSFlix
 # ==============================================================
 set -e
@@ -11,7 +11,7 @@ CS_DIR="${CS_DIR:-$(pwd)/cloudstream}"
 [ ! -d "$CS_DIR" ] && { echo "ERROR: CloudStream dir not found: $CS_DIR"; exit 1; }
 
 # --- 1. Change applicationId -----------------------------------------------
-echo "[1/11] Changing applicationId to com.mts.mtsflix..."
+echo "[1/12] Changing applicationId to com.mts.mtsflix..."
 APP_BUILD="$CS_DIR/app/build.gradle.kts"
 if [ -f "$APP_BUILD" ]; then
   sed -i 's|applicationId = "com\.lagradost\.cloudstream3"|applicationId = "com.mts.mtsflix"|g' "$APP_BUILD"
@@ -19,7 +19,7 @@ if [ -f "$APP_BUILD" ]; then
 fi
 
 # --- 2. Change App Name ----------------------------------------------------
-echo "[2/11] Setting app name to MTSFlix in all localized resources..."
+echo "[2/12] Setting app name to MTSFlix in all localized resources..."
 python3 - << 'PYEOF'
 import os, re
 cs_dir = os.environ.get('CS_DIR','cloudstream')
@@ -45,7 +45,7 @@ else:
 PYEOF
 
 # --- 3. Copy Custom Assets (Logo, Banner) ----------------------------------
-echo "[3/11] Copying custom logo and banner (rebranding all icons/drawables)..."
+echo "[3/12] Copying custom logo and banner (rebranding all icons/drawables)..."
 if [ -f "$MTSFLIX_DIR/logo.png" ]; then
   # 1. Clean up and replace launcher icons & foreground
   find "$CS_DIR/app/src/main/res" -name "ic_launcher.png" -delete
@@ -96,7 +96,7 @@ else
 fi
 
 # --- 4. Patch RepositoryManager.kt for legacy MD5 verification fallback ---
-echo "[4/11] Patching RepositoryManager.kt to add legacy MD5 hash validation fallback & ensure permanent MTS Repo..."
+echo "[4/12] Patching RepositoryManager.kt to add legacy MD5 hash validation fallback & ensure permanent MTS Repo..."
 python3 - << 'PYEOF'
 import os, re
 cs_dir = os.environ.get('CS_DIR','cloudstream')
@@ -199,8 +199,8 @@ else:
         print("  INFO: RepositoryManager.kt already patched or targets not found")
 PYEOF
 
-# --- 5. Patch MainActivity.kt for permanent repo & auto-download plugins ---
-echo "[5/11] Patching MainActivity.kt for permanent repo & auto-download plugins..."
+# --- 5. Patch MainActivity.kt for permanent repo & setup wizard bypass ---
+echo "[5/12] Patching MainActivity.kt for permanent repo..."
 python3 - << 'PYEOF'
 import os, re
 cs_dir = os.environ.get('CS_DIR','cloudstream')
@@ -213,13 +213,13 @@ else:
     content = open(main_path, encoding='utf-8').read()
     changed = False
 
-    # 1. Inject the permanent repo and auto-download logic right after super.onCreate(savedInstanceState)
+    # 1. Inject the permanent repo logic right after super.onCreate(savedInstanceState)
     oncreate_target = 'super.onCreate(savedInstanceState)'
-    oncreate_marker = '// MTSFlix: Permanent repo & Auto-download plugins'
+    oncreate_marker = '// MTSFlix: Permanent repo'
     
     if oncreate_marker not in content and oncreate_target in content:
         bypass_code = '''super.onCreate(savedInstanceState)
-        // MTSFlix: Permanent repo & Auto-download plugins
+        // MTSFlix: Permanent repo
         try {
             val repoUrl = "https://cdn.jsdelivr.net/gh/muhamadakmal854-svg/Provider@builds/repo.json"
             val repoName = "MTS Repo"
@@ -232,40 +232,12 @@ else:
                 setKey(key, currentRepos + newRepo)
                 Log.i("MTSFlix", "Added permanent repo: $repoUrl")
             }
-            
-            // Auto download and load/install all plugins in the background
-            com.lagradost.cloudstream3.utils.Coroutines.ioSafe {
-                try {
-                    val repo = com.lagradost.cloudstream3.plugins.RepositoryManager.parseRepository(repoUrl)
-                    if (repo != null) {
-                        val plugins = com.lagradost.cloudstream3.plugins.RepositoryManager.getRepoPlugins(
-                            com.lagradost.cloudstream3.ui.settings.extensions.RepositoryData(null, repoName, repoUrl)
-                        )
-                        if (plugins != null) {
-                            for (pluginWrapper in plugins) {
-                                val sitePlugin = pluginWrapper.plugin
-                                Log.i("MTSFlix", "Auto downloading/updating plugin: ${sitePlugin.name}")
-                                com.lagradost.cloudstream3.plugins.PluginManager.downloadPlugin(
-                                    this@MainActivity,
-                                    sitePlugin.url,
-                                    sitePlugin.fileHash,
-                                    sitePlugin.internalName,
-                                    repoUrl,
-                                    true // loadPlugin
-                                )
-                            }
-                        }
-                    }
-                } catch (t: Throwable) {
-                    Log.e("MTSFlix", "Error auto loading plugins: " + t.message, t)
-                }
-            }
         } catch (e: Exception) {
             Log.e("MTSFlix", "Repo setup error: " + e.message)
         }'''
         content = content.replace(oncreate_target, bypass_code, 1)
         changed = True
-        print("  OK: Permanent repo and auto-loader injected into MainActivity.onCreate()")
+        print("  OK: Permanent repo injected into MainActivity.onCreate()")
 
     # 2. Inject permanent repo check into onNewIntent
     onnewintent_target = 'override fun onNewIntent(intent: Intent) {'
@@ -303,8 +275,8 @@ else:
         print("  INFO: MainActivity.kt already patched or target not found")
 PYEOF
 
-# --- 6. Patch SettingsFragment.kt to hide Extensions menu option ----------
-echo "[6/11] Patching SettingsFragment.kt to hide Extensions option..."
+# --- 6. Patch SettingsFragment.kt to ensure Extensions menu option is VISIBLE ---
+echo "[6/12] Patching SettingsFragment.kt to ensure Extensions option is VISIBLE..."
 python3 - << 'PYEOF'
 import os, re
 cs_dir = os.environ.get('CS_DIR','cloudstream')
@@ -316,19 +288,19 @@ else:
     print("  Patching SettingsFragment.kt...")
     content = open(settings_frag_path, encoding='utf-8').read()
     
-    # Hide the settingsExtensions view in onBindingCreated
-    target = 'binding.apply {'
-    replacement = 'binding.apply {\n            settingsExtensions.visibility = View.GONE'
-    
-    if target in content and 'settingsExtensions.visibility' not in content:
+    # Ensure settingsExtensions is VISIBLE so users can browse & choose providers from MTS Repo
+    target = 'settingsExtensions.visibility = View.GONE'
+    replacement = 'settingsExtensions.visibility = View.VISIBLE'
+    if target in content:
         content = content.replace(target, replacement)
         open(settings_frag_path, 'w', encoding='utf-8').write(content)
-        print("  OK: Hided Extensions option in SettingsFragment")
+        print("  OK: Ensured Extensions option is VISIBLE in SettingsFragment")
     else:
-        print("  INFO: SettingsFragment.kt already patched or target not found")
+        print("  INFO: SettingsFragment.kt Extensions option is visible")
 PYEOF
+
 # --- 7. Patch strings and settings_general.xml ----------------------------
-echo "[7/11] Patching donottranslate-strings.xml and settings_general.xml..."
+echo "[7/12] Patching donottranslate-strings.xml and settings_general.xml..."
 python3 - << 'PYEOF'
 import os, re
 cs_dir = os.environ.get('CS_DIR','cloudstream')
@@ -352,7 +324,6 @@ if os.path.exists(donottranslate_path):
         
     pattern = r'(<string name="legal_notice_text">)(.*?)(</string>)'
     
-    # Let's replace the content between <string name="legal_notice_text"> and </string>
     def repl_func(match):
         return match.group(1) + malay_notice + match.group(3)
         
@@ -380,7 +351,7 @@ if os.path.exists(xml_path):
 PYEOF
 
 # --- 8. Patch InAppUpdater.kt for custom update repository -----------------
-echo "[8/11] Patching InAppUpdater.kt for custom update repository..."
+echo "[8/12] Patching InAppUpdater.kt for custom update repository..."
 python3 - << 'PYEOF'
 import os, re
 cs_dir = os.environ.get('CS_DIR','cloudstream')
@@ -424,7 +395,7 @@ else:
 PYEOF
 
 # --- 9. Generate BuildUrls.kt with hardcoded URLs --------------------------
-echo "[9/11] Generating BuildUrls.kt with hardcoded URLs..."
+echo "[9/12] Generating BuildUrls.kt with hardcoded URLs..."
 TARGET_LIC="$CS_DIR/app/src/main/java/com/mts/mtsflix/license"
 mkdir -p "$TARGET_LIC"
 cat > "$TARGET_LIC/BuildUrls.kt" << KTEOF
@@ -437,7 +408,7 @@ KTEOF
 echo "  OK: BuildUrls.kt generated"
 
 # --- 10. Copy Custom MTSFlix Source Files ----------------------------------
-echo "[10/11] Copying custom MTSFlix source files..."
+echo "[10/12] Copying custom MTSFlix source files..."
 CUSTOM_SRC="$MTSFLIX_DIR/custom_src"
 TARGET_PKG="$CS_DIR/app/src/main/java/com/mts/mtsflix"
 mkdir -p "$TARGET_PKG"
@@ -451,7 +422,7 @@ else
 fi
 
 # --- 11. Patch AndroidManifest: LicenseCheckActivity as LAUNCHER -----------
-echo "[11/11] Setting LicenseCheckActivity as LAUNCHER..."
+echo "[11/12] Setting LicenseCheckActivity as LAUNCHER..."
 MANIFEST="$CS_DIR/app/src/main/AndroidManifest.xml"
 if [ -f "$MANIFEST" ]; then
   python3 - << 'PYEOF'
@@ -490,6 +461,81 @@ except Exception as e:
     print(f'  WARN: {e}')
 PYEOF
 fi
+
+# --- 12. Filter 18+/18x/NSFW providers automatically ----------------------
+echo "[12/12] Patching automatic 18+/18x/NSFW provider filters..."
+python3 - << 'PYEOF'
+import os, re
+cs_dir = os.environ.get('CS_DIR','cloudstream')
+
+# 1. Filter out 18+/NSFW plugins in PluginsViewModel.kt (Extensions download list)
+pvm_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/ui/settings/extensions/PluginsViewModel.kt'
+if os.path.exists(pvm_path):
+    c = open(pvm_path, encoding='utf-8').read()
+    target = 'it.plugin.tvTypes?.contains(TvType.NSFW.name) != true || isAdult'
+    replacement = '''val tvTypes = it.plugin.tvTypes ?: emptyList()
+            val name = it.plugin.name.lowercase()
+            val internalName = it.plugin.internalName.lowercase()
+            val is18 = tvTypes.any { t -> t.equals(TvType.NSFW.name, ignoreCase = true) || t.contains("18") || t.lowercase().contains("adult") || t.lowercase().contains("nsfw") } ||
+                       name.contains("18+") || name.contains("18x") || name.contains("adult") || name.contains("nsfw") || name.contains("porn") || name.contains("hentai") || name.contains("xxx") ||
+                       internalName.contains("18+") || internalName.contains("18x") || internalName.contains("adult") || internalName.contains("nsfw") || internalName.contains("porn") || internalName.contains("hentai") || internalName.contains("xxx")
+            !is18'''
+    if target in c:
+        c = c.replace(target, replacement)
+        open(pvm_path, 'w', encoding='utf-8').write(c)
+        print("  OK: Filtered 18+ plugins in PluginsViewModel.kt")
+
+# 2. Filter out 18+/NSFW providers in PluginManager.kt (Plugin loading)
+pm_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/plugins/PluginManager.kt'
+if os.path.exists(pm_path):
+    c = open(pm_path, encoding='utf-8').read()
+    pm_target = '//Omit NSFW, if disabled'
+    pm_replacement = '''// Omit 18+ / 18x / NSFW providers
+            val siteNameLower = sitePlugin.name.lowercase()
+            val siteInternalLower = sitePlugin.internalName.lowercase()
+            val is18Plus = tvtypes.any { t -> t.equals(TvType.NSFW.name, ignoreCase = true) || t.contains("18") || t.lowercase().contains("adult") || t.lowercase().contains("nsfw") } ||
+                           siteNameLower.contains("18+") || siteNameLower.contains("18x") || siteNameLower.contains("adult") || siteNameLower.contains("nsfw") || siteNameLower.contains("porn") || siteNameLower.contains("hentai") || siteNameLower.contains("xxx") ||
+                           siteInternalLower.contains("18+") || siteInternalLower.contains("18x") || siteInternalLower.contains("adult") || siteInternalLower.contains("nsfw") || siteInternalLower.contains("porn") || siteInternalLower.contains("hentai") || siteInternalLower.contains("xxx")
+            if (is18Plus) {
+                Log.i(TAG, "Omit 18+ provider > ${sitePlugin.internalName}")
+                return@mapNotNull null
+            }
+            //Omit NSFW, if disabled'''
+    if pm_target in c and 'siteNameLower' not in c:
+        c = c.replace(pm_target, pm_replacement)
+        open(pm_path, 'w', encoding='utf-8').write(c)
+        print("  OK: Filtered 18+ plugins in PluginManager.kt")
+
+# 3. Filter out 18+/NSFW providers in APIHolder.kt (MainAPI.kt)
+mainapi_path = cs_dir + '/library/src/commonMain/kotlin/com/lagradost/cloudstream3/MainAPI.kt'
+if os.path.exists(mainapi_path):
+    c = open(mainapi_path, encoding='utf-8').read()
+    api_target = 'apis.withLock {\n            apis = apis + plugin\n        }'
+    api_replacement = '''apis.withLock {
+            val pName = plugin.name.lowercase()
+            val is18 = plugin.supportedTypes.contains(TvType.NSFW) ||
+                       pName.contains("18+") || pName.contains("18x") || pName.contains("nsfw") ||
+                       pName.contains("adult") || pName.contains("porn") || pName.contains("hentai") || pName.contains("xxx")
+            if (!is18) {
+                apis = apis + plugin
+            }
+        }'''
+    if api_target in c:
+        c = c.replace(api_target, api_replacement)
+        open(mainapi_path, 'w', encoding='utf-8').write(c)
+        print("  OK: Filtered 18+ providers in APIHolder (MainAPI.kt)")
+
+# 4. Disable NSFW category chip in HomeFragment.kt
+hf_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/ui/home/HomeFragment.kt'
+if os.path.exists(hf_path):
+    c = open(hf_path, encoding='utf-8').read()
+    hf_target = 'Pair(nsfw, listOf(TvType.NSFW)),'
+    hf_replacement = '// Pair(nsfw, listOf(TvType.NSFW)),'
+    if hf_target in c:
+        c = c.replace(hf_target, hf_replacement)
+        open(hf_path, 'w', encoding='utf-8').write(c)
+        print("  OK: Disabled NSFW category chip in HomeFragment.kt")
+PYEOF
 
 echo "======================================================"
 echo "    MTSFlix Customization Complete! (License Build)"
