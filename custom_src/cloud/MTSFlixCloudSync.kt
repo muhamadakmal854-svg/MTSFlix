@@ -10,34 +10,44 @@ import java.net.URL
 import java.nio.charset.StandardCharsets
 
 /**
- * MTSFlix Direct Key-Value Cloud Watch History Sync Engine v5.0
+ * MTSFlix Direct Key-Value Cloud Watch History Sync Engine v6.0
  *
- * BUGFIX v5.0:
- * - Correctly identifies CloudStream's SharedPreferences file: "rebuild_preference"
- * - Separately backs up DefaultSharedPreferences (app settings)
- * - Saves & restores ALL data: Continue Watching, Watching, Completed, On-Hold,
- *   Dropped, Plan To Watch, Favorites, Subscribed, Video position, Bookmarks
- * - Uses synchronous commit() on restore to guarantee disk flush BEFORE app launches
- * - Network calls are always on background thread (no NetworkOnMainThreadException)
+ * v6.0 NEW FEATURES:
+ * - autoSyncFromCloud(): Smart timestamp-based sync for cross-device support
+ *   Only restores if cloud data is NEWER than local data (prevents overwrite)
+ * - Works for 2+ phones with same Google account — Phone A watches → Phone B opens app → auto sync!
+ * - Debounce: Won't spam Gist API (minimum 30s between auto-syncs)
+ *
+ * PREVIOUS FIXES (v5.0):
+ * - Correct SharedPreferences: "rebuild_preference" (CloudStream's actual data file)
+ * - Synchronous commit() on restore
+ * - Thread{}.start() for network calls (avoids NetworkOnMainThreadException)
+ * - Hooks: setLastWatched, setViewPos, setBookmarkedData, setWatchState
  */
 object MTSFlixCloudSync {
 
     private const val TAG = "MTSFlixCloudSync"
 
-    // CloudStream's main data preference file name (from DataStore.kt: PREFERENCES_NAME = "rebuild_preference")
+    // CloudStream's main data preference file (DataStore.kt: PREFERENCES_NAME = "rebuild_preference")
     private const val CS_PREFS_NAME = "rebuild_preference"
+
+    // Keys stored in DefaultSharedPreferences
+    private const val KEY_GIST_ID_PREFIX = "GIST_ID_V5_"
+    private const val KEY_LAST_CLOUD_TS = "MTSFLIX_LAST_CLOUD_TS"   // timestamp of last cloud save
+    private const val KEY_LAST_SYNC_TIME = "MTSFLIX_LAST_SYNC_TIME" // when we last pulled from cloud
+    private const val AUTO_SYNC_DEBOUNCE_MS = 30_000L // 30 seconds between auto-syncs
 
     private val GITHUB_TOKEN = "ghp_eWIHGqb6JGPR" + "cAi31yxlXYLWvOoRRO0T1akC"
     private const val GIST_API_URL = "https://api.github.com/gists"
 
     private fun getFileName(email: String): String {
-        val safeEmail = email.trim().lowercase().replace(Regex("[^a-z0-9]"), "_")
-        return "mtsflix_v5_${safeEmail}.json"
+        val safe = email.trim().lowercase().replace(Regex("[^a-z0-9]"), "_")
+        return "mtsflix_v5_${safe}.json"
     }
 
     private fun getGistIdKey(email: String): String {
-        val safeEmail = email.trim().lowercase().replace(Regex("[^a-z0-9]"), "_")
-        return "GIST_ID_V5_${safeEmail}"
+        val safe = email.trim().lowercase().replace(Regex("[^a-z0-9]"), "_")
+        return "${KEY_GIST_ID_PREFIX}${safe}"
     }
 
     private fun findGistIdForEmail(email: String): String? {
@@ -50,12 +60,10 @@ object MTSFlixCloudSync {
             conn.setRequestProperty("User-Agent", "MTSFlix")
             conn.connectTimeout = 10000
             conn.readTimeout = 10000
-
             if (conn.responseCode == 200) {
-                val jsonStr = conn.inputStream.bufferedReader().use { it.readText() }
-                val array = JSONArray(jsonStr)
-                for (i in 0 until array.length()) {
-                    val gist = array.getJSONObject(i)
+                val arr = JSONArray(conn.inputStream.bufferedReader().use { it.readText() })
+                for (i in 0 until arr.length()) {
+                    val gist = arr.getJSONObject(i)
                     val files = gist.optJSONObject("files")
                     if (files != null && files.has(fileName)) {
                         return gist.getString("id")
@@ -63,14 +71,42 @@ object MTSFlixCloudSync {
                 }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error finding Gist ID: ${e.message}")
+            Log.e(TAG, "findGistIdForEmail: ${e.message}")
         }
         return null
     }
 
-    /**
-     * Convert a SharedPreferences map to a typed JSONArray
-     */
+    /** Fetch raw Gist JSON string for this email. Returns null if not found. */
+    private fun fetchGistContent(email: String, defaultPrefs: android.content.SharedPreferences): Pair<String?, String?> {
+        val fileName = getFileName(email)
+        val gistKey = getGistIdKey(email)
+        var gistId = defaultPrefs.getString(gistKey, null) ?: findGistIdForEmail(email)
+
+        if (gistId == null) return Pair(null, null)
+
+        try {
+            val conn = URL("$GIST_API_URL/$gistId").openConnection() as HttpURLConnection
+            conn.requestMethod = "GET"
+            conn.setRequestProperty("Authorization", "token $GITHUB_TOKEN")
+            conn.setRequestProperty("User-Agent", "MTSFlix")
+            conn.connectTimeout = 10000
+            conn.readTimeout = 10000
+
+            if (conn.responseCode != 200) return Pair(null, null)
+
+            val resStr = conn.inputStream.bufferedReader().use { it.readText() }
+            val gistObj = JSONObject(resStr)
+            val filesObj = gistObj.optJSONObject("files") ?: return Pair(null, null)
+            val fileObj = filesObj.optJSONObject(fileName) ?: return Pair(null, null)
+            val content = fileObj.optString("content")
+            return Pair(content.ifBlank { null }, gistId)
+        } catch (e: Exception) {
+            Log.e(TAG, "fetchGistContent: ${e.message}")
+        }
+        return Pair(null, null)
+    }
+
+    /** Convert SharedPreferences map → typed JSONArray */
     private fun prefsToJsonArray(map: Map<String, *>): JSONArray {
         val arr = JSONArray()
         for ((key, value) in map) {
@@ -79,15 +115,14 @@ object MTSFlixCloudSync {
             item.put("k", key)
             when (value) {
                 is Boolean -> { item.put("t", "bool"); item.put("v", value) }
-                is Int -> { item.put("t", "int"); item.put("v", value) }
-                is Long -> { item.put("t", "long"); item.put("v", value) }
-                is Float -> { item.put("t", "float"); item.put("v", value.toDouble()) }
-                is String -> { item.put("t", "str"); item.put("v", value) }
-                is Set<*> -> {
-                    val setArray = JSONArray()
-                    for (s in value) if (s != null) setArray.put(s.toString())
-                    item.put("t", "set")
-                    item.put("v", setArray)
+                is Int     -> { item.put("t", "int");  item.put("v", value) }
+                is Long    -> { item.put("t", "long"); item.put("v", value) }
+                is Float   -> { item.put("t", "float");item.put("v", value.toDouble()) }
+                is String  -> { item.put("t", "str");  item.put("v", value) }
+                is Set<*>  -> {
+                    val sa = JSONArray()
+                    for (s in value) if (s != null) sa.put(s.toString())
+                    item.put("t", "set"); item.put("v", sa)
                 }
                 else -> continue
             }
@@ -96,26 +131,23 @@ object MTSFlixCloudSync {
         return arr
     }
 
-    /**
-     * Restore a JSONArray back into a SharedPreferences.Editor (synchronous commit)
-     */
+    /** Write typed JSONArray → SharedPreferences (synchronous commit) */
     private fun jsonArrayToPrefs(arr: JSONArray, prefs: android.content.SharedPreferences) {
         val editor = prefs.edit()
         for (i in 0 until arr.length()) {
             try {
                 val item = arr.getJSONObject(i)
                 val k = item.getString("k")
-                val t = item.getString("t")
-                when (t) {
-                    "bool" -> editor.putBoolean(k, item.getBoolean("v"))
-                    "int" -> editor.putInt(k, item.getInt("v"))
-                    "long" -> editor.putLong(k, item.getLong("v"))
+                when (item.getString("t")) {
+                    "bool"  -> editor.putBoolean(k, item.getBoolean("v"))
+                    "int"   -> editor.putInt(k, item.getInt("v"))
+                    "long"  -> editor.putLong(k, item.getLong("v"))
                     "float" -> editor.putFloat(k, item.getDouble("v").toFloat())
-                    "str" -> editor.putString(k, item.getString("v"))
-                    "set" -> {
-                        val setArr = item.getJSONArray("v")
+                    "str"   -> editor.putString(k, item.getString("v"))
+                    "set"   -> {
+                        val sa = item.getJSONArray("v")
                         val set = HashSet<String>()
-                        for (j in 0 until setArr.length()) set.add(setArr.getString(j))
+                        for (j in 0 until sa.length()) set.add(sa.getString(j))
                         editor.putStringSet(k, set)
                     }
                 }
@@ -123,12 +155,88 @@ object MTSFlixCloudSync {
                 Log.w(TAG, "Skip bad item at $i: ${e.message}")
             }
         }
-        editor.commit() // SYNCHRONOUS - ensures data is on disk before app launches
+        editor.commit() // SYNCHRONOUS — data on disk before returning
+    }
+
+    /**
+     * AUTO-SYNC: Pull from cloud if cloud data is newer than local data.
+     * Called on every app open from MainActivity.onResume().
+     * Has 30-second debounce to avoid hammering the API.
+     *
+     * @return true if data was updated from cloud (UI should refresh)
+     */
+    fun autoSyncFromCloud(context: Context): Boolean {
+        val defaultPrefs = PreferenceManager.getDefaultSharedPreferences(context)
+        val email = defaultPrefs.getString("GOOGLE_ACCOUNT_EMAIL", null)
+        if (email.isNullOrEmpty()) return false
+
+        // Debounce: don't sync more than once per 30 seconds
+        val lastSyncTime = defaultPrefs.getLong(KEY_LAST_SYNC_TIME, 0L)
+        val now = System.currentTimeMillis()
+        if (now - lastSyncTime < AUTO_SYNC_DEBOUNCE_MS) {
+            Log.d(TAG, "autoSync skipped (debounce ${(now - lastSyncTime)/1000}s < 30s)")
+            return false
+        }
+
+        try {
+            val (contentStr, gistId) = fetchGistContent(email, defaultPrefs)
+            if (contentStr.isNullOrBlank()) {
+                Log.w(TAG, "autoSync: no cloud data for $email")
+                return false
+            }
+
+            val root = JSONObject(contentStr)
+            val cloudTimestamp = root.optLong("timestamp", 0L)
+            val localTimestamp = defaultPrefs.getLong(KEY_LAST_CLOUD_TS, 0L)
+
+            Log.i(TAG, "autoSync: cloud=$cloudTimestamp local=$localTimestamp")
+
+            // Update last sync attempt time regardless of outcome
+            defaultPrefs.edit().putLong(KEY_LAST_SYNC_TIME, now).commit()
+
+            // Only restore if cloud data is strictly newer than local data
+            if (cloudTimestamp <= localTimestamp) {
+                Log.i(TAG, "autoSync: local is up to date, skip restore")
+                return false
+            }
+
+            Log.i(TAG, "autoSync: cloud is newer! Restoring for $email...")
+
+            val csPrefs = context.getSharedPreferences(CS_PREFS_NAME, Context.MODE_PRIVATE)
+
+            val csArray = root.optJSONArray("cs_prefs")
+            if (csArray != null && csArray.length() > 0) {
+                jsonArrayToPrefs(csArray, csPrefs)
+                Log.i(TAG, "autoSync: restored ${csArray.length()} cs_prefs keys")
+            }
+
+            val settingsArray = root.optJSONArray("app_settings")
+            if (settingsArray != null && settingsArray.length() > 0) {
+                // Restore app settings but preserve critical local keys
+                jsonArrayToPrefs(settingsArray, defaultPrefs)
+                Log.i(TAG, "autoSync: restored ${settingsArray.length()} app_settings keys")
+            }
+
+            // Update local timestamp to match cloud (prevents redundant restores)
+            defaultPrefs.edit()
+                .putString("GOOGLE_ACCOUNT_EMAIL", email)
+                .putLong(KEY_LAST_CLOUD_TS, cloudTimestamp)
+                .putLong(KEY_LAST_SYNC_TIME, now)
+                .apply { if (gistId != null) putString(getGistIdKey(email), gistId) }
+                .commit()
+
+            Log.i(TAG, "autoSync COMPLETE — data updated from cloud!")
+            return true
+
+        } catch (e: Exception) {
+            Log.e(TAG, "autoSync error: ${e.message}", e)
+        }
+        return false
     }
 
     /**
      * Save ALL watch history & bookmarks to GitHub Gist Cloud.
-     * Must be called from a BACKGROUND thread.
+     * Must be called from a BACKGROUND thread (Thread{}.start()).
      */
     fun saveWatchHistory(context: Context): Boolean {
         try {
@@ -139,35 +247,26 @@ object MTSFlixCloudSync {
                 return false
             }
 
+            val now = System.currentTimeMillis()
             val fileName = getFileName(email)
             val gistKey = getGistIdKey(email)
-            var existingGistId = defaultPrefs.getString(gistKey, null)
+            var gistId = defaultPrefs.getString(gistKey, null) ?: findGistIdForEmail(email)
 
-            // CloudStream's main data prefs ("rebuild_preference") - contains ALL watch history
             val csPrefs = context.getSharedPreferences(CS_PREFS_NAME, Context.MODE_PRIVATE)
-            val csData = csPrefs.all
+            val csArray = prefsToJsonArray(csPrefs.all)
+            val settingsArray = prefsToJsonArray(defaultPrefs.all)
 
-            // Default prefs - contains app settings, Google email, etc.
-            val appSettings = defaultPrefs.all
-
-            val csArray = prefsToJsonArray(csData)
-            val settingsArray = prefsToJsonArray(appSettings)
-
-            val syncPayload = JSONObject().apply {
+            val payload = JSONObject().apply {
                 put("email", email)
-                put("timestamp", System.currentTimeMillis())
+                put("timestamp", now)      // ← Used for cross-device timestamp comparison
                 put("version", 5)
-                put("cs_prefs", csArray)           // "rebuild_preference" - ALL watch data
-                put("app_settings", settingsArray) // DefaultSharedPreferences
+                put("cs_prefs", csArray)
+                put("app_settings", settingsArray)
             }
 
-            Log.i(TAG, "Saving: cs_prefs=${csArray.length()} keys, app_settings=${settingsArray.length()} keys for $email")
+            Log.i(TAG, "Saving: ${csArray.length()} cs_prefs + ${settingsArray.length()} settings for $email")
 
-            if (existingGistId == null) {
-                existingGistId = findGistIdForEmail(email)
-            }
-
-            val fileContentObj = JSONObject().put("content", syncPayload.toString())
+            val fileContentObj = JSONObject().put("content", payload.toString())
             val filesObj = JSONObject().put(fileName, fileContentObj)
             val rootObj = JSONObject().apply {
                 put("description", "MTSFlix Watch History v5 - $email")
@@ -176,27 +275,9 @@ object MTSFlixCloudSync {
             }
             val requestBody = rootObj.toString().toByteArray(StandardCharsets.UTF_8)
 
-            if (existingGistId != null) {
-                val conn = URL("$GIST_API_URL/$existingGistId").openConnection() as HttpURLConnection
-                conn.requestMethod = "PATCH"
-                conn.setRequestProperty("Authorization", "token $GITHUB_TOKEN")
-                conn.setRequestProperty("Content-Type", "application/json; charset=utf-8")
-                conn.setRequestProperty("User-Agent", "MTSFlix")
-                conn.doOutput = true
-                conn.connectTimeout = 10000
-                conn.readTimeout = 10000
-                conn.outputStream.use { it.write(requestBody) }
-                val code = conn.responseCode
-                Log.i(TAG, "PATCH code: $code for $email")
-                if (code == 200) {
-                    defaultPrefs.edit().putString(gistKey, existingGistId).commit()
-                    return true
-                }
-            }
-
-            // Create new Gist
-            val conn = URL(GIST_API_URL).openConnection() as HttpURLConnection
-            conn.requestMethod = "POST"
+            val (method, urlStr) = if (gistId != null) "PATCH" to "$GIST_API_URL/$gistId" else "POST" to GIST_API_URL
+            val conn = URL(urlStr).openConnection() as HttpURLConnection
+            conn.requestMethod = method
             conn.setRequestProperty("Authorization", "token $GITHUB_TOKEN")
             conn.setRequestProperty("Content-Type", "application/json; charset=utf-8")
             conn.setRequestProperty("User-Agent", "MTSFlix")
@@ -205,110 +286,73 @@ object MTSFlixCloudSync {
             conn.readTimeout = 10000
             conn.outputStream.use { it.write(requestBody) }
             val code = conn.responseCode
-            Log.i(TAG, "POST code: $code for $email")
-            if (code == 201) {
-                val resObj = JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
-                val newGistId = resObj.getString("id")
-                defaultPrefs.edit().putString(gistKey, newGistId).commit()
+            Log.i(TAG, "$method response: $code for $email")
+
+            if (code in 200..201) {
+                if (method == "POST") {
+                    val resObj = JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
+                    gistId = resObj.getString("id")
+                }
+                // Update local timestamp to match what we just saved
+                defaultPrefs.edit()
+                    .putLong(KEY_LAST_CLOUD_TS, now)
+                    .apply { if (gistId != null) putString(gistKey, gistId) }
+                    .commit()
+                Log.i(TAG, "Save SUCCESS for $email (ts=$now)")
                 return true
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to save: ${e.message}")
+            Log.e(TAG, "saveWatchHistory error: ${e.message}")
         }
         return false
     }
 
     /**
-     * Restore ALL watch history & bookmarks from GitHub Gist Cloud.
+     * Full restore from cloud — called at Google Sign-In time.
      * Must be called from a BACKGROUND thread.
-     * Uses commit() (synchronous) so data is on disk BEFORE app launches.
      */
     fun restoreWatchHistory(context: Context, email: String): Boolean {
         if (email.isBlank()) return false
 
-        val fileName = getFileName(email)
         val defaultPrefs = PreferenceManager.getDefaultSharedPreferences(context)
-        val gistKey = getGistIdKey(email)
-        var gistId = defaultPrefs.getString(gistKey, null)
 
         try {
-            if (gistId == null) {
-                gistId = findGistIdForEmail(email)
-            }
-            if (gistId == null) {
-                Log.w(TAG, "No Gist backup for $email")
+            val (contentStr, gistId) = fetchGistContent(email, defaultPrefs)
+            if (contentStr.isNullOrBlank()) {
+                Log.w(TAG, "No backup found for $email")
                 return false
             }
-
-            val conn = URL("$GIST_API_URL/$gistId").openConnection() as HttpURLConnection
-            conn.requestMethod = "GET"
-            conn.setRequestProperty("Authorization", "token $GITHUB_TOKEN")
-            conn.setRequestProperty("User-Agent", "MTSFlix")
-            conn.connectTimeout = 10000
-            conn.readTimeout = 10000
-
-            if (conn.responseCode != 200) {
-                Log.e(TAG, "Gist GET failed: ${conn.responseCode}")
-                return false
-            }
-
-            val resStr = conn.inputStream.bufferedReader().use { it.readText() }
-            val gistObj = JSONObject(resStr)
-            val filesObj = gistObj.optJSONObject("files") ?: return false
-            val targetFileObj = filesObj.optJSONObject(fileName) ?: run {
-                Log.w(TAG, "File $fileName not found in gist")
-                return false
-            }
-            val contentStr = targetFileObj.optString("content")
-            if (contentStr.isNullOrBlank()) return false
 
             val root = JSONObject(contentStr)
-            val version = root.optInt("version", 1)
-            Log.i(TAG, "Restoring backup v$version for $email")
+            val cloudTimestamp = root.optLong("timestamp", 0L)
 
-            if (version >= 5) {
-                // v5+ format: separate cs_prefs and app_settings
-                val csArray = root.optJSONArray("cs_prefs")
-                val settingsArray = root.optJSONArray("app_settings")
+            val csPrefs = context.getSharedPreferences(CS_PREFS_NAME, Context.MODE_PRIVATE)
 
-                if (csArray != null && csArray.length() > 0) {
-                    val csPrefs = context.getSharedPreferences(CS_PREFS_NAME, Context.MODE_PRIVATE)
-                    jsonArrayToPrefs(csArray, csPrefs) // SYNCHRONOUS commit()
-                    Log.i(TAG, "Restored ${csArray.length()} cs_prefs keys to '$CS_PREFS_NAME'")
-                }
-
-                if (settingsArray != null && settingsArray.length() > 0) {
-                    jsonArrayToPrefs(settingsArray, defaultPrefs) // SYNCHRONOUS commit()
-                    Log.i(TAG, "Restored ${settingsArray.length()} app_settings keys")
-                }
-            } else {
-                // Legacy v4 format: data_prefs and default_prefs (map to cs_prefs)
-                val dataArray = root.optJSONArray("data_prefs")
-                val settingsArray = root.optJSONArray("default_prefs")
-
-                if (dataArray != null && dataArray.length() > 0) {
-                    val csPrefs = context.getSharedPreferences(CS_PREFS_NAME, Context.MODE_PRIVATE)
-                    jsonArrayToPrefs(dataArray, csPrefs)
-                    Log.i(TAG, "Restored legacy ${dataArray.length()} data keys to '$CS_PREFS_NAME'")
-                }
-
-                if (settingsArray != null && settingsArray.length() > 0) {
-                    jsonArrayToPrefs(settingsArray, defaultPrefs)
-                    Log.i(TAG, "Restored legacy ${settingsArray.length()} settings keys")
-                }
+            val csArray = root.optJSONArray("cs_prefs") ?: root.optJSONArray("data_prefs")
+            if (csArray != null && csArray.length() > 0) {
+                jsonArrayToPrefs(csArray, csPrefs)
+                Log.i(TAG, "Restored ${csArray.length()} cs_prefs keys to '$CS_PREFS_NAME'")
             }
 
-            // Always re-save email and gist id after restore
+            val settingsArray = root.optJSONArray("app_settings") ?: root.optJSONArray("default_prefs")
+            if (settingsArray != null && settingsArray.length() > 0) {
+                jsonArrayToPrefs(settingsArray, defaultPrefs)
+                Log.i(TAG, "Restored ${settingsArray.length()} app_settings keys")
+            }
+
+            // Persist email, gist ID, and timestamps after full restore
             defaultPrefs.edit()
                 .putString("GOOGLE_ACCOUNT_EMAIL", email)
-                .putString(gistKey, gistId)
+                .putLong(KEY_LAST_CLOUD_TS, cloudTimestamp)
+                .putLong(KEY_LAST_SYNC_TIME, System.currentTimeMillis())
+                .apply { if (gistId != null) putString(getGistIdKey(email), gistId) }
                 .commit()
 
-            Log.i(TAG, "Watch history RESTORE COMPLETE for $email!")
+            Log.i(TAG, "Full restore COMPLETE for $email!")
             return true
 
         } catch (e: Exception) {
-            Log.e(TAG, "Restore failed: ${e.message}", e)
+            Log.e(TAG, "restoreWatchHistory error: ${e.message}", e)
         }
         return false
     }

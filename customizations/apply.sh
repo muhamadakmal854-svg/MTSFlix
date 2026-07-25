@@ -368,11 +368,41 @@ if os.path.exists(main_path):
     override fun onPause() {
         super.onPause()
         try {
-            com.mts.mtsflix.cloud.MTSFlixCloudSync.saveWatchHistory(this)
+            val ctx = this
+            Thread { com.mts.mtsflix.cloud.MTSFlixCloudSync.saveWatchHistory(ctx) }.start()
         } catch (e: Exception) {}
     }
 '''
         c3 = c3.replace('override fun onDestroy() {', onpause_code + '\n    override fun onDestroy() {')
+        changed = True
+
+    # Auto-sync on every app open (cross-device support: Phone A watches, Phone B opens app -> sync!)
+    if 'autoSyncFromCloud' not in c3:
+        onresume_code = '''
+    override fun onResume() {
+        super.onResume()
+        try {
+            val ctx = this
+            Thread {
+                try {
+                    val updated = com.mts.mtsflix.cloud.MTSFlixCloudSync.autoSyncFromCloud(ctx)
+                    if (updated) {
+                        runOnUiThread {
+                            try {
+                                android.widget.Toast.makeText(ctx, "\u2705 Sejarah tontonan dikemas kini dari cloud", android.widget.Toast.LENGTH_SHORT).show()
+                                // Navigate to home to refresh Continue Watching
+                                try {
+                                    navController.navigate(com.lagradost.cloudstream3.R.id.navigation_home)
+                                } catch (e: Exception) {}
+                            } catch (e: Exception) {}
+                        }
+                    }
+                } catch (e: Exception) {}
+            }.start()
+        } catch (e: Exception) {}
+    }
+'''
+        c3 = c3.replace('override fun onDestroy() {', onresume_code + '\n    override fun onDestroy() {')
         changed = True
 
     if 'runAutoUpdate()' in c3:
@@ -381,7 +411,7 @@ if os.path.exists(main_path):
 
     if changed:
         open(main_path, 'w', encoding='utf-8').write(c3)
-        print("  OK: MainActivity.kt patched successfully")
+        print("  OK: MainActivity.kt patched successfully with onResume auto-sync")
 PYEOF
 
 # --- 6. Patch SettingsFragment.kt & settings_account.xml -------------------
