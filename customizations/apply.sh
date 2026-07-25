@@ -198,11 +198,10 @@ if os.path.exists(dsh_path):
     c = open(dsh_path, encoding='utf-8').read()
     changed_dsh = False
 
-    # CRITICAL: Wrap in GlobalScope.launch(IO) to avoid NetworkOnMainThreadException!
+    # CRITICAL: Use plain Thread{}.start() to avoid NetworkOnMainThreadException
+    # Cannot use GlobalScope.launch here as DataStoreHelper may not have coroutine scope import
     CLOUD_SYNC_CALL = '''try {
-            kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
-                context?.let { com.mts.mtsflix.cloud.MTSFlixCloudSync.saveWatchHistory(it) }
-            }
+            Thread { context?.let { com.mts.mtsflix.cloud.MTSFlixCloudSync.saveWatchHistory(it) } }.start()
         } catch (e: Exception) {}'''
 
     # Hook 1: setLastWatched (Continue Watching row)
