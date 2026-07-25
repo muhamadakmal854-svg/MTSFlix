@@ -196,26 +196,59 @@ if os.path.exists(repo_mgr_path):
 dsh_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/utils/DataStoreHelper.kt'
 if os.path.exists(dsh_path):
     c = open(dsh_path, encoding='utf-8').read()
+    changed_dsh = False
+
+    # CRITICAL: Wrap in GlobalScope.launch(IO) to avoid NetworkOnMainThreadException!
+    CLOUD_SYNC_CALL = '''try {
+            kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                context?.let { com.mts.mtsflix.cloud.MTSFlixCloudSync.saveWatchHistory(it) }
+            }
+        } catch (e: Exception) {}'''
+
+    # Hook 1: setLastWatched (Continue Watching row)
     t_lw = 'isFromDownload\n            )\n        )'
     r_lw = '''isFromDownload
             )
         )
-        try {
-            context?.let { com.mts.mtsflix.cloud.MTSFlixCloudSync.saveWatchHistory(it) }
-        } catch (e: Exception) {}'''
+        ''' + CLOUD_SYNC_CALL
     if t_lw in c and 'saveWatchHistory' not in c:
         c = c.replace(t_lw, r_lw, 1)
-    
+        changed_dsh = True
+
+    # Also update existing saveWatchHistory calls to be on background thread (fix NetworkOnMainThreadException)
+    OLD_SYNC = 'try {\n            context?.let { com.mts.mtsflix.cloud.MTSFlixCloudSync.saveWatchHistory(it) }\n        } catch (e: Exception) {}'
+    if OLD_SYNC in c:
+        c = c.replace(OLD_SYNC, CLOUD_SYNC_CALL)
+        changed_dsh = True
+
+    # Hook 2: setViewPos (video seek position = evidence of watching)
     t_vp = 'setKey("$currentAccount/$VIDEO_POS_DUR", id.toString(), PosDur(pos, dur))'
-    r_vp = '''setKey("$currentAccount/$VIDEO_POS_DUR", id.toString(), PosDur(pos, dur))
-        try {
-            context?.let { com.mts.mtsflix.cloud.MTSFlixCloudSync.saveWatchHistory(it) }
-        } catch (e: Exception) {}'''
-    if t_vp in c:
-        c = c.replace(t_vp, r_vp, 1)
-        
-    open(dsh_path, 'w', encoding='utf-8').write(c)
-    print("  OK: DataStoreHelper.kt patched for instant cloud sync on playback")
+    r_vp = 'setKey("$currentAccount/$VIDEO_POS_DUR", id.toString(), PosDur(pos, dur))\n        ' + CLOUD_SYNC_CALL
+    if t_vp in c and 'VIDEO_POS_DUR' in c:
+        # Only replace in setViewPos function, check it's not already there
+        if c.count(CLOUD_SYNC_CALL) < 2:
+            c = c.replace(t_vp, r_vp, 1)
+            changed_dsh = True
+
+    # Hook 3: setBookmarkedData (Watching, Completed, On-Hold, Dropped, Plan To Watch, Favorites)
+    t_bk = 'setKey("$currentAccount/$RESULT_WATCH_STATE_DATA", id.toString(), data)'
+    r_bk = 'setKey("$currentAccount/$RESULT_WATCH_STATE_DATA", id.toString(), data)\n        ' + CLOUD_SYNC_CALL
+    if t_bk in c:
+        c = c.replace(t_bk, r_bk, 1)
+        changed_dsh = True
+
+    # Hook 4: setWatchState (Watching, Completed, On-Hold, Dropped, Plan to Watch)
+    t_ws = 'setKey("$currentAccount/$RESULT_WATCH_STATE", id.toString(), state)'
+    r_ws = 'setKey("$currentAccount/$RESULT_WATCH_STATE", id.toString(), state)\n        ' + CLOUD_SYNC_CALL
+    if t_ws in c:
+        c = c.replace(t_ws, r_ws, 1)
+        changed_dsh = True
+
+    if changed_dsh:
+        open(dsh_path, 'w', encoding='utf-8').write(c)
+        print("  OK: DataStoreHelper.kt patched for background cloud sync on playback & bookmarks")
+    else:
+        print("  SKIP: DataStoreHelper.kt already patched")
 PYEOF
 
 # --- 5. Patch MainActivity.kt, SetupFragmentExtensions.kt & SetupFragmentLanguage.kt ---
