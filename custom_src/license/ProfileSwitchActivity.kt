@@ -263,7 +263,7 @@ class ProfileSwitchActivity : AppCompatActivity() {
 
     private fun promptAddGoogle() {
         try {
-            val intent = android.accounts.AccountManager.get(this).newChooseAccountIntent(
+            val intent = android.accounts.AccountManager.newChooseAccountIntent(
                 null, null, arrayOf("com.google"), null, null, null, null
             )
             startActivityForResult(intent, REQUEST_GOOGLE_ACCOUNT)
