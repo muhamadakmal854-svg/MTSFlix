@@ -1,6 +1,6 @@
 #!/bin/bash
 # ==============================================================
-#  MTSFlix Customization Script v4.1 (Clean Extensions & Hidden Accounts Section)
+#  MTSFlix Customization Script v4.2 (Hidden Extensions & Silent Background Download)
 #  Patches CloudStream 3 → MTSFlix
 # ==============================================================
 set -e
@@ -219,7 +219,7 @@ if os.path.exists(dsh_path):
 PYEOF
 
 # --- 5. Patch MainActivity.kt, SetupFragmentExtensions.kt & SetupFragmentLanguage.kt ---
-echo "[5/12] Patching setup fragments to FORCE BYPASS Extensions screen without forcing auto-download on launch..."
+echo "[5/12] Patching setup fragments to FORCE BYPASS Extensions screen & silent background download..."
 python3 - << 'PYEOF'
 import os, re
 cs_dir = os.environ.get('CS_DIR','cloudstream')
@@ -255,7 +255,7 @@ if os.path.exists(lang_path):
         open(lang_path, 'w', encoding='utf-8').write(c2)
         print("  OK: Patched SetupFragmentLanguage.kt")
 
-# 3. MainActivity.kt
+# 3. MainActivity.kt (Auto download extensions SILENTLY di balik layar on launch if empty)
 main_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/MainActivity.kt'
 if os.path.exists(main_path):
     c3 = open(main_path, encoding='utf-8').read()
@@ -270,9 +270,18 @@ if os.path.exists(main_path):
             val repoName = "MTS Repo"
             val key = "REPOSITORIES_KEY"
             val currentRepos = getKey<Array<com.lagradost.cloudstream3.ui.settings.extensions.RepositoryData>>(key) ?: emptyArray()
-            if (currentRepos.none { it.url == repoUrl }) {
+            val reposToUse = if (currentRepos.none { it.url == repoUrl }) {
                 val newRepo = com.lagradost.cloudstream3.ui.settings.extensions.RepositoryData(null, repoName, repoUrl)
                 setKey(key, currentRepos + newRepo)
+                currentRepos + newRepo
+            } else currentRepos
+
+            ioSafe {
+                if (com.lagradost.cloudstream3.plugins.PluginManager.getPluginsLocal().isEmpty()) {
+                    for (r in reposToUse) {
+                        com.lagradost.cloudstream3.ui.settings.extensions.PluginsViewModel.downloadAll(this@MainActivity, r, null)
+                    }
+                }
             }
         } catch (e: Exception) {}'''
         c3 = c3.replace(oncreate_target, bypass_code, 1)
@@ -344,25 +353,24 @@ if os.path.exists(main_path):
 PYEOF
 
 # --- 6. Patch SettingsFragment.kt & settings_account.xml -------------------
-echo "[6/12] Hiding Accounts category in settings_account.xml..."
+echo "[6/12] HIDE Extensions menu & REMOVE Accounts section in settings..."
 python3 - << 'PYEOF'
 import os, re
 cs_dir = os.environ.get('CS_DIR','cloudstream')
 
+# Hide Extensions section in SettingsFragment.kt to prevent URL theft
 settings_frag_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/ui/settings/SettingsFragment.kt'
 if os.path.exists(settings_frag_path):
-    content = open(settings_frag_path, encoding='utf-8').read()
-    target = 'settingsExtensions.visibility = View.GONE'
-    replacement = 'settingsExtensions.visibility = View.VISIBLE'
-    if target in content:
-        content = content.replace(target, replacement)
-        open(settings_frag_path, 'w', encoding='utf-8').write(content)
-        print("  OK: Ensured Extensions option is VISIBLE in SettingsFragment")
+    c = open(settings_frag_path, encoding='utf-8').read()
+    if 'settingsExtensions.visibility = View.GONE' not in c:
+        c = c.replace('binding.apply {', 'binding.apply {\n            settingsExtensions.visibility = View.GONE', 1)
+        open(settings_frag_path, 'w', encoding='utf-8').write(c)
+        print("  OK: HIDE Extensions section in SettingsFragment")
 
+# Remove Accounts category in settings_account.xml
 xml_acc_path = cs_dir + '/app/src/main/res/xml/settings_account.xml'
 if os.path.exists(xml_acc_path):
     c = open(xml_acc_path, encoding='utf-8').read()
-    # Remove pref_category_accounts (MAL, Kitsu, AniList, Simkl, OpenSubtitles, SubDL, AnimeSkip, skip account prompt)
     c = re.sub(r'<PreferenceCategory\s+android:title="@string/pref_category_accounts">.*?</PreferenceCategory>', '', c, flags=re.DOTALL)
     open(xml_acc_path, 'w', encoding='utf-8').write(c)
     print("  OK: Removed Accounts section from settings_account.xml")
