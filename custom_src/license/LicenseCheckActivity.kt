@@ -1,5 +1,6 @@
 package com.mts.mtsflix.license
 
+import android.accounts.AccountManager
 import android.animation.ObjectAnimator
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -20,17 +21,17 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * MTSFlix License Check Activity
+ * MTSFlix License Check & Google Sign-In Activity
  *
  * This is the LAUNCHER activity. It:
  * 1. Generates/shows device code
  * 2. Verifies against GitHub licenses.json
- * 3. If valid → launches CloudStream MainActivity
- * 4. If not → shows device code + contact admin instructions
- *
- * UI: Dark theme, premium design, built programmatically (no XML layout needed)
+ * 3. Prompts Google Sign-In for watch history preservation upon verification
+ * 4. Launches CloudStream MainActivity
  */
 class LicenseCheckActivity : AppCompatActivity() {
+
+    private val REQUEST_CODE_GOOGLE_PICKER = 9005
 
     // ─── UI References ────────────────────────────────────────────────────────
     private lateinit var tvStatus: TextView
@@ -39,6 +40,8 @@ class LicenseCheckActivity : AppCompatActivity() {
     private lateinit var btnVerify: Button
     private lateinit var btnContact: Button
     private lateinit var btnCopy: Button
+    private lateinit var btnGoogleSignIn: Button
+    private lateinit var btnSkipGoogle: Button
     private lateinit var progressBar: ProgressBar
     private lateinit var cardView: LinearLayout
     private lateinit var tvExpiry: TextView
@@ -51,7 +54,6 @@ class LicenseCheckActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Set orientation based on device type (Phone: Portrait, TV: Landscape, Tablet: Unspecified)
         try {
             val uiModeManager = getSystemService(Context.UI_MODE_SERVICE) as android.app.UiModeManager
             if (uiModeManager.currentModeType == android.content.res.Configuration.UI_MODE_TYPE_TELEVISION) {
@@ -70,13 +72,11 @@ class LicenseCheckActivity : AppCompatActivity() {
             requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
         }
 
-        // Set status bar dark
         window.statusBarColor = Color.parseColor("#0D0D0D")
         window.decorView.systemUiVisibility = 0
 
         buildUI()
 
-        // Initialize MTSFlix services (Firebase, notifications, extension repo setup)
         try {
             com.mts.mtsflix.MTSFlixInit.initialize(applicationContext)
         } catch (e: Exception) {
@@ -86,7 +86,6 @@ class LicenseCheckActivity : AppCompatActivity() {
         val deviceCode = DeviceCodeManager.getDeviceCode(this)
         tvDeviceCode.text = deviceCode
 
-        // Auto-verify on first open
         startVerification(deviceCode)
     }
 
@@ -96,7 +95,6 @@ class LicenseCheckActivity : AppCompatActivity() {
         setLoadingState("Menyemak lesen peranti...")
 
         lifecycleScope.launch {
-            // Small delay for UX
             delay(500)
 
             val result = LicenseVerifier.verify(deviceCode)
@@ -105,8 +103,8 @@ class LicenseCheckActivity : AppCompatActivity() {
                 LicenseVerifier.Status.VALID -> {
                     DeviceCodeManager.setVerified(this@LicenseCheckActivity, result.username, result.expiryDate)
                     showVerifiedState(result.username, result.expiryDate)
-                    delay(2000)
-                    checkGoogleLoginAndNavigate()
+                    delay(1500)
+                    checkGoogleLoginAndNavigate(result.username)
                 }
 
                 LicenseVerifier.Status.BANNED -> {
@@ -154,8 +152,8 @@ class LicenseCheckActivity : AppCompatActivity() {
                         val username = DeviceCodeManager.getUsername(this@LicenseCheckActivity) ?: "User"
                         val expiry = DeviceCodeManager.getExpiryDate(this@LicenseCheckActivity) ?: ""
                         showVerifiedState(username, expiry)
-                        delay(1200)
-                        checkGoogleLoginAndNavigate()
+                        delay(1000)
+                        checkGoogleLoginAndNavigate(username)
                     } else {
                         showErrorState(
                             icon = "📡",
@@ -171,8 +169,8 @@ class LicenseCheckActivity : AppCompatActivity() {
                         val username = DeviceCodeManager.getUsername(this@LicenseCheckActivity) ?: "User"
                         val expiry = DeviceCodeManager.getExpiryDate(this@LicenseCheckActivity) ?: ""
                         showVerifiedState(username, expiry)
-                        delay(1200)
-                        checkGoogleLoginAndNavigate()
+                        delay(1000)
+                        checkGoogleLoginAndNavigate(username)
                     } else {
                         showErrorState(
                             icon = "⚠️",
@@ -187,8 +185,6 @@ class LicenseCheckActivity : AppCompatActivity() {
     }
 
     private fun launchMainApp() {
-        // FLAG_ACTIVITY_CLEAR_TASK wipes the entire back stack so the user
-        // can never navigate back to LicenseCheckActivity from the main app.
         val intent = Intent(this, com.lagradost.cloudstream3.MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         }
@@ -196,25 +192,111 @@ class LicenseCheckActivity : AppCompatActivity() {
         finish()
     }
 
-    private fun checkGoogleLoginAndNavigate() {
+    private fun checkGoogleLoginAndNavigate(username: String) {
         markSetupComplete()
-        try {
-            val username = DeviceCodeManager.getUsername(this) ?: "MTSFlix User"
-            val prefs = androidx.preference.PreferenceManager.getDefaultSharedPreferences(this)
-            prefs.edit().putString("ACCOUNT_USER_NAME", username).apply()
-        } catch (e: Exception) {
-            android.util.Log.w("MTSFlix", "Profile setup error: ${e.message}")
+        
+        val prefs = androidx.preference.PreferenceManager.getDefaultSharedPreferences(this)
+        val savedGoogleEmail = prefs.getString("GOOGLE_ACCOUNT_EMAIL", null)
+
+        if (!savedGoogleEmail.isNullOrEmpty()) {
+            tvStatus.text = "✅ Akaun Google Terhubung!"
+            tvMessage.text = "Logged in: $savedGoogleEmail\nSejarah tontonan disimpan secara automatik."
+            btnGoogleSignIn.visibility = View.GONE
+            btnSkipGoogle.visibility = View.GONE
+            lifecycleScope.launch {
+                delay(1200)
+                launchMainApp()
+            }
+        } else {
+            showGoogleSignInPrompt(username)
         }
-        launchMainApp()
+    }
+
+    private fun showGoogleSignInPrompt(username: String) {
+        progressBar.visibility = View.GONE
+        btnVerify.visibility = View.GONE
+        btnContact.visibility = View.GONE
+        btnCopy.visibility = View.GONE
+
+        tvStatus.text = "🌐 Log Masuk Akaun Google"
+        tvStatus.setTextColor(Color.parseColor("#4285F4"))
+        
+        tvMessage.visibility = View.VISIBLE
+        tvMessage.text = "Sila log masuk dengan Google untuk menyimpan sejarah tontonan & senarai kegemaran supaya rekod tidak hilang sekiranya peranti di-clear data atau uninstall."
+        tvMessage.setTextColor(Color.parseColor("#CCCCCC"))
+
+        btnGoogleSignIn.visibility = View.VISIBLE
+        btnSkipGoogle.visibility = View.VISIBLE
+    }
+
+    private fun triggerGoogleAccountPicker() {
+        try {
+            val intent = AccountManager.newChooseAccountIntent(
+                null, null, arrayOf("com.google"), false, null, null, null, null
+            )
+            startActivityForResult(intent, REQUEST_CODE_GOOGLE_PICKER)
+        } catch (e: Exception) {
+            // Fallback: prompt text dialog input for email
+            promptManualEmailInput()
+        }
+    }
+
+    private fun promptManualEmailInput() {
+        val input = EditText(this).apply {
+            hint = "contoh@gmail.com"
+            inputType = android.text.InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS
+        }
+        android.app.AlertDialog.Builder(this, com.lagradost.cloudstream3.R.style.AlertDialogCustom)
+            .setTitle("Log Masuk Akaun Google")
+            .setMessage("Masukkan email Google anda untuk menyelaraskan sejarah tontonan:")
+            .setView(input)
+            .setPositiveButton("Simpan & Teruskan") { _, _ ->
+                val email = input.text.toString().trim()
+                if (email.isNotEmpty()) {
+                    saveGoogleAccount(email)
+                } else {
+                    launchMainApp()
+                }
+            }
+            .setNegativeButton("Langkah Ini") { _, _ -> launchMainApp() }
+            .show()
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == REQUEST_CODE_GOOGLE_PICKER && resultCode == RESULT_OK && data != null) {
+            val accountName = data.getStringExtra(AccountManager.KEY_ACCOUNT_NAME)
+            if (!accountName.isNullOrEmpty()) {
+                saveGoogleAccount(accountName)
+            } else {
+                launchMainApp()
+            }
+        }
+    }
+
+    private fun saveGoogleAccount(email: String) {
+        val prefs = androidx.preference.PreferenceManager.getDefaultSharedPreferences(this)
+        prefs.edit().putString("GOOGLE_ACCOUNT_EMAIL", email).apply()
+        
+        Toast.makeText(this, "Akaun Google ($email) Berjaya Log Masuk! ✅", Toast.LENGTH_LONG).show()
+        
+        tvStatus.text = "✅ Log Masuk Google Berjaya!"
+        tvStatus.setTextColor(Color.parseColor("#4CAF50"))
+        tvMessage.text = "Akaun: $email\nRekod sejarah tontonan selamat disimpan."
+
+        btnGoogleSignIn.visibility = View.GONE
+        btnSkipGoogle.visibility = View.GONE
+
+        lifecycleScope.launch {
+            delay(1500)
+            launchMainApp()
+        }
     }
 
     private fun markSetupComplete() {
-        // CloudStream DataStore uses SharedPreferences file named "rebuild_preference"
-        // (PREFERENCES_NAME in DataStore.kt). HAS_DONE_SETUP_KEY = "HAS_DONE_SETUP".
-        // DataStore reads everything as JSON literals (strings), so we must write booleans as "true" string.
         val key = "HAS_DONE_SETUP"
         try {
-            getSharedPreferences("rebuild_preference", android.content.Context.MODE_PRIVATE)
+            getSharedPreferences("rebuild_preference", Context.MODE_PRIVATE)
                 .edit().putString(key, "true").apply()
         } catch (e: Exception) { android.util.Log.w("MTSFlix", "setup bypass fail: ${e.message}") }
         try {
@@ -222,7 +304,6 @@ class LicenseCheckActivity : AppCompatActivity() {
                 .edit().putString(key, "true").apply()
         } catch (e: Exception) { android.util.Log.w("MTSFlix", "setup bypass2 fail: ${e.message}") }
     }
-
 
     // ─── UI State Management ──────────────────────────────────────────────────
 
@@ -232,6 +313,8 @@ class LicenseCheckActivity : AppCompatActivity() {
         btnVerify.isEnabled = false
         btnVerify.text = "Menyemak lesen..."
         btnContact.visibility = View.GONE
+        btnGoogleSignIn.visibility = View.GONE
+        btnSkipGoogle.visibility = View.GONE
         tvStatus.text = message
         tvStatus.setTextColor(Color.parseColor("#FFA500"))
         tvMessage.visibility = View.GONE
@@ -242,7 +325,7 @@ class LicenseCheckActivity : AppCompatActivity() {
 
     private fun showVerifiedState(username: String, expiryDate: String) {
         progressBar.visibility = View.GONE
-        btnVerify.visibility = View.GONE // Hide verify button on success
+        btnVerify.visibility = View.GONE
         btnContact.visibility = View.GONE
         tvStatus.text = "✅ Lesen Disahkan!"
         tvStatus.setTextColor(Color.parseColor("#4CAF50"))
@@ -252,7 +335,6 @@ class LicenseCheckActivity : AppCompatActivity() {
         tvUsername.visibility = View.VISIBLE
         tvUsername.text = "👤  $username"
         tvExpiry.visibility = View.GONE
-        // tvExpiry.text = "📅  Sah sehingga: $expiryDate"
         btnCopy.visibility = View.GONE
     }
 
@@ -274,6 +356,8 @@ class LicenseCheckActivity : AppCompatActivity() {
         tvUsername.visibility = View.GONE
         tvExpiry.visibility = View.GONE
         btnCopy.visibility = View.VISIBLE
+        btnGoogleSignIn.visibility = View.GONE
+        btnSkipGoogle.visibility = View.GONE
 
         if (showContact) {
             btnContact.visibility = View.VISIBLE
@@ -285,7 +369,6 @@ class LicenseCheckActivity : AppCompatActivity() {
     // ─── Build UI Programmatically ────────────────────────────────────────────
 
     private fun buildUI() {
-        // Root scroll
         val scroll = ScrollView(this)
         scroll.setBackgroundColor(Color.parseColor("#0D0D0D"))
         setContentView(scroll)
@@ -297,7 +380,6 @@ class LicenseCheckActivity : AppCompatActivity() {
         }
         scroll.addView(root)
 
-        // ── Logo / Title ──────────────────────────────────────────────────────
         val ivLogo = ImageView(this).apply {
             setImageResource(com.lagradost.cloudstream3.R.mipmap.ic_launcher)
             val lp = LinearLayout.LayoutParams(dp(80), dp(80))
@@ -329,7 +411,6 @@ class LicenseCheckActivity : AppCompatActivity() {
         }
         root.addView(tvSubtitle)
 
-        // ── Card ──────────────────────────────────────────────────────────────
         cardView = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(24), dp(28), dp(24), dp(28))
@@ -344,7 +425,6 @@ class LicenseCheckActivity : AppCompatActivity() {
         }
         root.addView(cardView)
 
-        // ── Card content: Device Code label ───────────────────────────────────
         val tvDeviceLabel = TextView(this).apply {
             text = "Kod Peranti Anda"
             textSize = 12f
@@ -356,7 +436,6 @@ class LicenseCheckActivity : AppCompatActivity() {
         }
         cardView.addView(tvDeviceLabel)
 
-        // ── Device Code (large, monospace, red) ───────────────────────────────
         tvDeviceCode = TextView(this).apply {
             text = "MTSF-XXXX-XXXX-XXXX"
             textSize = 24f
@@ -375,7 +454,6 @@ class LicenseCheckActivity : AppCompatActivity() {
         }
         cardView.addView(tvDeviceCode)
 
-        // ── Copy button ───────────────────────────────────────────────────────
         btnCopy = Button(this).apply {
             text = "📋 Salin Kod"
             textSize = 13f
@@ -398,7 +476,6 @@ class LicenseCheckActivity : AppCompatActivity() {
         }
         cardView.addView(btnCopy)
 
-        // ── Divider ───────────────────────────────────────────────────────────
         val divider = View(this).apply {
             setBackgroundColor(Color.parseColor("#2A2A2A"))
             val lp = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 1)
@@ -407,7 +484,6 @@ class LicenseCheckActivity : AppCompatActivity() {
         }
         cardView.addView(divider)
 
-        // ── Status Text ───────────────────────────────────────────────────────
         tvStatus = TextView(this).apply {
             text = "Menyemak lesen..."
             textSize = 16f
@@ -420,7 +496,6 @@ class LicenseCheckActivity : AppCompatActivity() {
         }
         cardView.addView(tvStatus)
 
-        // ── Username (shown when verified) ────────────────────────────────────
         tvUsername = TextView(this).apply {
             text = ""
             textSize = 14f
@@ -433,7 +508,6 @@ class LicenseCheckActivity : AppCompatActivity() {
         }
         cardView.addView(tvUsername)
 
-        // ── Expiry (shown when verified) ──────────────────────────────────────
         tvExpiry = TextView(this).apply {
             text = ""
             textSize = 13f
@@ -446,7 +520,6 @@ class LicenseCheckActivity : AppCompatActivity() {
         }
         cardView.addView(tvExpiry)
 
-        // ── Message ───────────────────────────────────────────────────────────
         tvMessage = TextView(this).apply {
             text = ""
             textSize = 13f
@@ -459,7 +532,6 @@ class LicenseCheckActivity : AppCompatActivity() {
         }
         cardView.addView(tvMessage)
 
-        // ── Progress Bar ──────────────────────────────────────────────────────
         progressBar = ProgressBar(this).apply {
             isIndeterminate = true
             visibility = View.VISIBLE
@@ -470,7 +542,6 @@ class LicenseCheckActivity : AppCompatActivity() {
         }
         cardView.addView(progressBar)
 
-        // ── Verify / Retry / Contact Button ───────────────────────────────────
         btnVerify = Button(this).apply {
             text = "🔑 Semak Lesen"
             textSize = 15f
@@ -493,7 +564,47 @@ class LicenseCheckActivity : AppCompatActivity() {
         }
         cardView.addView(btnVerify)
 
-        // ── Contact Admin Button (initially hidden) ───────────────────────────
+        // ── Google Sign-In Button (Promoted after License Verification) ───────
+        btnGoogleSignIn = Button(this).apply {
+            text = "🌐 Log Masuk Akaun Google"
+            textSize = 15f
+            setTypeface(null, Typeface.BOLD)
+            setTextColor(Color.WHITE)
+            val bg = GradientDrawable().apply {
+                setColor(Color.parseColor("#4285F4")) // Google Blue
+                cornerRadius = dp(12).toFloat()
+            }
+            background = bg
+            visibility = View.GONE
+            setPadding(dp(16), dp(14), dp(16), dp(14))
+            val lp = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+            lp.topMargin = dp(16)
+            layoutParams = lp
+            setOnClickListener {
+                triggerGoogleAccountPicker()
+            }
+        }
+        cardView.addView(btnGoogleSignIn)
+
+        // ── Skip Google Button ────────────────────────────────────────────────
+        btnSkipGoogle = Button(this).apply {
+            text = "Teruskan ke MTSFlix ➔"
+            textSize = 14f
+            setTextColor(Color.parseColor("#888888"))
+            val bg = GradientDrawable().apply {
+                setColor(Color.TRANSPARENT)
+            }
+            background = bg
+            visibility = View.GONE
+            val lp = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+            lp.topMargin = dp(8)
+            layoutParams = lp
+            setOnClickListener {
+                launchMainApp()
+            }
+        }
+        cardView.addView(btnSkipGoogle)
+
         btnContact = Button(this).apply {
             text = "📞 Hubungi Admin"
             textSize = 15f
@@ -519,7 +630,6 @@ class LicenseCheckActivity : AppCompatActivity() {
         }
         cardView.addView(btnContact)
 
-        // ── Footer ────────────────────────────────────────────────────────────
         val tvFooter = TextView(this).apply {
             text = "MTSFlix v1.0 • Hak Cipta © 2026 MTS"
             textSize = 11f
