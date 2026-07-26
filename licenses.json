@@ -1,7 +1,7 @@
 {
   "version": 1,
   "description": "MTSFlix Device License Registry",
-  "lastUpdated": "2026-07-25",
+  "lastUpdated": "2026-07-26",
   "licenses": [
     {
       "id": "LIC-EXAMPLE-00000001",
@@ -240,6 +240,34 @@
       "deviceInfo": "",
       "note": "VIP",
       "lastModified": "2026-07-25T22:41:20"
+    },
+    {
+      "id": "LIC-20260726-08B5B928",
+      "deviceCode": "MTSF-AD26-58A8-81C2",
+      "username": "Sakuraairiv3 D2",
+      "email": "Sakuraairiv3d2@gmail.com",
+      "expiredAt": "2099-12-30",
+      "active": true,
+      "banned": false,
+      "bannedReason": "",
+      "addedAt": "2026-07-26",
+      "deviceInfo": "Android TV",
+      "note": "VIP",
+      "lastModified": "2026-07-26T15:41:24"
+    },
+    {
+      "id": "LIC-20260726-6172B25A",
+      "deviceCode": "MTSF-FD30-60F1-1965",
+      "username": "My Wife Ika",
+      "email": "mywife@gmail.com",
+      "expiredAt": "2099-12-30",
+      "active": true,
+      "banned": false,
+      "bannedReason": "",
+      "addedAt": "2026-07-26",
+      "deviceInfo": "OPPO A6T 5G",
+      "note": "VIP",
+      "lastModified": "2026-07-26T15:42:48"
     }
   ]
 }
