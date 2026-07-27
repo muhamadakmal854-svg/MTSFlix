@@ -17,13 +17,15 @@ import os, re, json
 cs_dir = os.environ.get('CS_DIR','cloudstream')
 mtsflix_dir = os.environ.get('MTSFLIX_DIR','.')
 
-# Read MTSFlix version from version.json
-ver = '1.0.8'
-try:
-    vj = json.load(open(mtsflix_dir + '/version.json'))
-    ver = vj.get('version', '1.0.8')
-except:
-    pass
+# Read MTSFlix version — priority: VER env variable (set by workflow) > version.json
+ver = os.environ.get('VER', '')
+if not ver:
+    try:
+        vj = json.load(open(mtsflix_dir + '/version.json'))
+        ver = vj.get('version', '1.0.9')
+    except:
+        ver = '1.0.9'
+print(f"  INFO: Building with versionName = {ver}")
 
 # 1a. Patch build.gradle.kts: applicationId, strip suffixes
 app_build = cs_dir + '/app/build.gradle.kts'
