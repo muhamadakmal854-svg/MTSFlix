@@ -411,23 +411,22 @@ function generateHex(length) {
 }
 
 function encodeBase64Unicode(str) {
-  return btoa(
-    encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, function toSolidBytes(match, p1) {
-      return String.fromCharCode('0x' + p1);
-    })
-  );
+  const bytes = new TextEncoder().encode(str);
+  let binary = '';
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
 }
 
 function decodeBase64Unicode(str) {
-  const cleanStr = str.replace(/\n/g, '').replace(/\r/g, '');
-  return decodeURIComponent(
-    atob(cleanStr)
-      .split('')
-      .map(function (c) {
-        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-      })
-      .join('')
-  );
+  const cleanStr = str.replace(/\s+/g, '');
+  const binary = atob(cleanStr);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return new TextDecoder().decode(bytes);
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
