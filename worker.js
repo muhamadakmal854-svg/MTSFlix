@@ -139,6 +139,9 @@ export default {
         if (!isAuthorized(request)) {
           return jsonRes({ ok: false, error: 'Akses ditolak: Admin key tidak sah' }, 401);
         }
+        if (!CONFIG.GITHUB_TOKEN) {
+          return jsonRes({ ok: false, error: 'Sila masukkan GITHUB_TOKEN di Cloudflare Worker Settings > Variables' }, 400);
+        }
 
         let body = {};
         try {
@@ -345,6 +348,20 @@ async function fetchLicensesFileFromGitHub(config) {
 }
 
 async function fetchLicensesFromGitHub(config) {
+  // 1. Cuba muat dari URL Public Raw terlebih dahulu (Sangat pantas <50ms, tiada keperluan token)
+  try {
+    const rawUrl = `https://raw.githubusercontent.com/${config.GITHUB_REPO}/${config.GITHUB_BRANCH}/licenses.json?t=${Date.now()}`;
+    const res = await fetch(rawUrl, {
+      headers: { 'User-Agent': 'Cloudflare-Worker-MTSFlix' },
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch (e) {
+    console.warn('Raw fetch failed, falling back to GitHub API:', e);
+  }
+
+  // 2. Fallback: GitHub REST API
   const fileData = await fetchLicensesFileFromGitHub(config);
   const contentDecoded = decodeBase64Unicode(fileData.content);
   return JSON.parse(contentDecoded);
