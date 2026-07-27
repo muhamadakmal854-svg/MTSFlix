@@ -602,10 +602,28 @@
     async function loadLicenses() {
       const tbody = document.getElementById('licenseTbody');
       try {
-        const res = await fetch('/licenses');
-        const data = await res.json();
-        if (data.ok && data.licenses) {
-          allLicenses = data.licenses;
+        let licenses = null;
+        try {
+          const res = await fetch('/licenses');
+          const data = await res.json();
+          if (data.ok && data.licenses) {
+            licenses = data.licenses;
+          }
+        } catch (e) {
+          console.warn('API fetch failed, trying direct raw fallback:', e);
+        }
+
+        if (!licenses) {
+          const rawUrl = 'https://raw.githubusercontent.com/muhamadakmal854-svg/MTSFlix/main/licenses.json?t=' + Date.now();
+          const rawRes = await fetch(rawUrl);
+          const rawData = await rawRes.json();
+          if (rawData && rawData.licenses) {
+            licenses = rawData.licenses;
+          }
+        }
+
+        if (licenses) {
+          allLicenses = licenses;
           updateStats(allLicenses);
           renderTable(allLicenses);
         } else {

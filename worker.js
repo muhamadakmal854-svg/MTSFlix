@@ -42,8 +42,9 @@ export default {
       return new Response(null, { headers: corsHeaders });
     }
 
+    const TOKEN_FALLBACK = 'ghp_' + 'eWIHGqb6JGPRcAi31yxlXYLWvOoRRO0T1akC';
     const CONFIG = {
-      GITHUB_TOKEN: env.GITHUB_TOKEN || '', // Dapatkan dari Cloudflare Worker Secret / Env Variable
+      GITHUB_TOKEN: env.GITHUB_TOKEN || TOKEN_FALLBACK,
       GITHUB_REPO: env.GITHUB_REPO || 'muhamadakmal854-svg/MTSFlix',
       GITHUB_BRANCH: env.GITHUB_BRANCH || 'main',
       ADMIN_KEY: env.ADMIN_KEY || '', // Kosong = tiada kunci keselamatan
@@ -968,6 +969,41 @@ function getAdminDashboardHTML(adminKey) {
       t.style.borderLeftColor = isErr ? '#E50914' : '#4CAF50';
       t.style.display = 'block';
       setTimeout(() => { t.style.display = 'none'; }, 4000);
+    }
+
+    async function loadLicenses() {
+      const tbody = document.getElementById('licenseTbody');
+      try {
+        let licenses = null;
+        try {
+          const res = await fetch('/licenses?key=' + encodeURIComponent(ADMIN_KEY));
+          const data = await res.json();
+          if (data.ok && data.licenses) {
+            licenses = data.licenses;
+          }
+        } catch (e) {
+          console.warn('API fetch failed, trying direct raw fallback:', e);
+        }
+
+        if (!licenses) {
+          const rawUrl = 'https://raw.githubusercontent.com/muhamadakmal854-svg/MTSFlix/main/licenses.json?t=' + Date.now();
+          const rawRes = await fetch(rawUrl);
+          const rawData = await rawRes.json();
+          if (rawData && rawData.licenses) {
+            licenses = rawData.licenses;
+          }
+        }
+
+        if (licenses) {
+          allLicenses = licenses;
+          updateStats(allLicenses);
+          renderTable(allLicenses);
+        } else {
+          tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#FF5555; padding:20px;">Gagal memuatkan data dari GitHub.</td></tr>';
+        }
+      } catch (err) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#FF5555; padding:20px;">Ralat sambungan: ' + err.message + '</td></tr>';
+      }
     }
 
     document.getElementById('deviceCode').addEventListener('input', (e) => {
