@@ -1000,12 +1000,7 @@ else:
 
                             // MTSFlix KIDS FILTER: only show cartoon/anime for kids profiles
                             try {
-                                val ctx = try {
-                                    com.lagradost.cloudstream3.CloudStreamApp.context
-                                } catch (_: Throwable) {
-                                    @Suppress("DEPRECATION")
-                                    com.lagradost.cloudstream3.AcraApplication.context
-                                }
+                                val ctx = com.lagradost.cloudstream3.CloudStreamApp.context
                                 if (ctx != null) {
                                     val isKids = com.mts.mtsflix.license.ProfileManager.isKidsModeActive(ctx)
                                     if (isKids) {
