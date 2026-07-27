@@ -785,3 +785,207 @@ PYEOF
 echo "======================================================"
 echo "    MTSFlix Customization Complete! (License Build)"
 echo "======================================================"
+
+# --- 13. Register Netflix-Style Profile Activities in AndroidManifest -------
+echo "[13/13] Registering Netflix-style profile activities in AndroidManifest..."
+python3 - << 'PYEOF'
+import os
+path = os.environ.get('CS_DIR','cloudstream') + '/app/src/main/AndroidManifest.xml'
+try:
+    c = open(path, encoding='utf-8').read()
+    changed = False
+
+    # Register ProfilePickerActivity (new Netflix-style picker)
+    if 'ProfilePickerActivity' not in c:
+        inject = '''
+        <!-- MTSFlix: Netflix-Style Profile Picker -->
+        <activity
+            android:name="com.mts.mtsflix.license.ProfilePickerActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboard|keyboardHidden"
+            android:theme="@style/AppTheme" />
+        <!-- MTSFlix: Profile PIN Entry -->
+        <activity
+            android:name="com.mts.mtsflix.license.ProfilePinActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboard|keyboardHidden"
+            android:theme="@style/AppTheme" />
+        <!-- MTSFlix: Profile Manage Screen -->
+        <activity
+            android:name="com.mts.mtsflix.license.ProfileManageActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboard|keyboardHidden"
+            android:theme="@style/AppTheme" />'''
+        c = c.replace('<!-- MTSFlix: Profile Switch Screen -->', inject + '\n        <!-- MTSFlix: Profile Switch Screen (legacy) -->')
+        changed = True
+        print('  OK: ProfilePickerActivity + ProfilePinActivity + ProfileManageActivity registered')
+
+    if changed:
+        open(path, 'w', encoding='utf-8').write(c)
+except Exception as e:
+    print(f'  WARN profile activities: {e}')
+PYEOF
+
+# --- 14. Route LicenseCheckActivity → ProfilePickerActivity -----------------
+echo "[14/14] Routing LicenseCheckActivity to Netflix-style ProfilePickerActivity..."
+python3 - << 'PYEOF'
+import os
+cs_dir = os.environ.get('CS_DIR','cloudstream')
+# Find LicenseCheckActivity in the mts package
+for root, dirs, files in os.walk(cs_dir + '/app/src/main/java/com/mts/mtsflix'):
+    for f in files:
+        if f == 'LicenseCheckActivity.kt':
+            path = os.path.join(root, f)
+            c = open(path, encoding='utf-8').read()
+            # Replace route to old ProfileSwitchActivity with new ProfilePickerActivity
+            old = 'ProfileSwitchActivity::class.java'
+            new = 'ProfilePickerActivity::class.java'
+            if old in c and new not in c:
+                c = c.replace(old, new)
+                open(path, 'w', encoding='utf-8').write(c)
+                print('  OK: LicenseCheckActivity now routes to ProfilePickerActivity')
+            elif new in c:
+                print('  OK: LicenseCheckActivity already routes to ProfilePickerActivity')
+PYEOF
+
+# --- 15. Patch InAppUpdater: Download Progress Bar --------------------------
+echo "[15/15] Patching InAppUpdater.kt — adding download progress bar..."
+python3 - << 'PYEOF'
+import os, re
+cs_dir = os.environ.get('CS_DIR','cloudstream')
+path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/utils/InAppUpdater.kt'
+
+if not os.path.exists(path):
+    print('  SKIP: InAppUpdater.kt not found')
+else:
+    c = open(path, encoding='utf-8').read()
+
+    # Replace the legacy downloadUpdate function with one that shows a progress dialog
+    old_download = '''    private suspend fun Activity.downloadUpdate(url: String): Boolean {
+        try {
+            Log.d(LOG_TAG, "Downloading update: $url")
+            val appUpdateName = "CloudStream"
+            val appUpdateSuffix = "apk"
+
+            // Delete all old updates
+            this.cacheDir.listFiles()?.filter {
+                it.name.startsWith(appUpdateName) && it.extension == appUpdateSuffix
+            }?.forEach { deleteFileOnExit(it) }
+
+            val downloadedFile = File.createTempFile(appUpdateName, ".$appUpdateSuffix")
+            val sink: BufferedSink = downloadedFile.sink().buffer()
+
+            updateLock.withLock {
+                sink.writeAll(app.get(url).body.source())
+                sink.close()
+                openApk(this, Uri.fromFile(downloadedFile))
+            }
+
+            return true
+        } catch (e: Exception) {
+            logError(e)
+            return false
+        }
+    }'''
+
+    new_download = '''    private suspend fun Activity.downloadUpdate(url: String): Boolean {
+        // Show progress dialog on UI thread
+        var progressDialog: android.app.ProgressDialog? = null
+        withContext(kotlinx.coroutines.Dispatchers.Main) {
+            try {
+                progressDialog = android.app.ProgressDialog(this@downloadUpdate).apply {
+                    setTitle("Memuat turun kemas kini")
+                    setMessage("Menyambung...")
+                    setProgressStyle(android.app.ProgressDialog.STYLE_HORIZONTAL)
+                    isIndeterminate = true
+                    setCancelable(false)
+                    progress = 0; max = 100
+                    show()
+                }
+            } catch (_: Exception) {}
+        }
+
+        return try {
+            Log.d(LOG_TAG, "Downloading update with progress: $url")
+            val appUpdateName = "MTSFlix"
+            val appUpdateSuffix = "apk"
+
+            // Delete old update files
+            this.cacheDir.listFiles()?.filter {
+                it.name.startsWith(appUpdateName) && it.extension == appUpdateSuffix
+            }?.forEach { deleteFileOnExit(it) }
+
+            val downloadedFile = File.createTempFile(appUpdateName, ".$appUpdateSuffix")
+
+            updateLock.withLock {
+                val connection = java.net.URL(url).openConnection() as java.net.HttpURLConnection
+                connection.connect()
+                val totalBytes = connection.contentLength.toLong()
+                val input = java.io.BufferedInputStream(connection.inputStream, 8192)
+                val output = java.io.FileOutputStream(downloadedFile)
+                val buffer = ByteArray(8192)
+                var downloaded = 0L
+                var read: Int
+
+                while (input.read(buffer).also { read = it } != -1) {
+                    output.write(buffer, 0, read)
+                    downloaded += read
+                    if (totalBytes > 0) {
+                        val pct = (downloaded * 100 / totalBytes).toInt()
+                        val dlMb = "%.1f".format(downloaded / 1_048_576.0)
+                        val totMb = "%.1f".format(totalBytes / 1_048_576.0)
+                        withContext(kotlinx.coroutines.Dispatchers.Main) {
+                            try {
+                                progressDialog?.apply {
+                                    isIndeterminate = false
+                                    progress = pct
+                                    setMessage("$dlMb MB / $totMb MB  ($pct%)")
+                                }
+                            } catch (_: Exception) {}
+                        }
+                    }
+                }
+                output.flush(); output.close(); input.close()
+                connection.disconnect()
+
+                withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    try {
+                        progressDialog?.setMessage("Memasang kemas kini...")
+                        progressDialog?.isIndeterminate = true
+                    } catch (_: Exception) {}
+                }
+
+                openApk(this@downloadUpdate, Uri.fromFile(downloadedFile))
+            }
+
+            withContext(kotlinx.coroutines.Dispatchers.Main) {
+                try { progressDialog?.dismiss() } catch (_: Exception) {}
+            }
+            true
+        } catch (e: Exception) {
+            logError(e)
+            withContext(kotlinx.coroutines.Dispatchers.Main) {
+                try { progressDialog?.dismiss() } catch (_: Exception) {}
+                try { showToast("Muat turun gagal. Cuba lagi.", android.widget.Toast.LENGTH_LONG) } catch (_: Exception) {}
+            }
+            false
+        }
+    }'''
+
+    if old_download in c and 'progressDialog' not in c:
+        c = c.replace(old_download, new_download)
+        # Add missing imports if needed
+        if 'import kotlinx.coroutines.Dispatchers' not in c and 'import kotlinx.coroutines' not in c:
+            c = c.replace('import java.io.InputStreamReader', 'import java.io.InputStreamReader\nimport kotlinx.coroutines.withContext')
+        open(path, 'w', encoding='utf-8').write(c)
+        print('  OK: InAppUpdater download progress bar added')
+    elif 'progressDialog' in c:
+        print('  OK: Download progress already patched')
+    else:
+        print('  WARN: Could not find downloadUpdate function to patch (CloudStream updated?)')
+PYEOF
+
+echo "======================================================"
+echo "    MTSFlix Customization Complete! v1.1.0"
+echo "    Netflix Profiles + Download Progress READY"
+echo "======================================================"

@@ -356,4 +356,45 @@ object MTSFlixCloudSync {
         }
         return false
     }
+
+    /**
+     * Restore watch history for a specific profile using a custom Gist filename key.
+     * Used by ProfilePickerActivity when switching between profiles.
+     * Key format: mtsflix_sync_EMAIL_PROFILEID.json
+     */
+    fun restoreWatchHistoryByKey(context: Context, gistKey: String): Boolean {
+        if (gistKey.isBlank()) return false
+        val defaultPrefs = PreferenceManager.getDefaultSharedPreferences(context)
+        val token = defaultPrefs.getString("GITHUB_TOKEN", null) ?: return false
+        val gistId = defaultPrefs.getString("GIST_ID_MASTER", null) ?: return false
+
+        return try {
+            val url = URL("https://api.github.com/gists/$gistId")
+            val conn = (url.openConnection() as HttpURLConnection).apply {
+                requestMethod = "GET"
+                setRequestProperty("Authorization", "token $token")
+                setRequestProperty("Accept", "application/vnd.github.v3+json")
+                connectTimeout = 10000; readTimeout = 15000
+            }
+            if (conn.responseCode != 200) return false
+            val resp = conn.inputStream.bufferedReader(StandardCharsets.UTF_8).readText()
+            conn.disconnect()
+
+            val root    = JSONObject(resp)
+            val files   = root.optJSONObject("files") ?: return false
+            val fileObj = files.optJSONObject(gistKey) ?: return false
+            val content = fileObj.optString("content", "")
+            if (content.isBlank()) return false
+
+            val data    = JSONObject(content)
+            val csPrefs = context.getSharedPreferences("rebuild_preference", Context.MODE_PRIVATE)
+            data.optJSONArray("cs_prefs")?.let { arr -> jsonArrayToPrefs(arr, csPrefs) }
+            data.optJSONArray("app_settings")?.let { arr -> jsonArrayToPrefs(arr, defaultPrefs) }
+            Log.i(TAG, "Profile sync restored from key: $gistKey")
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "restoreWatchHistoryByKey error: ${e.message}")
+            false
+        }
+    }
 }
