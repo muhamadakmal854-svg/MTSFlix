@@ -13,8 +13,19 @@ CS_DIR="${CS_DIR:-$(pwd)/cloudstream}"
 # --- 1. Change applicationId and strip prerelease suffixes ----------------
 echo "[1/12] Patching build.gradle.kts to set applicationId com.mts.mtsflix and remove suffixes..."
 python3 - << 'PYEOF'
-import os, re
+import os, re, json
 cs_dir = os.environ.get('CS_DIR','cloudstream')
+mtsflix_dir = os.environ.get('MTSFLIX_DIR','.')
+
+# Read MTSFlix version from version.json
+ver = '1.0.8'
+try:
+    vj = json.load(open(mtsflix_dir + '/version.json'))
+    ver = vj.get('version', '1.0.8')
+except:
+    pass
+
+# 1a. Patch build.gradle.kts: applicationId, strip suffixes
 app_build = cs_dir + '/app/build.gradle.kts'
 if os.path.exists(app_build):
     c = open(app_build, encoding='utf-8').read()
@@ -22,7 +33,16 @@ if os.path.exists(app_build):
     c = re.sub(r'applicationIdSuffix\s*=\s*"\.(prerelease|debug)"', 'applicationIdSuffix = ""', c)
     c = re.sub(r'versionNameSuffix\s*=\s*"-PRE"', 'versionNameSuffix = ""', c)
     open(app_build, 'w', encoding='utf-8').write(c)
-    print("  OK: build.gradle.kts patched with clean applicationId com.mts.mtsflix")
+    print(f"  OK: build.gradle.kts patched with clean applicationId com.mts.mtsflix")
+
+# 1b. Patch libs.versions.toml: set versionName = MTSFlix version
+# This is CRITICAL for InAppUpdater to show update popup correctly!
+toml_path = cs_dir + '/gradle/libs.versions.toml'
+if os.path.exists(toml_path):
+    tc = open(toml_path, encoding='utf-8').read()
+    tc = re.sub(r'versionName\s*=\s*"[^"]*"', f'versionName = "{ver}"', tc)
+    open(toml_path, 'w', encoding='utf-8').write(tc)
+    print(f"  OK: libs.versions.toml versionName set to {ver} (matches GitHub release tag)")
 PYEOF
 
 # --- 2. Change App Name ----------------------------------------------------
