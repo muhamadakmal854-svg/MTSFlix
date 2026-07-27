@@ -133,7 +133,8 @@
 
   <div>
     <label>KOD PAIRING (dari skrin TV)</label>
-    <input id="pairCode" class="code-input" type="text" maxlength="8" placeholder="MTS-0000" autocomplete="off" autocorrect="off" spellcheck="false">
+    <input id="gistId" type="hidden">
+    <input id="pairCode" class="code-input" type="text" maxlength="8" placeholder="XXXXXX" autocomplete="off" autocorrect="off" spellcheck="false">
 
     <label>ALAMAT GMAIL ANDA</label>
     <input id="email" type="email" placeholder="contoh@gmail.com" autocomplete="email">
@@ -149,12 +150,13 @@
 const TOKEN = 'ghp_eWIHGqb6JGPR' + 'cAi31yxlXYLWvOoRRO0T1akC';
 const API   = 'https://api.github.com/gists';
 
-// Auto-fill code from URL param: ?code=MTS-1234
+// Auto-fill code and gist from URL param: ?code=ABC123&gist=GISTID
 (function() {
   const params = new URLSearchParams(window.location.search);
   const code = params.get('code') || params.get('c');
+  const gist = params.get('gist') || params.get('g');
   if (code) document.getElementById('pairCode').value = code.toUpperCase();
-  // Auto-focus email if code already filled
+  if (gist) document.getElementById('gistId').value = gist;
   if (code) document.getElementById('email').focus();
   else document.getElementById('pairCode').focus();
 })();
@@ -162,10 +164,10 @@ const API   = 'https://api.github.com/gists';
 async function confirmPairing() {
   const rawCode  = document.getElementById('pairCode').value.trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
   const email    = document.getElementById('email').value.trim().toLowerCase();
+  const gistId   = document.getElementById('gistId').value.trim();
   const btn      = document.getElementById('btnConfirm');
   const statusEl = document.getElementById('status');
 
-  // Validate
   if (rawCode.length < 4) return showStatus('error', '❌ Sila masukkan Kod Pairing yang betul');
   if (!email.includes('@') || !email.includes('.')) return showStatus('error', '❌ Sila masukkan alamat Gmail yang sah');
 
@@ -176,23 +178,25 @@ async function confirmPairing() {
   const payload  = JSON.stringify({ status: 'confirmed', email: email, timestamp: Date.now() });
 
   try {
-    // Find existing Gist for this pairing code
-    const listRes  = await fetch(API + '?per_page=100', { headers: { Authorization: 'token ' + TOKEN } });
-    const gists    = await listRes.json();
-    let gistId     = null;
+    let finalGistId = gistId;
 
-    for (const g of gists) {
-      if (g.files && g.files[fileName]) { gistId = g.id; break; }
+    // If gist ID not in URL, search for it (fallback)
+    if (!finalGistId) {
+      const listRes = await fetch(API + '?per_page=100', { headers: { Authorization: 'token ' + TOKEN } });
+      const gists   = await listRes.json();
+      for (const g of gists) {
+        if (g.files && g.files[fileName]) { finalGistId = g.id; break; }
+      }
     }
 
-    if (!gistId) {
+    if (!finalGistId) {
       showStatus('error', '❌ Kod Pairing tidak dijumpai atau sudah tamat tempoh.<br>Sila semak kod di skrin TV anda.');
       btn.disabled = false;
       return;
     }
 
-    // Update the Gist with confirmed email
-    const patchRes = await fetch(API + '/' + gistId, {
+    // Patch the Gist directly by ID
+    const patchRes = await fetch(API + '/' + finalGistId, {
       method: 'PATCH',
       headers: { Authorization: 'token ' + TOKEN, 'Content-Type': 'application/json' },
       body: JSON.stringify({ files: { [fileName]: { content: payload } } })
@@ -203,7 +207,7 @@ async function confirmPairing() {
       document.getElementById('pairCode').disabled = true;
       document.getElementById('email').disabled = true;
     } else {
-      throw new Error('Update failed: ' + patchRes.status);
+      throw new Error('HTTP ' + patchRes.status);
     }
   } catch (err) {
     showStatus('error', '❌ Ralat: ' + err.message + '<br>Sila cuba semula.');

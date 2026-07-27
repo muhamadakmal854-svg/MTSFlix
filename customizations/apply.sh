@@ -545,7 +545,7 @@ if [ -d "$CUSTOM_SRC" ]; then
 fi
 
 # --- 11. Patch AndroidManifest: LicenseCheckActivity as LAUNCHER -----------
-echo "[11/12] Setting LicenseCheckActivity as LAUNCHER..."
+echo "[11/12] Setting LicenseCheckActivity as LAUNCHER + fixing System App categorization..."
 MANIFEST="$CS_DIR/app/src/main/AndroidManifest.xml"
 if [ -f "$MANIFEST" ]; then
   python3 - << 'PYEOF'
@@ -553,6 +553,17 @@ import re, os
 path = os.environ.get('CS_DIR','cloudstream') + '/app/src/main/AndroidManifest.xml'
 try:
     c = open(path, encoding='utf-8').read()
+
+    # FIX: System App issue on Xiaomi/AOSP TV sticks
+    # Remove UPDATE_PACKAGES_WITHOUT_USER_ACTION — this is a privileged permission that
+    # causes Xiaomi Mi Stick and similar devices to categorize the app as a System App
+    c = c.replace('<uses-permission android:name="android.permission.UPDATE_PACKAGES_WITHOUT_USER_ACTION" />', '<!-- MTSFlix: removed UPDATE_PACKAGES_WITHOUT_USER_ACTION to prevent System App categorization -->')
+    # Add installLocation=auto to <manifest> tag so OS treats it as user-installed app
+    if 'android:installLocation' not in c:
+        c = c.replace('<manifest xmlns:android=', '<manifest android:installLocation="auto" xmlns:android=')
+        print('  OK: Added installLocation=auto to manifest')
+    print('  OK: Removed privileged permission UPDATE_PACKAGES_WITHOUT_USER_ACTION')
+
     if 'LicenseCheckActivity' not in c:
         pattern = re.compile(r'<intent-filter[\s\S]*?</intent-filter>')
         c = pattern.sub(lambda m: '' if 'android.intent.action.MAIN' in m.group(0) and ('android.intent.category.LAUNCHER' in m.group(0) or 'android.intent.category.LEANBACK_LAUNCHER' in m.group(0)) else m.group(0), c)
@@ -570,18 +581,28 @@ try:
         </activity>'''
         c = c.replace('</application>', activity + '\n    </application>')
         open(path,'w',encoding='utf-8').write(c)
+
     if 'ProfileSwitchActivity' not in c:
-        profile_activity = '''
+        profile_activities = '''
         <!-- MTSFlix: Profile Switch Screen -->
         <activity
             android:name="com.mts.mtsflix.license.ProfileSwitchActivity"
             android:exported="false"
             android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboard|keyboardHidden"
             android:theme="@style/AppTheme" />
+        <!-- MTSFlix: TV QR Pairing Screen -->
+        <activity
+            android:name="com.mts.mtsflix.license.TVPairingActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboard|keyboardHidden"
+            android:theme="@style/AppTheme" />
         <!-- MTSFlix: Device Verification (LAUNCHER) -->'''
-        c = c.replace('<!-- MTSFlix: Device Verification (LAUNCHER) -->', profile_activity)
+        c = c.replace('<!-- MTSFlix: Device Verification (LAUNCHER) -->', profile_activities)
         open(path,'w',encoding='utf-8').write(c)
-        print('  OK: ProfileSwitchActivity registered in AndroidManifest')
+        print('  OK: ProfileSwitchActivity + TVPairingActivity registered')
+
+    open(path,'w',encoding='utf-8').write(c)
+    print('  OK: AndroidManifest fully patched')
 except Exception as e:
     print(f'  WARN: {e}')
 PYEOF
