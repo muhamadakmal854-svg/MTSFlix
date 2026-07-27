@@ -1,11 +1,11 @@
 {
   "version": "1.1.1",
-  "versionCode": 4,
+  "versionCode": 1,
   "downloadUrl": "https://github.com/muhamadakmal854-svg/MTSFlix/releases/download/v1.1.1/MTSFlix-v1.1.1.apk",
-  "releaseNotes": "Fix profil: grid warna, butang Kanak-kanak, emoji avatar 24 pilihan, filter kartun untuk profil kanak-kanak",
+  "releaseNotes": "MTSFlix v1.1.1",
   "mandatory": false,
   "sha256": "",
-  "publishedAt": "2026-07-27T03:06:10Z",
+  "publishedAt": "2026-07-27T03:11:02Z",
   "minAndroid": 21,
   "providerUrl": "https://cdn.jsdelivr.net/gh/muhamadakmal854-svg/Provider@builds/repo.json"
 }
