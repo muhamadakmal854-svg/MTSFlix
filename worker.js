@@ -1050,33 +1050,27 @@ function getAdminDashboardHTML(adminKey) {
 
       const today = new Date().toISOString().split('T')[0];
 
-      tbody.innerHTML = [...list].reverse().map(l => {
-        const isExp = l.expiredAt && l.expiredAt < today;
-        const statusBadge = l.banned
+      tbody.innerHTML = [...list].reverse().map(function(l) {
+        var isExp = l.expiredAt && l.expiredAt < today;
+        var statusBadge = l.banned
           ? '<span class="badge badge-banned">BANNED</span>'
           : isExp
           ? '<span class="badge badge-expired">EXPIRED</span>'
           : '<span class="badge badge-active">AKTIF</span>';
 
-        return \`
-          <tr>
-            <td>
-              <span class="device-code">\${l.deviceCode}</span><br>
-              <small style="color:var(--text-muted); font-size:11px;">\${l.id}</small>
-            </td>
-            <td>
-              <strong style="color:#FFF;">\${l.username}</strong><br>
-              <small style="color:var(--text-muted); font-size:11px;">\${l.email || '-'}</small>
-            </td>
-            <td>\${l.deviceInfo || '-'}</td>
-            <td>\${l.expiredAt}</td>
-            <td>\${statusBadge}</td>
-            <td>
-              \${!l.banned ? \`<button onclick="banLicense('\${l.deviceCode}')" class="action-btn ban">Ban</button>\` : ''}
-              <button onclick="deleteLicense('\${l.deviceCode}')" class="action-btn" style="background:#2A1A1A; color:#FFAAAA;">Padam</button>
-            </td>
-          </tr>
-        \`;
+        var banBtn = !l.banned
+          ? '<button onclick="banLicense(\'' + l.deviceCode + '\')" class="action-btn ban">Ban</button>'
+          : '';
+        var delBtn = '<button onclick="deleteLicense(\'' + l.deviceCode + '\')" class="action-btn" style="background:#2A1A1A; color:#FFAAAA;">Padam</button>';
+
+        return '<tr>' +
+          '<td><span class="device-code">' + l.deviceCode + '</span><br><small style="color:var(--text-muted); font-size:11px;">' + l.id + '</small></td>' +
+          '<td><strong style="color:#FFF;">' + l.username + '</strong><br><small style="color:var(--text-muted); font-size:11px;">' + (l.email || '-') + '</small></td>' +
+          '<td>' + (l.deviceInfo || '-') + '</td>' +
+          '<td>' + l.expiredAt + '</td>' +
+          '<td>' + statusBadge + '</td>' +
+          '<td>' + banBtn + ' ' + delBtn + '</td>' +
+          '</tr>';
       }).join('');
     }
 
@@ -1092,7 +1086,7 @@ function getAdminDashboardHTML(adminKey) {
     }
 
     async function banLicense(code) {
-      if (!confirm(\`Adakah anda pasti untuk GANTUNG / BAN lesen \${code}?\`)) return;
+      if (!confirm('Adakah anda pasti untuk GANTUNG / BAN lesen ' + code + '?')) return;
       try {
         const res = await fetch('/ban', {
           method: 'POST',
@@ -1101,7 +1095,7 @@ function getAdminDashboardHTML(adminKey) {
         });
         const data = await res.json();
         if (data.ok) {
-          showToast(\`🚫 Lesen \${code} telah digantung!\`);
+          showToast('🚫 Lesen ' + code + ' telah digantung!');
           loadLicenses();
         } else {
           showToast('❌ ' + data.error, true);
@@ -1112,7 +1106,7 @@ function getAdminDashboardHTML(adminKey) {
     }
 
     async function deleteLicense(code) {
-      if (!confirm(\`Padam lesen \${code} secara kekal dari GitHub?\`)) return;
+      if (!confirm('Padam lesen ' + code + ' secara kekal dari GitHub?')) return;
       try {
         const res = await fetch('/delete', {
           method: 'POST',
@@ -1121,7 +1115,7 @@ function getAdminDashboardHTML(adminKey) {
         });
         const data = await res.json();
         if (data.ok) {
-          showToast(\`🗑️ Lesen \${code} dipadam!\`);
+          showToast('🗑️ Lesen ' + code + ' dipadam!');
           loadLicenses();
         } else {
           showToast('❌ ' + data.error, true);
@@ -1134,5 +1128,5 @@ function getAdminDashboardHTML(adminKey) {
     loadLicenses();
   </script>
 </body>
-</html>\`;
+</html>`;
 }
