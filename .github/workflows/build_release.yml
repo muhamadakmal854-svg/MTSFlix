@@ -260,38 +260,23 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ env.VER }}
-          name: "🎬 MTSFlix v${{ env.VER }}"
+          name: "MTSFlix v${{ env.VER }}"
           body: |
-            ## 🎬 MTSFlix v${{ env.VER }}
+            ${{ github.event.inputs.release_notes || 'Kemas kini MTSFlix' }}
 
-            ${{ github.event.inputs.release_notes || 'Update MTSFlix' }}
+            Versi: v${{ env.VER }} | Saiz: ${{ env.APK_SIZE }} | Build #${{ github.run_number }}
 
-            ---
+            Cara kemas kini:
+            1. Tekan butang "Kemas kini" untuk muat turun automatik
+            2. Atau muat turun APK di bawah dan pasang semula
+            3. Data tidak akan hilang
 
-            ### 📥 Cara Install / Update
-            1. Download **MTSFlix-v${{ env.VER }}.apk** di bawah
-            2. App akan **auto-detect** update dan tawarkan download bila buka MTSFlix
-            3. Atau install manual — **data tidak akan hilang** (sama signing key)
-
-            ### ✅ Ciri-Ciri
-            - 🔐 Pengesahan peranti (kod unik setiap device)
-            - 🔑 Login Google — sync watchlist & sejarah
-            - 🔔 Notifikasi episod baru
-            - 🔌 Provider MTS auto-sync (tiada reinstall perlu)
-            - 📥 Auto-update APK dalam app
-            - 🚫 Tiada iklan
-
-            ---
-
-            | Info | Nilai |
-            |------|-------|
-            | Versi | `v${{ env.VER }}` |
-            | Saiz | `${{ env.APK_SIZE }}` |
-            | SHA256 | `${{ env.APK_SHA256 }}` |
-            | Build | `#${{ github.run_number }}` |
-            | Commit | `${{ github.sha }}` |
-
-            > 🤖 Built automatically by GitHub Actions
+            Ciri-ciri MTSFlix:
+            - Pengesahan peranti (kod unik setiap device)
+            - Log masuk Google — sync watchlist dan sejarah tontonan
+            - Provider MTS auto-sync (tiada reinstall perlu)
+            - Kemas kini automatik dalam app
+            - Tiada iklan
           files: release_output/*.apk
           draft: false
           prerelease: false

@@ -540,7 +540,45 @@ if os.path.exists(updater_path):
     content = content.replace('private const val GITHUB_USER_NAME = "recloudstream"', 'private const val GITHUB_USER_NAME = "muhamadakmal854-svg"')
     content = content.replace('private const val GITHUB_REPO = "cloudstream"', 'private const val GITHUB_REPO = "MTSFlix"')
     content = content.replace('val appUpdateName = "CloudStream"', 'val appUpdateName = "MTSFlix"')
+
+    # Strip markdown symbols from changelog before displaying in popup
+    # Insert a helper function and clean the changelog text
+    old_return = '''        return Update(
+            shouldUpdate,
+            foundAsset.browserDownloadUrl,
+            foundVersion.groupValues[2],
+            found.body,
+            found.nodeId
+        )'''
+    new_return = '''        // Strip markdown symbols from changelog so popup looks clean
+        val cleanBody = found.body
+            .replace(Regex("#{1,6}\\\\s*"), "")   // remove ## ### etc
+            .replace(Regex("\\\\*{1,2}([^*]+)\\\\*{1,2}"), "$1") // remove **bold**
+            .replace(Regex("^---+$", RegexOption.MULTILINE), "")  // remove ---
+            .replace(Regex("^\\\\|.*\\\\|$", RegexOption.MULTILINE), "") // remove tables
+            .replace(Regex("^>\\\\s*", RegexOption.MULTILINE), "")       // remove blockquotes
+            .replace(Regex("\\\\n{3,}"), "\\n\\n")  // collapse blank lines
+            .trim()
+        return Update(
+            shouldUpdate,
+            foundAsset.browserDownloadUrl,
+            foundVersion.groupValues[2],
+            cleanBody,
+            found.nodeId
+        )'''
+    if old_return in content:
+        content = content.replace(old_return, new_return)
+
+    # Translate "New update found!" and related strings to Malay
+    content = content.replace('"New update found!"', '"Kemas kini tersedia!"')
+    content = content.replace('"Download"', '"Muat Turun"')
+    content = content.replace('"Cancel"', '"Batal"')
+    content = content.replace('"Update"', '"Kemas kini"')
+    content = content.replace('"Downloading update"', '"Sedang memuat turun kemas kini"')
+    content = content.replace('"Installing update"', '"Memasang kemas kini"')
+
     open(updater_path, 'w', encoding='utf-8').write(content)
+    print('  OK: InAppUpdater patched — markdown stripped, strings translated to Malay')
 PYEOF
 
 # --- 9. Generate BuildUrls.kt ----------------------------------------------
