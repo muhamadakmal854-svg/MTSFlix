@@ -261,22 +261,7 @@ jobs:
         with:
           tag_name: v${{ env.VER }}
           name: "MTSFlix v${{ env.VER }}"
-          body: |
-            ${{ github.event.inputs.release_notes || 'Kemas kini MTSFlix' }}
-
-            Versi: v${{ env.VER }} | Saiz: ${{ env.APK_SIZE }} | Build #${{ github.run_number }}
-
-            Cara kemas kini:
-            1. Tekan butang "Kemas kini" untuk muat turun automatik
-            2. Atau muat turun APK di bawah dan pasang semula
-            3. Data tidak akan hilang
-
-            Ciri-ciri MTSFlix:
-            - Pengesahan peranti (kod unik setiap device)
-            - Log masuk Google — sync watchlist dan sejarah tontonan
-            - Provider MTS auto-sync (tiada reinstall perlu)
-            - Kemas kini automatik dalam app
-            - Tiada iklan
+          body: ${{ github.event.inputs.release_notes || 'Kemas kini MTSFlix' }}
           files: release_output/*.apk
           draft: false
           prerelease: false
