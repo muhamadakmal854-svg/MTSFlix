@@ -1,11 +1,11 @@
 {
   "version": "1.0.8",
-  "versionCode": 2,
+  "versionCode": 1,
   "downloadUrl": "https://github.com/muhamadakmal854-svg/MTSFlix/releases/download/v1.0.8/MTSFlix-v1.0.8.apk",
-  "releaseNotes": "MTSFlix v1.0.8 - Fix auto-update popup (versionName mismatch) + Fix QR Pairing + Fix System App",
+  "releaseNotes": "MTSFlix v1.0.8",
   "mandatory": false,
   "sha256": "",
-  "publishedAt": "2026-07-27T00:56:30Z",
+  "publishedAt": "2026-07-27T01:01:24Z",
   "minAndroid": 21,
   "providerUrl": "https://cdn.jsdelivr.net/gh/muhamadakmal854-svg/Provider@builds/repo.json"
 }
