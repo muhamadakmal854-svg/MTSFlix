@@ -985,7 +985,48 @@ else:
         print('  WARN: Could not find downloadUpdate function to patch (CloudStream updated?)')
 PYEOF
 
+echo "# --- 16. Kids Mode: Cartoon/Anime-only Filter -------------------------"
+echo "[16/16] Patching kids cartoon/anime-only content filter..."
+python3 - << 'PYEOF'
+import os
+cs_dir = os.environ.get('CS_DIR','cloudstream')
+hvm_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/ui/home/HomeViewModel.kt'
+if not os.path.exists(hvm_path):
+    print('  SKIP: HomeViewModel.kt not found')
+else:
+    c = open(hvm_path, encoding='utf-8').read()
+    kids_patch_marker = 'if (is18Row) return@forEach'
+    kids_patch = '''if (is18Row) return@forEach
+
+                            // MTSFlix KIDS FILTER: only show cartoon/anime for kids profiles
+                            try {
+                                val ctx = com.lagradost.cloudstream3.AcraApplication.context
+                                if (ctx != null) {
+                                    val isKids = com.mts.mtsflix.license.ProfileManager.isKidsModeActive(ctx)
+                                    if (isKids) {
+                                        val kidsKeywords = listOf("anime","cartoon","animation","kids","animasi","kartun","kanak","children","family")
+                                        val rowLower = list.name.lowercase()
+                                        val isKidsRow = kidsKeywords.any { rowLower.contains(it) } ||
+                                            list.list.any { item ->
+                                                val t = item.type.toString().lowercase()
+                                                t == "anime" || t == "cartoon" || t == "ova" || t == "animemovie" || t.contains("anim")
+                                            }
+                                        if (!isKidsRow) return@forEach
+                                    }
+                                }
+                            } catch (_: Exception) {}'''
+    if kids_patch_marker in c and 'MTSFlix KIDS FILTER' not in c:
+        c = c.replace(kids_patch_marker, kids_patch)
+        open(hvm_path, 'w', encoding='utf-8').write(c)
+        print('  OK: Kids cartoon/anime-only filter patched in HomeViewModel.kt')
+    elif 'MTSFlix KIDS FILTER' in c:
+        print('  OK: Kids filter already patched')
+    else:
+        print('  WARN: Could not find is18Row anchor in HomeViewModel.kt')
+PYEOF
+
 echo "======================================================"
-echo "    MTSFlix Customization Complete! v1.1.0"
-echo "    Netflix Profiles + Download Progress READY"
+echo "    MTSFlix Customization Complete! v1.1.1"
+echo "    Netflix Profiles + Emoji Avatar + Kids Filter"
+echo "    Download Progress Bar READY"
 echo "======================================================"

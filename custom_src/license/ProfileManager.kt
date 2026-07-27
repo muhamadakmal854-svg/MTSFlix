@@ -15,6 +15,7 @@ data class MtsProfile(
     val id: String,
     val name: String,
     val avatarColor: String,   // hex e.g. "#E50914"
+    val avatarEmoji: String?,  // emoji logo e.g. "🦁", null = use letter+color
     val isKids: Boolean,
     val pinHash: String?,      // SHA-256 hash of PIN, null = no PIN
     val createdAt: Long
@@ -41,6 +42,7 @@ data class MtsProfile(
             id          = obj.getString("id"),
             name        = obj.getString("name"),
             avatarColor = obj.optString("avatarColor", "#E50914"),
+            avatarEmoji = obj.optString("avatarEmoji", "").ifBlank { null },
             isKids      = obj.optBoolean("isKids", false),
             pinHash     = obj.optString("pinHash", "").ifBlank { null },
             createdAt   = obj.optLong("createdAt", System.currentTimeMillis())
@@ -51,6 +53,7 @@ data class MtsProfile(
         put("id",          id)
         put("name",        name)
         put("avatarColor", avatarColor)
+        put("avatarEmoji", avatarEmoji ?: "")
         put("isKids",      isKids)
         put("pinHash",     pinHash ?: "")
         put("createdAt",   createdAt)
@@ -95,13 +98,15 @@ object ProfileManager {
     // ── CRUD ─────────────────────────────────────────────────────────────────
 
     fun addProfile(context: Context, name: String, color: String,
-                   isKids: Boolean, pin: String? = null): MtsProfile? {
+                   isKids: Boolean, pin: String? = null,
+                   emoji: String? = null): MtsProfile? {
         val list = loadProfiles(context).toMutableList()
         if (list.size >= MAX_PROFILES) return null
         val profile = MtsProfile(
             id          = "prof_" + UUID.randomUUID().toString().replace("-","").take(8),
             name        = name.trim().take(20),
             avatarColor = color,
+            avatarEmoji = emoji,
             isKids      = isKids,
             pinHash     = pin?.let { MtsProfile.sha256(it) },
             createdAt   = System.currentTimeMillis()
