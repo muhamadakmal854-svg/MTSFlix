@@ -70,9 +70,9 @@ export default {
 
     try {
       // ───────────────────────────────────────────────────────────────────────
-      // ROUTE 1: GET / or GET /admin — Web Dashboard Admin
+      // ROUTE 1: GET / or GET /index.html or GET /admin — Web Dashboard Admin
       // ───────────────────────────────────────────────────────────────────────
-      if ((path === '/' || path === '/admin') && method === 'GET') {
+      if ((path === '/' || path === '/index.html' || path === '/admin') && method === 'GET') {
         const html = getAdminDashboardHTML(CONFIG.ADMIN_KEY);
         return new Response(html, {
           headers: { 'Content-Type': 'text/html; charset=utf-8', ...corsHeaders },
