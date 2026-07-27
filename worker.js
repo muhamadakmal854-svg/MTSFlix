@@ -5,12 +5,12 @@
  * Fail ini membolehkan pendaftaran, semakan, penggantungan (ban), dan pengurusan
  * lesen peranti MTSFlix terus melalui Cloudflare Worker.
  *
- * Worker ini membaca & mengemaskini fail `licenses.json` di GitHub secara terus
+ * Worker ini membaca & mengemaskini fail licenses.json di GitHub secara terus
  * menggunakan GitHub REST API tanpa mengubah sebarang kod dalam aplikasi sedia ada.
  *
  * 📍 TEKNIKAL:
  * - Bahasa    : JavaScript (ES Modules for Cloudflare Worker)
- * - Storage   : GitHub REST API (Direct Commit to `licenses.json`)
+ * - Storage   : GitHub REST API (Direct Commit to licenses.json)
  * - Features  : 
  *     1. REST API (POST /register, GET /verify, POST /ban, GET /licenses)
  *     2. Web Admin Dashboard (Visual Web UI untuk urus lesen dari browser)
