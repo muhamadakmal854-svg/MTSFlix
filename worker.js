@@ -311,6 +311,83 @@ export default {
         });
       }
 
+      // ───────────────────────────────────────────────────────────────────────
+      // ROUTE 7: POST /pair — TV QR Code Pairing (Proxy untuk GitHub Gist)
+      // ───────────────────────────────────────────────────────────────────────
+      // Frontend (pair/index.html) menghantar request ke sini TANPA token.
+      // Worker bertindak sebagai proxy selamat — token disimpan di server sahaja.
+      // ───────────────────────────────────────────────────────────────────────
+      if (path === '/pair' && method === 'POST') {
+        let body = {};
+        try { body = await request.json(); } catch (_) {
+          return jsonRes({ success: false, message: 'Format JSON tidak sah' }, 400);
+        }
+
+        const { code, email, gistId } = body;
+
+        if (!code || code.length < 4) {
+          return jsonRes({ success: false, message: 'Kod Pairing tidak sah (min 4 aksara)' }, 400);
+        }
+        if (!email || !email.includes('@')) {
+          return jsonRes({ success: false, message: 'Alamat Gmail tidak sah' }, 400);
+        }
+
+        const cleanCode = code.toUpperCase().replace(/[^A-Z0-9]/g, '');
+        const fileName = `mtsflix_pair_${cleanCode}.json`;
+        const payload = JSON.stringify({
+          status: 'confirmed',
+          email: email.toLowerCase().trim(),
+          timestamp: Date.now(),
+          confirmedAt: new Date().toISOString()
+        });
+
+        const GIST_API = 'https://api.github.com/gists';
+        const gistHeaders = {
+          Authorization: `token ${CONFIG.GITHUB_TOKEN}`,
+          'Content-Type': 'application/json',
+          'User-Agent': 'MTSFlix-Worker',
+          Accept: 'application/vnd.github.v3+json'
+        };
+
+        let finalGistId = gistId;
+
+        // Jika gistId tidak dibekalkan, cari gist yang ada fail berkenaan
+        if (!finalGistId) {
+          const listRes = await fetch(`${GIST_API}?per_page=100`, { headers: gistHeaders });
+          if (!listRes.ok) {
+            return jsonRes({ success: false, message: 'Gagal sambung ke pelayan. Cuba lagi.' }, 500);
+          }
+          const gists = await listRes.json();
+          for (const g of gists) {
+            if (g.files && g.files[fileName]) { finalGistId = g.id; break; }
+          }
+        }
+
+        if (!finalGistId) {
+          return jsonRes({
+            success: false,
+            message: 'Kod Pairing tidak dijumpai atau sudah tamat tempoh. Sila semak kod di skrin TV.'
+          }, 404);
+        }
+
+        // Patch gist dengan email pengguna
+        const patchRes = await fetch(`${GIST_API}/${finalGistId}`, {
+          method: 'PATCH',
+          headers: gistHeaders,
+          body: JSON.stringify({ files: { [fileName]: { content: payload } } })
+        });
+
+        if (!patchRes.ok) {
+          const errText = await patchRes.text();
+          return jsonRes({ success: false, message: `Pairing gagal (${patchRes.status}). Cuba lagi.` }, 500);
+        }
+
+        return jsonRes({
+          success: true,
+          message: 'Berjaya! TV anda akan log masuk dalam beberapa saat.'
+        });
+      }
+
       // Route Tidak Ditemui
       return jsonRes({ ok: false, error: `Laluan ${method} ${path} tidak ditemui` }, 404);
 

@@ -11,7 +11,7 @@
 
   body {
     font-family: 'Inter', sans-serif;
-    background: #0A0A0F;
+    background: linear-gradient(135deg, #0A0A0F 0%, #13131C 100%);
     color: #fff;
     min-height: 100vh;
     display: flex;
@@ -21,119 +21,135 @@
   }
 
   .card {
-    background: #141418;
-    border: 1px solid #222;
+    background: rgba(20,20,28,0.95);
+    border: 1px solid rgba(229,9,20,0.15);
     border-radius: 24px;
     padding: 40px 36px;
     max-width: 440px;
     width: 100%;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.7), 0 0 80px rgba(229,9,20,0.05);
+    backdrop-filter: blur(10px);
   }
 
   .logo { text-align: center; margin-bottom: 28px; }
-  .logo-text { font-size: 42px; font-weight: 800; color: #E50914; letter-spacing: -1px; }
-  .logo-sub  { font-size: 16px; font-weight: 700; color: #fff; letter-spacing: 4px; }
+  .logo-icon { font-size: 48px; margin-bottom: 6px; }
+  .logo-text { font-size: 38px; font-weight: 800; letter-spacing: -1px; background: linear-gradient(135deg, #E50914, #FF6B6B); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .logo-sub  { font-size: 13px; font-weight: 700; color: #666; letter-spacing: 5px; margin-top: 2px; }
 
-  h1 { font-size: 22px; font-weight: 700; text-align: center; margin-bottom: 6px; }
+  h1 { font-size: 21px; font-weight: 700; text-align: center; margin-bottom: 6px; color: #fff; }
   .subtitle {
-    font-size: 14px; color: #888; text-align: center;
-    margin-bottom: 32px; line-height: 1.5;
+    font-size: 13px; color: #666; text-align: center;
+    margin-bottom: 28px; line-height: 1.6;
   }
 
   .step {
     display: flex; align-items: flex-start; gap: 14px;
-    margin-bottom: 20px; background: #1a1a20;
-    border-radius: 14px; padding: 16px;
+    margin-bottom: 14px; background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 14px; padding: 14px;
+    transition: border-color 0.2s;
   }
+  .step:hover { border-color: rgba(229,9,20,0.2); }
   .step-num {
-    background: #E50914; color: #fff;
-    width: 28px; height: 28px; border-radius: 50%;
+    background: linear-gradient(135deg, #E50914, #B81D24);
+    color: #fff;
+    width: 26px; height: 26px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
-    font-size: 13px; font-weight: 700; flex-shrink: 0;
+    font-size: 12px; font-weight: 700; flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(229,9,20,0.35);
   }
-  .step-text { font-size: 14px; color: #ccc; line-height: 1.5; }
+  .step-text { font-size: 13.5px; color: #aaa; line-height: 1.55; }
   .step-text strong { color: #fff; }
 
-  label { display: block; font-size: 13px; color: #aaa; margin-bottom: 8px; font-weight: 600; letter-spacing: 0.5px; }
+  label { display: block; font-size: 11px; color: #555; margin-bottom: 7px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
 
   input {
-    width: 100%; padding: 14px 18px;
-    background: #0d0d12; border: 1.5px solid #2a2a35;
-    border-radius: 12px; color: #fff; font-size: 16px;
+    width: 100%; padding: 14px 16px;
+    background: rgba(255,255,255,0.04); border: 1.5px solid rgba(255,255,255,0.08);
+    border-radius: 12px; color: #fff; font-size: 15px;
     font-family: 'Inter', sans-serif;
-    outline: none; transition: border-color 0.2s;
-    margin-bottom: 16px;
+    outline: none; transition: border-color 0.2s, background 0.2s;
+    margin-bottom: 14px;
   }
-  input:focus { border-color: #E50914; }
-  input::placeholder { color: #444; }
+  input:focus { border-color: #E50914; background: rgba(229,9,20,0.05); }
+  input::placeholder { color: #333; }
   input.code-input {
-    font-size: 22px; font-weight: 700; letter-spacing: 4px;
+    font-size: 24px; font-weight: 700; letter-spacing: 6px;
     text-align: center; text-transform: uppercase;
   }
 
   .btn {
-    width: 100%; padding: 16px;
-    background: linear-gradient(135deg, #E50914, #B81D24);
+    width: 100%; padding: 15px;
+    background: linear-gradient(135deg, #E50914 0%, #B81D24 100%);
     color: #fff; border: none; border-radius: 12px;
-    font-size: 16px; font-weight: 700; cursor: pointer;
+    font-size: 15px; font-weight: 700; cursor: pointer;
     font-family: 'Inter', sans-serif;
-    transition: transform 0.15s, box-shadow 0.15s;
+    transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
     margin-top: 4px;
+    box-shadow: 0 8px 24px rgba(229,9,20,0.3);
+    letter-spacing: 0.3px;
   }
-  .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(229,9,20,0.4); }
-  .btn:active { transform: translateY(0); }
-  .btn:disabled { background: #333; cursor: not-allowed; transform: none; box-shadow: none; }
+  .btn:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(229,9,20,0.45); }
+  .btn:active { transform: translateY(0); box-shadow: 0 4px 12px rgba(229,9,20,0.25); }
+  .btn:disabled { background: #222; color: #555; cursor: not-allowed; transform: none; box-shadow: none; }
 
   .status {
-    margin-top: 20px; padding: 14px 18px;
-    border-radius: 12px; font-size: 14px; font-weight: 600;
-    text-align: center; display: none;
+    margin-top: 18px; padding: 14px 16px;
+    border-radius: 12px; font-size: 13.5px; font-weight: 600;
+    text-align: center; display: none; line-height: 1.55;
   }
-  .status.success { background: #0d2818; border: 1px solid #1a6b35; color: #4CAF50; display: block; }
-  .status.error   { background: #2a0a0a; border: 1px solid #6b1a1a; color: #ff6b6b; display: block; }
-  .status.loading { background: #1a1a0a; border: 1px solid #6b5a00; color: #FFC107; display: block; }
+  .status.success { background: rgba(76,175,80,0.1); border: 1px solid rgba(76,175,80,0.25); color: #66BB6A; display: block; }
+  .status.error   { background: rgba(229,9,20,0.1); border: 1px solid rgba(229,9,20,0.25); color: #FF6B6B; display: block; }
+  .status.loading { background: rgba(255,193,7,0.08); border: 1px solid rgba(255,193,7,0.2); color: #FFC107; display: block; }
 
-  .divider { height: 1px; background: #222; margin: 24px 0; }
+  .divider { height: 1px; background: rgba(255,255,255,0.06); margin: 22px 0; }
 
-  .footer { text-align: center; font-size: 12px; color: #444; margin-top: 24px; }
+  .footer { text-align: center; font-size: 11px; color: #333; margin-top: 22px; }
+  .footer a { color: #E50914; text-decoration: none; }
 
   .spinner {
-    display: inline-block; width: 16px; height: 16px;
-    border: 2px solid #FFC107; border-top-color: transparent;
-    border-radius: 50%; animation: spin 0.8s linear infinite;
+    display: inline-block; width: 14px; height: 14px;
+    border: 2px solid rgba(255,193,7,0.3); border-top-color: #FFC107;
+    border-radius: 50%; animation: spin 0.7s linear infinite;
     vertical-align: middle; margin-right: 8px;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
+
+  .success-icon { font-size: 48px; text-align: center; margin-bottom: 12px; animation: pop 0.4s ease; display: none; }
+  @keyframes pop { 0%{transform:scale(0.5);opacity:0} 70%{transform:scale(1.15)} 100%{transform:scale(1);opacity:1} }
 </style>
 </head>
 <body>
 <div class="card">
   <div class="logo">
-    <div class="logo-text">MTS</div>
-    <div class="logo-sub">FLIX</div>
+    <div class="logo-icon">📺</div>
+    <div class="logo-text">MTSFlix</div>
+    <div class="logo-sub">TV PAIRING</div>
   </div>
 
-  <h1>📺 Pairing TV / Android TV</h1>
-  <p class="subtitle">Hubungkan akaun Google anda ke TV dengan mudah tanpa taip dengan remote</p>
+  <h1>Sambung TV dengan Telefon</h1>
+  <p class="subtitle">Log masuk Google di TV anda tanpa perlu taip guna remote</p>
 
   <div class="step">
     <div class="step-num">1</div>
-    <div class="step-text">Di skrin TV anda, pergi ke <strong>Log Masuk Google → Pair dengan QR</strong> dan cari <strong>Kod Pairing</strong></div>
+    <div class="step-text">Di TV anda, pergi ke <strong>Log Masuk → Pair dengan QR Code</strong></div>
   </div>
   <div class="step">
     <div class="step-num">2</div>
-    <div class="step-text">Masukkan <strong>Kod Pairing</strong> dan <strong>alamat Gmail</strong> anda di bawah ini</div>
+    <div class="step-text">Masukkan <strong>Kod 6 Huruf</strong> yang terpapar di skrin TV</div>
   </div>
   <div class="step">
     <div class="step-num">3</div>
-    <div class="step-text">Tekan <strong>Sahkan</strong> — TV anda akan log masuk secara automatik dalam masa beberapa saat ✅</div>
+    <div class="step-text">Masukkan <strong>Gmail</strong> anda → Tekan <strong>Sahkan</strong> ✅</div>
   </div>
 
   <div class="divider"></div>
 
+  <div id="successIcon" class="success-icon">✅</div>
+
   <div>
-    <label>KOD PAIRING (dari skrin TV)</label>
     <input id="gistId" type="hidden">
+    <label>KOD PAIRING (dari skrin TV)</label>
     <input id="pairCode" class="code-input" type="text" maxlength="8" placeholder="XXXXXX" autocomplete="off" autocorrect="off" spellcheck="false">
 
     <label>ALAMAT GMAIL ANDA</label>
@@ -143,74 +159,60 @@
     <div class="status" id="status"></div>
   </div>
 
-  <div class="footer">MTSFlix © 2026 • Selamat &amp; Peribadi</div>
+  <div class="footer">MTSFlix © 2026 &nbsp;•&nbsp; <a href="https://t.me/mtsadm">Hubungi Admin</a></div>
 </div>
 
 <script>
-const TOKEN = 'ghp_eWIHGqb6JGPR' + 'cAi31yxlXYLWvOoRRO0T1akC';
-const API   = 'https://api.github.com/gists';
+// Cloudflare Worker URL — backend proxy (no token exposed in frontend)
+const WORKER_URL = 'https://mtsflix-license.muhamadakmal854-svg.workers.dev';
 
-// Auto-fill code and gist from URL param: ?code=ABC123&gist=GISTID
+// Auto-fill code and gist from URL params: ?code=ABC123&gist=GISTID
 (function() {
-  const params = new URLSearchParams(window.location.search);
-  const code = params.get('code') || params.get('c');
-  const gist = params.get('gist') || params.get('g');
+  const p = new URLSearchParams(window.location.search);
+  const code = p.get('code') || p.get('c');
+  const gist = p.get('gist') || p.get('g');
   if (code) document.getElementById('pairCode').value = code.toUpperCase();
   if (gist) document.getElementById('gistId').value = gist;
   if (code) document.getElementById('email').focus();
-  else document.getElementById('pairCode').focus();
+  else       document.getElementById('pairCode').focus();
 })();
 
 async function confirmPairing() {
-  const rawCode  = document.getElementById('pairCode').value.trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
-  const email    = document.getElementById('email').value.trim().toLowerCase();
-  const gistId   = document.getElementById('gistId').value.trim();
-  const btn      = document.getElementById('btnConfirm');
-  const statusEl = document.getElementById('status');
+  const code   = document.getElementById('pairCode').value.trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
+  const email  = document.getElementById('email').value.trim().toLowerCase();
+  const gistId = document.getElementById('gistId').value.trim();
+  const btn    = document.getElementById('btnConfirm');
 
-  if (rawCode.length < 4) return showStatus('error', '❌ Sila masukkan Kod Pairing yang betul');
+  if (code.length < 4) return showStatus('error', '❌ Sila masukkan Kod Pairing yang betul (min 4 huruf)');
   if (!email.includes('@') || !email.includes('.')) return showStatus('error', '❌ Sila masukkan alamat Gmail yang sah');
 
   btn.disabled = true;
   showStatus('loading', '<span class="spinner"></span>Mengesahkan... sila tunggu');
 
-  const fileName = 'mtsflix_pair_' + rawCode + '.json';
-  const payload  = JSON.stringify({ status: 'confirmed', email: email, timestamp: Date.now() });
-
   try {
-    let finalGistId = gistId;
-
-    // If gist ID not in URL, search for it (fallback)
-    if (!finalGistId) {
-      const listRes = await fetch(API + '?per_page=100', { headers: { Authorization: 'token ' + TOKEN } });
-      const gists   = await listRes.json();
-      for (const g of gists) {
-        if (g.files && g.files[fileName]) { finalGistId = g.id; break; }
-      }
-    }
-
-    if (!finalGistId) {
-      showStatus('error', '❌ Kod Pairing tidak dijumpai atau sudah tamat tempoh.<br>Sila semak kod di skrin TV anda.');
-      btn.disabled = false;
-      return;
-    }
-
-    // Patch the Gist directly by ID
-    const patchRes = await fetch(API + '/' + finalGistId, {
-      method: 'PATCH',
-      headers: { Authorization: 'token ' + TOKEN, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ files: { [fileName]: { content: payload } } })
+    // Call Cloudflare Worker — no GitHub token in frontend
+    const res = await fetch(WORKER_URL + '/pair', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, email, gistId })
     });
 
-    if (patchRes.ok) {
-      showStatus('success', '✅ Berjaya! TV anda sedang log masuk...<br>Anda boleh tutup halaman ini.');
+    const data = await res.json();
+
+    if (res.ok && data.success) {
+      document.getElementById('successIcon').style.display = 'block';
       document.getElementById('pairCode').disabled = true;
       document.getElementById('email').disabled = true;
+      showStatus('success', '✅ Berjaya! TV anda sedang log masuk...<br><small>Anda boleh tutup halaman ini sekarang.</small>');
     } else {
-      throw new Error('HTTP ' + patchRes.status);
+      throw new Error(data.message || 'Pairing gagal. Cuba lagi.');
     }
   } catch (err) {
-    showStatus('error', '❌ Ralat: ' + err.message + '<br>Sila cuba semula.');
+    let msg = err.message || 'Ralat tidak diketahui';
+    if (msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
+      msg = 'Tiada sambungan internet. Sila semak rangkaian anda.';
+    }
+    showStatus('error', '❌ ' + msg);
     btn.disabled = false;
   }
 }
@@ -221,7 +223,6 @@ function showStatus(type, msg) {
   el.innerHTML = msg;
 }
 
-// Allow Enter key to submit
 document.addEventListener('keydown', e => {
   if (e.key === 'Enter') confirmPairing();
 });
