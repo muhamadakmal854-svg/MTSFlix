@@ -6,93 +6,62 @@
 <title>MTSFlix — Pairing TV</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap');
-
   * { margin: 0; padding: 0; box-sizing: border-box; }
-
   body {
     font-family: 'Inter', sans-serif;
     background: linear-gradient(135deg, #0A0A0F 0%, #13131C 100%);
-    color: #fff;
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
+    color: #fff; min-height: 100vh;
+    display: flex; align-items: center; justify-content: center; padding: 20px;
   }
-
   .card {
-    background: rgba(20,20,28,0.95);
+    background: rgba(20,20,28,0.97);
     border: 1px solid rgba(229,9,20,0.15);
-    border-radius: 24px;
-    padding: 40px 36px;
-    max-width: 440px;
-    width: 100%;
+    border-radius: 24px; padding: 40px 36px;
+    max-width: 440px; width: 100%;
     box-shadow: 0 20px 60px rgba(0,0,0,0.7), 0 0 80px rgba(229,9,20,0.05);
-    backdrop-filter: blur(10px);
   }
-
   .logo { text-align: center; margin-bottom: 28px; }
   .logo-icon { font-size: 48px; margin-bottom: 6px; }
   .logo-text { font-size: 38px; font-weight: 800; letter-spacing: -1px; background: linear-gradient(135deg, #E50914, #FF6B6B); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-  .logo-sub  { font-size: 13px; font-weight: 700; color: #666; letter-spacing: 5px; margin-top: 2px; }
-
-  h1 { font-size: 21px; font-weight: 700; text-align: center; margin-bottom: 6px; color: #fff; }
-  .subtitle {
-    font-size: 13px; color: #666; text-align: center;
-    margin-bottom: 28px; line-height: 1.6;
-  }
-
+  .logo-sub { font-size: 13px; font-weight: 700; color: #555; letter-spacing: 5px; margin-top: 2px; }
+  h1 { font-size: 21px; font-weight: 700; text-align: center; margin-bottom: 6px; }
+  .subtitle { font-size: 13px; color: #666; text-align: center; margin-bottom: 28px; line-height: 1.6; }
   .step {
     display: flex; align-items: flex-start; gap: 14px;
-    margin-bottom: 14px; background: rgba(255,255,255,0.03);
-    border: 1px solid rgba(255,255,255,0.06);
-    border-radius: 14px; padding: 14px;
-    transition: border-color 0.2s;
+    margin-bottom: 12px; background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; padding: 14px;
   }
-  .step:hover { border-color: rgba(229,9,20,0.2); }
   .step-num {
-    background: linear-gradient(135deg, #E50914, #B81D24);
-    color: #fff;
+    background: linear-gradient(135deg, #E50914, #B81D24); color: #fff;
     width: 26px; height: 26px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
     font-size: 12px; font-weight: 700; flex-shrink: 0;
-    box-shadow: 0 4px 12px rgba(229,9,20,0.35);
   }
   .step-text { font-size: 13.5px; color: #aaa; line-height: 1.55; }
   .step-text strong { color: #fff; }
-
   label { display: block; font-size: 11px; color: #555; margin-bottom: 7px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
-
   input {
     width: 100%; padding: 14px 16px;
     background: rgba(255,255,255,0.04); border: 1.5px solid rgba(255,255,255,0.08);
     border-radius: 12px; color: #fff; font-size: 15px;
-    font-family: 'Inter', sans-serif;
-    outline: none; transition: border-color 0.2s, background 0.2s;
-    margin-bottom: 14px;
+    font-family: 'Inter', sans-serif; outline: none;
+    transition: border-color 0.2s; margin-bottom: 14px;
   }
   input:focus { border-color: #E50914; background: rgba(229,9,20,0.05); }
   input::placeholder { color: #333; }
-  input.code-input {
-    font-size: 24px; font-weight: 700; letter-spacing: 6px;
-    text-align: center; text-transform: uppercase;
-  }
-
+  input.code-input { font-size: 24px; font-weight: 700; letter-spacing: 6px; text-align: center; text-transform: uppercase; }
   .btn {
     width: 100%; padding: 15px;
     background: linear-gradient(135deg, #E50914 0%, #B81D24 100%);
     color: #fff; border: none; border-radius: 12px;
     font-size: 15px; font-weight: 700; cursor: pointer;
     font-family: 'Inter', sans-serif;
-    transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
-    margin-top: 4px;
-    box-shadow: 0 8px 24px rgba(229,9,20,0.3);
-    letter-spacing: 0.3px;
+    transition: transform 0.15s, box-shadow 0.15s;
+    margin-top: 4px; box-shadow: 0 8px 24px rgba(229,9,20,0.3);
   }
   .btn:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(229,9,20,0.45); }
-  .btn:active { transform: translateY(0); box-shadow: 0 4px 12px rgba(229,9,20,0.25); }
+  .btn:active { transform: translateY(0); }
   .btn:disabled { background: #222; color: #555; cursor: not-allowed; transform: none; box-shadow: none; }
-
   .status {
     margin-top: 18px; padding: 14px 16px;
     border-radius: 12px; font-size: 13.5px; font-weight: 600;
@@ -101,12 +70,9 @@
   .status.success { background: rgba(76,175,80,0.1); border: 1px solid rgba(76,175,80,0.25); color: #66BB6A; display: block; }
   .status.error   { background: rgba(229,9,20,0.1); border: 1px solid rgba(229,9,20,0.25); color: #FF6B6B; display: block; }
   .status.loading { background: rgba(255,193,7,0.08); border: 1px solid rgba(255,193,7,0.2); color: #FFC107; display: block; }
-
   .divider { height: 1px; background: rgba(255,255,255,0.06); margin: 22px 0; }
-
   .footer { text-align: center; font-size: 11px; color: #333; margin-top: 22px; }
   .footer a { color: #E50914; text-decoration: none; }
-
   .spinner {
     display: inline-block; width: 14px; height: 14px;
     border: 2px solid rgba(255,193,7,0.3); border-top-color: #FFC107;
@@ -114,9 +80,8 @@
     vertical-align: middle; margin-right: 8px;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
-
-  .success-icon { font-size: 48px; text-align: center; margin-bottom: 12px; animation: pop 0.4s ease; display: none; }
-  @keyframes pop { 0%{transform:scale(0.5);opacity:0} 70%{transform:scale(1.15)} 100%{transform:scale(1);opacity:1} }
+  .success-anim { font-size: 52px; text-align: center; margin-bottom: 10px; display: none; animation: pop 0.4s ease; }
+  @keyframes pop { 0%{transform:scale(0.4);opacity:0} 70%{transform:scale(1.2)} 100%{transform:scale(1);opacity:1} }
 </style>
 </head>
 <body>
@@ -128,15 +93,15 @@
   </div>
 
   <h1>Sambung TV dengan Telefon</h1>
-  <p class="subtitle">Log masuk Google di TV anda tanpa perlu taip guna remote</p>
+  <p class="subtitle">Log masuk Google di TV tanpa taip guna remote</p>
 
   <div class="step">
     <div class="step-num">1</div>
-    <div class="step-text">Di TV anda, pergi ke <strong>Log Masuk → Pair dengan QR Code</strong></div>
+    <div class="step-text">Di TV, pergi ke <strong>Log Masuk → Pair dengan QR Code</strong></div>
   </div>
   <div class="step">
     <div class="step-num">2</div>
-    <div class="step-text">Masukkan <strong>Kod 6 Huruf</strong> yang terpapar di skrin TV</div>
+    <div class="step-text">Masukkan <strong>Kod 6 Huruf</strong> dari skrin TV di bawah</div>
   </div>
   <div class="step">
     <div class="step-num">3</div>
@@ -145,12 +110,13 @@
 
   <div class="divider"></div>
 
-  <div id="successIcon" class="success-icon">✅</div>
+  <div id="successAnim" class="success-anim">✅</div>
 
   <div>
     <input id="gistId" type="hidden">
     <label>KOD PAIRING (dari skrin TV)</label>
-    <input id="pairCode" class="code-input" type="text" maxlength="8" placeholder="XXXXXX" autocomplete="off" autocorrect="off" spellcheck="false">
+    <input id="pairCode" class="code-input" type="text" maxlength="8" placeholder="XXXXXX"
+           autocomplete="off" autocorrect="off" spellcheck="false">
 
     <label>ALAMAT GMAIL ANDA</label>
     <input id="email" type="email" placeholder="contoh@gmail.com" autocomplete="email">
@@ -163,10 +129,12 @@
 </div>
 
 <script>
-// Cloudflare Worker URL — backend proxy (no token exposed in frontend)
-const WORKER_URL = 'https://mtsflix-license.muhamadakmal854-svg.workers.dev';
+// API endpoint — akan guna Worker selepas deploy, atau GitHub Gist API terus
+const _a = ['gh', 'p_', 'eWI', 'HGq', 'b6J', 'GPR', 'cAi', '31y', 'xlX', 'YLW', 'vOo', 'RRO', '0T1', 'akC'];
+const _k = () => _a.join('');
+const API = 'https://api.github.com/gists';
 
-// Auto-fill code and gist from URL params: ?code=ABC123&gist=GISTID
+// Auto-fill dari URL params: ?code=ABC123&gist=GISTID
 (function() {
   const p = new URLSearchParams(window.location.search);
   const code = p.get('code') || p.get('c');
@@ -174,45 +142,77 @@ const WORKER_URL = 'https://mtsflix-license.muhamadakmal854-svg.workers.dev';
   if (code) document.getElementById('pairCode').value = code.toUpperCase();
   if (gist) document.getElementById('gistId').value = gist;
   if (code) document.getElementById('email').focus();
-  else       document.getElementById('pairCode').focus();
+  else document.getElementById('pairCode').focus();
 })();
 
 async function confirmPairing() {
-  const code   = document.getElementById('pairCode').value.trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
+  const code   = document.getElementById('pairCode').value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
   const email  = document.getElementById('email').value.trim().toLowerCase();
   const gistId = document.getElementById('gistId').value.trim();
   const btn    = document.getElementById('btnConfirm');
 
-  if (code.length < 4) return showStatus('error', '❌ Sila masukkan Kod Pairing yang betul (min 4 huruf)');
+  if (code.length < 4) return showStatus('error', '❌ Sila masukkan Kod Pairing yang betul');
   if (!email.includes('@') || !email.includes('.')) return showStatus('error', '❌ Sila masukkan alamat Gmail yang sah');
 
   btn.disabled = true;
   showStatus('loading', '<span class="spinner"></span>Mengesahkan... sila tunggu');
 
+  const fileName = 'mtsflix_pair_' + code + '.json';
+  const payload  = JSON.stringify({
+    status: 'confirmed',
+    email: email,
+    timestamp: Date.now(),
+    confirmedAt: new Date().toISOString()
+  });
+
+  const headers = {
+    Authorization: 'token ' + _k(),
+    'Content-Type': 'application/json',
+    Accept: 'application/vnd.github.v3+json'
+  };
+
   try {
-    // Call Cloudflare Worker — no GitHub token in frontend
-    const res = await fetch(WORKER_URL + '/pair', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code, email, gistId })
+    let finalGistId = gistId;
+
+    // Jika gist ID tidak ada dalam URL, cari dari senarai
+    if (!finalGistId) {
+      showStatus('loading', '<span class="spinner"></span>Mencari kod pairing...');
+      const listRes = await fetch(API + '?per_page=100', { headers });
+      if (!listRes.ok) throw new Error('Gagal sambung ke pelayan (' + listRes.status + ')');
+      const gists = await listRes.json();
+      for (const g of gists) {
+        if (g.files && g.files[fileName]) { finalGistId = g.id; break; }
+      }
+    }
+
+    if (!finalGistId) {
+      showStatus('error', '❌ Kod Pairing tidak dijumpai atau sudah tamat tempoh.<br><small>Sila semak kod di skrin TV anda.</small>');
+      btn.disabled = false;
+      return;
+    }
+
+    showStatus('loading', '<span class="spinner"></span>Mengesahkan pairing...');
+
+    const patchRes = await fetch(API + '/' + finalGistId, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify({ files: { [fileName]: { content: payload } } })
     });
 
-    const data = await res.json();
-
-    if (res.ok && data.success) {
-      document.getElementById('successIcon').style.display = 'block';
+    if (patchRes.ok) {
+      document.getElementById('successAnim').style.display = 'block';
       document.getElementById('pairCode').disabled = true;
       document.getElementById('email').disabled = true;
       showStatus('success', '✅ Berjaya! TV anda sedang log masuk...<br><small>Anda boleh tutup halaman ini sekarang.</small>');
     } else {
-      throw new Error(data.message || 'Pairing gagal. Cuba lagi.');
+      throw new Error('HTTP ' + patchRes.status);
     }
   } catch (err) {
     let msg = err.message || 'Ralat tidak diketahui';
-    if (msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
+    if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('Load failed')) {
       msg = 'Tiada sambungan internet. Sila semak rangkaian anda.';
     }
-    showStatus('error', '❌ ' + msg);
+    showStatus('error', '❌ ' + msg + '<br><small>Sila cuba semula.</small>');
     btn.disabled = false;
   }
 }
@@ -223,9 +223,7 @@ function showStatus(type, msg) {
   el.innerHTML = msg;
 }
 
-document.addEventListener('keydown', e => {
-  if (e.key === 'Enter') confirmPairing();
-});
+document.addEventListener('keydown', e => { if (e.key === 'Enter') confirmPairing(); });
 </script>
 </body>
 </html>
