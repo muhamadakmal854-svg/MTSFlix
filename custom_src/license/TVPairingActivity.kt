@@ -32,7 +32,7 @@ import kotlin.random.Random
 class TVPairingActivity : AppCompatActivity() {
 
     companion object {
-        private const val PAIR_URL_BASE = "https://cdn.jsdelivr.net/gh/muhamadakmal854-svg/MTSFlix@main/pair/index.html"
+        private const val PAIR_URL_BASE = "https://muhamadakmal854-svg.github.io/MTSFlix/pair/"
         private val GITHUB_TOKEN = "ghp_eWIHGqb6JGPR" + "cAi31yxlXYLWvOoRRO0T1akC"
         private const val GIST_API = "https://api.github.com/gists"
         private const val POLL_INTERVAL_MS = 5000L
@@ -203,7 +203,7 @@ class TVPairingActivity : AppCompatActivity() {
 
                 // Embed BOTH code AND gistId in URL — phone uses gist ID directly, no search needed!
                 val pairUrl = "$PAIR_URL_BASE?code=$pairingCode&gist=$newGistId"
-                val shortUrl = "cdn.jsdelivr.net/gh/muhamadakmal854-svg/\nMTSFlix@main/pair/?code=$pairingCode\n&gist=$newGistId"
+                val shortUrl = "mtsfix.github.io/pair\n?code=$pairingCode"
 
                 runOnUiThread {
                     tvCode.text = pairingCode
