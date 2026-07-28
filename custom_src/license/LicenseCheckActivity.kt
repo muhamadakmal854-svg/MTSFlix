@@ -46,6 +46,8 @@ class LicenseCheckActivity : AppCompatActivity() {
 
     // ─── Lifecycle ────────────────────────────────────────────────────────────
 
+    private var isLaunching = false  // Guard against double-launch
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -80,6 +82,18 @@ class LicenseCheckActivity : AppCompatActivity() {
 
         val deviceCode = DeviceCodeManager.getDeviceCode(this)
         tvDeviceCode.text = deviceCode
+
+        // ── Fast-path: already verified locally within 24h — skip network call ──
+        if (DeviceCodeManager.isVerifiedLocally(this)) {
+            val username = DeviceCodeManager.getUsername(this) ?: "User"
+            val expiry  = DeviceCodeManager.getExpiryDate(this) ?: ""
+            showVerifiedState(username, expiry)
+            lifecycleScope.launch(Dispatchers.Main) {
+                delay(800)
+                checkGoogleLoginAndNavigate(username)
+            }
+            return
+        }
 
         startVerification(deviceCode)
     }
@@ -180,6 +194,9 @@ class LicenseCheckActivity : AppCompatActivity() {
     }
 
     private fun launchMainApp() {
+        if (isLaunching) return  // Prevent double-launch
+        isLaunching = true
+
         val prefs = androidx.preference.PreferenceManager.getDefaultSharedPreferences(this)
         val savedProfiles = prefs.getString(com.mts.mtsflix.license.ProfileSwitchActivity.KEY_PROFILES, null)
 
@@ -330,6 +347,7 @@ class LicenseCheckActivity : AppCompatActivity() {
 
     private fun markSetupComplete() {
         val key = "HAS_DONE_SETUP"
+        // Save as String in multiple SharedPreferences namespaces (used by MTSFlixInit)
         try {
             getSharedPreferences("rebuild_preference", Context.MODE_PRIVATE)
                 .edit().putString(key, "true").apply()
@@ -338,6 +356,10 @@ class LicenseCheckActivity : AppCompatActivity() {
             androidx.preference.PreferenceManager.getDefaultSharedPreferences(this)
                 .edit().putString(key, "true").apply()
         } catch (e: Exception) { android.util.Log.w("MTSFlix", "setup bypass2 fail: ${e.message}") }
+        // Save as Boolean using CloudStream's setKey (required for getKey(HAS_DONE_SETUP_KEY, false) to return true)
+        try {
+            com.lagradost.cloudstream3.CloudStreamApp.setKey(key, true)
+        } catch (e: Exception) { android.util.Log.w("MTSFlix", "CloudStreamApp setKey fail: ${e.message}") }
     }
 
     // ─── UI State Management ──────────────────────────────────────────────────
