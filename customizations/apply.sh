@@ -977,10 +977,13 @@ else:
         # Add missing imports if needed
         if 'import kotlinx.coroutines.Dispatchers' not in c and 'import kotlinx.coroutines' not in c:
             c = c.replace('import java.io.InputStreamReader', 'import java.io.InputStreamReader\nimport kotlinx.coroutines.withContext')
+        c = c.replace('val currentInstaller = settingsManager.getInt(', 'val currentInstaller = 1 // settingsManager.getInt(')
         open(path, 'w', encoding='utf-8').write(c)
-        print('  OK: InAppUpdater download progress bar added')
+        print('  OK: InAppUpdater download progress bar added & forced for all devices')
     elif 'progressDialog' in c:
-        print('  OK: Download progress already patched')
+        c = c.replace('val currentInstaller = settingsManager.getInt(', 'val currentInstaller = 1 // settingsManager.getInt(')
+        open(path, 'w', encoding='utf-8').write(c)
+        print('  OK: Download progress already patched & forced for all devices')
     else:
         print('  WARN: Could not find downloadUpdate function to patch (CloudStream updated?)')
 PYEOF

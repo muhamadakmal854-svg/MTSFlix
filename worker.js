@@ -81,6 +81,22 @@ export default {
       }
 
       // ───────────────────────────────────────────────────────────────────────
+      // ROUTE 1.5: GET /pair or GET /pair/index.html — TV Pairing Web Page
+      // ───────────────────────────────────────────────────────────────────────
+      if ((path === '/pair' || path === '/pair/index.html') && method === 'GET') {
+        try {
+          const rawUrl = `https://raw.githubusercontent.com/${CONFIG.GITHUB_REPO}/${CONFIG.GITHUB_BRANCH}/pair/index.html?t=${Date.now()}`;
+          const res = await fetch(rawUrl);
+          if (res.ok) {
+            const html = await res.text();
+            return new Response(html, {
+              headers: { 'Content-Type': 'text/html; charset=utf-8', ...corsHeaders },
+            });
+          }
+        } catch (_) {}
+      }
+
+      // ───────────────────────────────────────────────────────────────────────
       // ROUTE 2: GET /verify?code=MTSF-XXXX-XXXX-XXXX — Semak Lesen Peranti
       // ───────────────────────────────────────────────────────────────────────
       if (path === '/verify' && method === 'GET') {
