@@ -1,7 +1,7 @@
 {
   "version": 1,
   "description": "MTSFlix Device License Registry",
-  "lastUpdated": "2026-07-26",
+  "lastUpdated": "2026-07-28",
   "licenses": [
     {
       "id": "LIC-EXAMPLE-00000001",
@@ -268,6 +268,20 @@
       "deviceInfo": "OPPO A6T 5G",
       "note": "VIP",
       "lastModified": "2026-07-26T15:42:48"
+    },
+    {
+      "id": "LIC-20260728-ABC07FAA",
+      "deviceCode": "MTSF-61AB-3592-3E8D",
+      "username": "BDR NIZAM",
+      "email": "nizam@gmail.com",
+      "expiredAt": "2099-12-30",
+      "active": true,
+      "banned": false,
+      "bannedReason": "",
+      "addedAt": "2026-07-28",
+      "deviceInfo": "Android TV",
+      "note": "VIP",
+      "lastModified": "2026-07-28T16:03:43"
     }
   ]
 }
