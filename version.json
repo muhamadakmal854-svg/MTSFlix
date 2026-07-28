@@ -1,11 +1,11 @@
 {
   "version": "1.1.2",
-  "versionCode": 2,
+  "versionCode": 1,
   "downloadUrl": "https://github.com/muhamadakmal854-svg/MTSFlix/releases/download/v1.1.2/MTSFlix-v1.1.2.apk",
-  "releaseNotes": "Fix QR Code pairing (render HTML web page) + Paksa dialog progress bar muat turun kemas kini untuk semua peranti",
+  "releaseNotes": "MTSFlix v1.1.2",
   "mandatory": false,
   "sha256": "",
-  "publishedAt": "2026-07-28T08:14:26Z",
+  "publishedAt": "2026-07-28T08:19:03Z",
   "minAndroid": 21,
   "providerUrl": "https://cdn.jsdelivr.net/gh/muhamadakmal854-svg/Provider@builds/repo.json"
 }
