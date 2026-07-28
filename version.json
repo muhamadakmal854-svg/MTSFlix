@@ -1,11 +1,11 @@
 {
   "version": "1.1.2",
-  "versionCode": 4,
+  "versionCode": 5,
   "downloadUrl": "https://github.com/muhamadakmal854-svg/MTSFlix/releases/download/v1.1.2/MTSFlix-v1.1.2.apk",
-  "releaseNotes": "v1.1.2 — Fix QR Pairing, TV Launcher & Progress Bar Muat Turun",
+  "releaseNotes": "Fix QR Pairing (GitHub Pages), TV Launcher muncul di grid, progress bar muat turun kemas kini",
   "mandatory": false,
   "sha256": "",
-  "publishedAt": "2026-07-28T08:45:00Z",
+  "publishedAt": "2026-07-28T08:49:33Z",
   "minAndroid": 21,
   "providerUrl": "https://cdn.jsdelivr.net/gh/muhamadakmal854-svg/Provider@builds/repo.json"
 }
