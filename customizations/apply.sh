@@ -624,16 +624,11 @@ try:
         print('  OK: Added installLocation=auto to manifest')
     print('  OK: Removed privileged permission UPDATE_PACKAGES_WITHOUT_USER_ACTION')
 
-    # Add android.hardware.type.television feature if missing
-    if 'android.hardware.type.television' not in c:
-        c = c.replace('<uses-feature', '<uses-feature android:name="android.hardware.type.television" android:required="false" />\n    <uses-feature')
-        print('  OK: Added android.hardware.type.television feature')
-
     if 'LicenseCheckActivity' not in c:
         pattern = re.compile(r'<intent-filter[\s\S]*?</intent-filter>')
         c = pattern.sub(lambda m: '' if 'android.intent.action.MAIN' in m.group(0) and ('android.intent.category.LAUNCHER' in m.group(0) or 'android.intent.category.LEANBACK_LAUNCHER' in m.group(0)) else m.group(0), c)
         activity = '''
-        <!-- MTSFlix: Device Verification (LAUNCHER & LEANBACK_LAUNCHER for Android TV / Google TV) -->
+        <!-- MTSFlix: Device Verification (LAUNCHER) -->
         <activity
             android:name="com.mts.mtsflix.license.LicenseCheckActivity"
             android:exported="true"
@@ -642,7 +637,6 @@ try:
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
-                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
             </intent-filter>
         </activity>'''
         c = c.replace('</application>', activity + '\n    </application>')
@@ -983,13 +977,10 @@ else:
         # Add missing imports if needed
         if 'import kotlinx.coroutines.Dispatchers' not in c and 'import kotlinx.coroutines' not in c:
             c = c.replace('import java.io.InputStreamReader', 'import java.io.InputStreamReader\nimport kotlinx.coroutines.withContext')
-        c = c.replace('val currentInstaller = settingsManager.getInt(', 'val currentInstaller = 1 // settingsManager.getInt(')
         open(path, 'w', encoding='utf-8').write(c)
-        print('  OK: InAppUpdater download progress bar added & forced for all devices')
+        print('  OK: InAppUpdater download progress bar added')
     elif 'progressDialog' in c:
-        c = c.replace('val currentInstaller = settingsManager.getInt(', 'val currentInstaller = 1 // settingsManager.getInt(')
-        open(path, 'w', encoding='utf-8').write(c)
-        print('  OK: Download progress already patched & forced for all devices')
+        print('  OK: Download progress already patched')
     else:
         print('  WARN: Could not find downloadUpdate function to patch (CloudStream updated?)')
 PYEOF

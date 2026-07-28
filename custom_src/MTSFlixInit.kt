@@ -49,12 +49,6 @@ object MTSFlixInit {
         } catch (e: Exception) {
             Log.w("MTSFlix", "markSetupComplete defaultPrefs: ${e.message}")
         }
-        // Critical: CloudStream reads this with getKey<Boolean>(), so we must save it as Boolean
-        try {
-            com.lagradost.cloudstream3.CloudStreamApp.setKey(key, true)
-        } catch (e: Exception) {
-            Log.w("MTSFlix", "markSetupComplete CloudStreamApp.setKey: ${e.message}")
-        }
     }
 
     fun isInitialized() = initialized
