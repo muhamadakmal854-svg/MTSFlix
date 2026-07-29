@@ -1,0 +1,8 @@
+name = "mtsflix-license"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+account_id = "14b42c1256b5bd8b812239b33683ee61"
+
+[vars]
+GITHUB_REPO   = "muhamadakmal854-svg/MTSFlix"
+GITHUB_BRANCH = "main"

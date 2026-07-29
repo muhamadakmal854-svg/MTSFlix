@@ -3,664 +3,492 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MTSFlix — Semak Status Lesen Peranti</title>
-  <meta name="description" content="Semak status pendaftaran lesen peranti MTSFlix anda. Masukkan kod peranti untuk mengetahui status aktif, tamat, atau digantung.">
+  <title>MTSFlix — Semak & Daftar Lesen Peranti</title>
+  <meta name="description" content="Semak status atau daftar lesen peranti MTSFlix anda secara online.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg:           #07070D;
-      --surface:      #0F0F1A;
-      --card:         #13131F;
-      --card2:        #1A1A2A;
-      --border:       #1E1E30;
-      --border-glow:  #E50914;
-      --red:          #E50914;
-      --red-dim:      rgba(229,9,20,0.18);
-      --red-glow:     rgba(229,9,20,0.35);
-      --green:        #22C55E;
-      --green-dim:    rgba(34,197,94,0.12);
-      --green-glow:   rgba(34,197,94,0.3);
-      --orange:       #F59E0B;
-      --orange-dim:   rgba(245,158,11,0.12);
-      --blue:         #3B82F6;
-      --blue-dim:     rgba(59,130,246,0.12);
-      --text:         #F0F0F8;
-      --text-muted:   #7070A0;
-      --text-dim:     #404060;
-      --radius:       16px;
-      --radius-sm:    10px;
+      --bg:          #07070D;
+      --surface:     #0F0F1A;
+      --card:        #13131F;
+      --card2:       #1A1A2A;
+      --border:      #1E1E30;
+      --red:         #E50914;
+      --red-dim:     rgba(229,9,20,0.15);
+      --red-glow:    rgba(229,9,20,0.35);
+      --green:       #22C55E;
+      --green-dim:   rgba(34,197,94,0.12);
+      --orange:      #F59E0B;
+      --orange-dim:  rgba(245,158,11,0.12);
+      --blue:        #3B82F6;
+      --blue-dim:    rgba(59,130,246,0.12);
+      --purple:      #A855F7;
+      --purple-dim:  rgba(168,85,247,0.12);
+      --text:        #F0F0F8;
+      --text-muted:  #7070A0;
+      --text-dim:    #404060;
+      --radius:      16px;
+      --radius-sm:   10px;
     }
-
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
     body {
       font-family: 'Outfit', sans-serif;
       background: var(--bg);
       color: var(--text);
       min-height: 100vh;
-      overflow-x: hidden;
       background-image:
-        radial-gradient(ellipse 80% 50% at 50% -10%, rgba(229,9,20,0.12) 0%, transparent 60%),
-        radial-gradient(ellipse 60% 40% at 80% 110%, rgba(59,130,246,0.06) 0%, transparent 50%);
+        radial-gradient(ellipse 80% 50% at 50% -10%, rgba(229,9,20,0.1) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 40% at 80% 110%, rgba(59,130,246,0.05) 0%, transparent 50%);
     }
-
-    /* ── Animated background particles ── */
     .bg-grid {
-      position: fixed;
-      inset: 0;
-      background-image:
-        linear-gradient(rgba(229,9,20,0.03) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(229,9,20,0.03) 1px, transparent 1px);
+      position: fixed; inset: 0;
+      background-image: linear-gradient(rgba(229,9,20,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(229,9,20,0.025) 1px, transparent 1px);
       background-size: 60px 60px;
-      pointer-events: none;
-      z-index: 0;
+      pointer-events: none; z-index: 0;
     }
+    .wrapper { position: relative; z-index: 1; max-width: 680px; margin: 0 auto; padding: 48px 20px 80px; }
 
-    .wrapper {
-      position: relative;
-      z-index: 1;
-      max-width: 680px;
-      margin: 0 auto;
-      padding: 48px 20px 80px;
-    }
-
-    /* ── Header ── */
-    .header {
-      text-align: center;
-      margin-bottom: 48px;
-    }
-
+    /* Header */
+    .header { text-align: center; margin-bottom: 40px; }
     .logo-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      background: linear-gradient(135deg, var(--red) 0%, #a00008 100%);
-      color: #fff;
-      font-size: 13px;
-      font-weight: 800;
-      letter-spacing: 2px;
-      padding: 8px 20px;
-      border-radius: 50px;
-      margin-bottom: 24px;
-      box-shadow: 0 0 30px var(--red-glow), 0 4px 20px rgba(0,0,0,0.5);
+      display: inline-flex; align-items: center; gap: 10px;
+      background: linear-gradient(135deg, var(--red), #a00008);
+      color: #fff; font-size: 13px; font-weight: 800; letter-spacing: 2px;
+      padding: 8px 20px; border-radius: 50px; margin-bottom: 22px;
+      box-shadow: 0 0 30px var(--red-glow);
       animation: pulse-badge 3s ease-in-out infinite;
     }
-
-    @keyframes pulse-badge {
-      0%, 100% { box-shadow: 0 0 30px var(--red-glow), 0 4px 20px rgba(0,0,0,0.5); }
-      50% { box-shadow: 0 0 50px var(--red-glow), 0 4px 20px rgba(0,0,0,0.5); }
-    }
-
-    .logo-dot {
-      width: 8px;
-      height: 8px;
-      background: #fff;
-      border-radius: 50%;
-      animation: blink 1.5s ease-in-out infinite;
-    }
-
-    @keyframes blink {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.3; }
-    }
-
+    @keyframes pulse-badge { 0%,100% { box-shadow: 0 0 30px var(--red-glow); } 50% { box-shadow: 0 0 55px var(--red-glow); } }
+    .logo-dot { width: 8px; height: 8px; background: #fff; border-radius: 50%; animation: blink 1.5s ease-in-out infinite; }
+    @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
     .header h1 {
-      font-size: clamp(28px, 6vw, 42px);
-      font-weight: 900;
-      letter-spacing: -0.5px;
-      line-height: 1.1;
-      margin-bottom: 14px;
+      font-size: clamp(26px, 5.5vw, 40px); font-weight: 900; letter-spacing: -0.5px; line-height: 1.1; margin-bottom: 12px;
       background: linear-gradient(135deg, #fff 30%, rgba(255,255,255,0.6) 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .header p { font-size: 14px; color: var(--text-muted); line-height: 1.6; max-width: 440px; margin: 0 auto; }
+
+    /* Tab Navigation */
+    .tab-nav {
+      display: flex; background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 5px; margin-bottom: 24px; gap: 4px;
+    }
+    .tab-btn {
+      flex: 1; padding: 12px 16px; border: none; border-radius: var(--radius-sm);
+      background: transparent; color: var(--text-muted); font-family: 'Outfit', sans-serif;
+      font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s;
+      display: flex; align-items: center; justify-content: center; gap: 7px;
+    }
+    .tab-btn.active {
+      background: var(--red); color: #fff;
+      box-shadow: 0 4px 15px var(--red-dim);
+    }
+    .tab-btn:not(.active):hover { background: var(--card2); color: var(--text); }
+
+    /* Tab Panels */
+    .tab-panel { display: none; animation: fadeIn 0.25s ease; }
+    .tab-panel.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* Cards */
+    .card {
+      background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 28px 30px; margin-bottom: 20px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.45); position: relative; overflow: hidden;
+    }
+    .card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, transparent, var(--red), transparent); opacity: 0.5;
+    }
+    .card-title {
+      font-size: 13px; font-weight: 700; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 18px;
     }
 
-    .header p {
-      font-size: 15px;
-      color: var(--text-muted);
-      line-height: 1.6;
-      max-width: 480px;
-      margin: 0 auto;
-    }
-
-    /* ── Search Card ── */
-    .search-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 32px;
-      margin-bottom: 24px;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-      position: relative;
-      overflow: hidden;
-    }
-
-    .search-card::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 2px;
-      background: linear-gradient(90deg, transparent, var(--red), transparent);
-      opacity: 0.6;
-    }
-
-    .search-label {
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 1.5px;
-      margin-bottom: 12px;
-    }
-
-    .input-group {
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-
-    .code-input {
-      flex: 1;
-      min-width: 200px;
-      background: var(--card2);
-      border: 1.5px solid var(--border);
-      border-radius: var(--radius-sm);
-      color: var(--text);
-      font-family: 'Outfit', monospace;
-      font-size: 18px;
-      font-weight: 600;
-      letter-spacing: 2px;
-      padding: 16px 20px;
-      outline: none;
+    /* Inputs */
+    .form-group { margin-bottom: 16px; }
+    .form-label { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; display: block; }
+    .form-input {
+      width: 100%; background: var(--card2); border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm); color: var(--text); font-family: 'Outfit', sans-serif;
+      font-size: 15px; font-weight: 500; padding: 13px 16px; outline: none;
       transition: border-color 0.2s, box-shadow 0.2s;
     }
+    .form-input::placeholder { color: var(--text-dim); }
+    .form-input:focus { border-color: var(--red); box-shadow: 0 0 0 3px var(--red-dim); }
+    .form-input.code-style { font-size: 17px; font-weight: 600; letter-spacing: 2px; }
+    .form-hint { font-size: 11px; color: var(--text-muted); margin-top: 5px; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    @media (max-width: 500px) { .form-grid { grid-template-columns: 1fr; } }
 
-    .code-input::placeholder {
-      color: var(--text-dim);
-      letter-spacing: 1px;
-      font-weight: 400;
-      font-size: 15px;
+    /* Buttons */
+    .btn-primary {
+      width: 100%; background: linear-gradient(135deg, var(--red), #c00008);
+      color: #fff; border: none; border-radius: var(--radius-sm);
+      font-family: 'Outfit', sans-serif; font-size: 15px; font-weight: 700;
+      padding: 15px 28px; cursor: pointer; transition: transform 0.15s, box-shadow 0.2s, opacity 0.2s;
+      box-shadow: 0 4px 20px var(--red-dim); display: flex; align-items: center; justify-content: center; gap: 9px;
+      margin-top: 20px;
     }
-
-    .code-input:focus {
-      border-color: var(--red);
-      box-shadow: 0 0 0 3px var(--red-dim);
-    }
-
-    .btn-check {
-      background: linear-gradient(135deg, var(--red) 0%, #c00008 100%);
-      color: #fff;
-      border: none;
-      border-radius: var(--radius-sm);
-      font-family: 'Outfit', sans-serif;
-      font-size: 15px;
-      font-weight: 700;
-      padding: 16px 28px;
-      cursor: pointer;
-      transition: transform 0.15s, box-shadow 0.2s, opacity 0.2s;
-      box-shadow: 0 4px 20px var(--red-dim);
-      white-space: nowrap;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .btn-check:hover:not(:disabled) {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 30px var(--red-glow);
-    }
-
-    .btn-check:active:not(:disabled) {
-      transform: translateY(0);
-    }
-
-    .btn-check:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-    }
-
-    .hint-text {
-      font-size: 12px;
-      color: var(--text-muted);
-      margin-top: 12px;
-    }
-
-    /* ── Result Card ── */
-    .result-card {
-      border-radius: var(--radius);
-      padding: 28px 32px;
-      margin-bottom: 24px;
-      display: none;
-      animation: slideIn 0.3s ease;
-      position: relative;
-      overflow: hidden;
-    }
-
-    @keyframes slideIn {
-      from { opacity: 0; transform: translateY(12px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-
-    .result-card.active {
-      display: block;
-      background: var(--green-dim);
-      border: 1.5px solid var(--green);
-      box-shadow: 0 0 40px rgba(34,197,94,0.1);
-    }
-
-    .result-card.banned {
-      display: block;
-      background: var(--red-dim);
-      border: 1.5px solid var(--red);
-      box-shadow: 0 0 40px rgba(229,9,20,0.1);
-    }
-
-    .result-card.expired {
-      display: block;
-      background: var(--orange-dim);
-      border: 1.5px solid var(--orange);
-      box-shadow: 0 0 40px rgba(245,158,11,0.1);
-    }
-
-    .result-card.notfound {
-      display: block;
-      background: var(--blue-dim);
-      border: 1.5px solid var(--blue);
-    }
-
-    .result-header {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      margin-bottom: 20px;
-    }
-
-    .status-icon {
-      font-size: 36px;
-      flex-shrink: 0;
-    }
-
-    .status-title {
-      font-size: 22px;
-      font-weight: 800;
-    }
-
-    .status-sub {
-      font-size: 13px;
-      opacity: 0.7;
-      margin-top: 2px;
-    }
-
-    .result-card.active .status-title { color: var(--green); }
-    .result-card.banned .status-title  { color: var(--red); }
-    .result-card.expired .status-title { color: var(--orange); }
-    .result-card.notfound .status-title { color: var(--blue); }
-
-    .info-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-      gap: 12px;
-      margin-top: 16px;
-    }
-
-    .info-item {
-      background: rgba(0,0,0,0.25);
-      border-radius: var(--radius-sm);
-      padding: 12px 16px;
-    }
-
-    .info-lbl {
-      font-size: 10px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: var(--text-muted);
-      margin-bottom: 4px;
-    }
-
-    .info-val {
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--text);
-      word-break: break-all;
-    }
-
-    .banned-reason {
-      margin-top: 14px;
-      background: rgba(229,9,20,0.1);
-      border: 1px solid rgba(229,9,20,0.3);
-      border-radius: var(--radius-sm);
-      padding: 12px 16px;
-      font-size: 13px;
-      color: #FFB3B3;
-    }
-
-    /* ── Loading Spinner ── */
-    .spinner {
-      display: none;
-      width: 20px;
-      height: 20px;
-      border: 2px solid rgba(255,255,255,0.3);
-      border-top-color: #fff;
-      border-radius: 50%;
-      animation: spin 0.7s linear infinite;
-    }
-
+    .btn-primary:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 30px var(--red-glow); }
+    .btn-primary:active:not(:disabled) { transform: translateY(0); }
+    .btn-primary:disabled { opacity: 0.55; cursor: not-allowed; }
+    .spinner { display: none; width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* ── Info Box ── */
-    .info-box {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 24px 28px;
-      margin-bottom: 24px;
-    }
+    /* Result Cards */
+    .result-card { border-radius: var(--radius); padding: 24px 28px; display: none; animation: slideIn 0.3s ease; margin-bottom: 20px; }
+    @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .result-card.show { display: block; }
+    .result-card.active   { background: var(--green-dim);  border: 1.5px solid var(--green);  box-shadow: 0 0 40px rgba(34,197,94,0.08); }
+    .result-card.banned   { background: var(--red-dim);    border: 1.5px solid var(--red);    box-shadow: 0 0 40px rgba(229,9,20,0.08); }
+    .result-card.expired  { background: var(--orange-dim); border: 1.5px solid var(--orange); }
+    .result-card.notfound { background: var(--blue-dim);   border: 1.5px solid var(--blue);   }
+    .result-card.success  { background: var(--purple-dim); border: 1.5px solid var(--purple); box-shadow: 0 0 40px rgba(168,85,247,0.08); }
+    .result-card.error    { background: var(--red-dim);    border: 1.5px solid var(--red);    }
+    .result-header { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
+    .result-icon { font-size: 32px; flex-shrink: 0; }
+    .result-title { font-size: 20px; font-weight: 800; }
+    .result-sub   { font-size: 13px; opacity: 0.7; margin-top: 2px; }
+    .result-card.active .result-title   { color: var(--green); }
+    .result-card.banned .result-title   { color: var(--red); }
+    .result-card.expired .result-title  { color: var(--orange); }
+    .result-card.notfound .result-title { color: var(--blue); }
+    .result-card.success .result-title  { color: var(--purple); }
+    .result-card.error .result-title    { color: var(--red); }
+    .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+    .info-item { background: rgba(0,0,0,0.25); border-radius: var(--radius-sm); padding: 10px 14px; }
+    .info-lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 3px; }
+    .info-val { font-size: 13px; font-weight: 600; color: var(--text); word-break: break-all; }
+    .banned-note { margin-top: 12px; background: rgba(229,9,20,0.1); border: 1px solid rgba(229,9,20,0.3); border-radius: var(--radius-sm); padding: 10px 14px; font-size: 13px; color: #FFB3B3; }
 
-    .info-box-title {
-      font-size: 14px;
-      font-weight: 700;
-      color: var(--text-muted);
-      margin-bottom: 16px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      text-transform: uppercase;
-      letter-spacing: 0.8px;
-      font-size: 11px;
-    }
-
-    .step-list {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    .step {
-      display: flex;
-      align-items: flex-start;
-      gap: 14px;
-    }
-
+    /* Step list */
+    .step-list { display: flex; flex-direction: column; gap: 11px; margin-top: 4px; }
+    .step { display: flex; align-items: flex-start; gap: 12px; }
     .step-num {
-      background: var(--red-dim);
-      color: var(--red);
-      border: 1px solid rgba(229,9,20,0.3);
-      width: 28px;
-      height: 28px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 12px;
-      font-weight: 800;
-      flex-shrink: 0;
+      background: var(--red-dim); color: var(--red); border: 1px solid rgba(229,9,20,0.3);
+      width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center;
+      justify-content: center; font-size: 11px; font-weight: 800; flex-shrink: 0;
     }
+    .step-text { font-size: 13px; color: var(--text-muted); padding-top: 3px; line-height: 1.5; }
+    .step-text strong { color: var(--text); }
 
-    .step-text {
-      font-size: 14px;
-      color: var(--text-muted);
-      padding-top: 4px;
-      line-height: 1.5;
+    /* Worker status badge */
+    .worker-status {
+      display: inline-flex; align-items: center; gap: 7px;
+      background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.3);
+      border-radius: 20px; padding: 5px 12px; font-size: 12px; font-weight: 600; color: var(--green);
+      margin-bottom: 20px;
     }
+    .worker-status .dot { width: 7px; height: 7px; background: var(--green); border-radius: 50%; animation: blink 1.5s ease-in-out infinite; }
+    .worker-status.offline { background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.3); color: #f87171; }
+    .worker-status.offline .dot { background: #f87171; }
 
-    .step-text strong {
-      color: var(--text);
-    }
-
-    /* ── Footer ── */
-    .footer {
-      text-align: center;
-      padding-top: 32px;
-      border-top: 1px solid var(--border);
-      font-size: 12px;
-      color: var(--text-dim);
-      line-height: 1.8;
-    }
-
-    .footer a {
-      color: var(--red);
-      text-decoration: none;
-    }
-
-    /* ── Responsive ── */
-    @media (max-width: 480px) {
-      .wrapper { padding: 32px 16px 60px; }
-      .search-card { padding: 24px 20px; }
-      .code-input { font-size: 15px; letter-spacing: 1px; }
-      .btn-check { padding: 16px 20px; }
-      .result-card { padding: 22px 20px; }
-    }
+    /* Footer */
+    .footer { text-align: center; padding-top: 28px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text-dim); line-height: 1.8; }
+    @media (max-width: 480px) { .wrapper { padding: 30px 14px 60px; } .card { padding: 22px 18px; } }
   </style>
 </head>
 <body>
-
 <div class="bg-grid"></div>
-
 <div class="wrapper">
 
   <!-- Header -->
   <div class="header">
-    <div class="logo-badge">
-      <div class="logo-dot"></div>
-      MTSFlix
-    </div>
-    <h1>Semak Status<br>Lesen Peranti Anda</h1>
-    <p>Masukkan kod peranti MTSFlix anda untuk semak status pendaftaran lesen secara langsung.</p>
+    <div class="logo-badge"><div class="logo-dot"></div>MTSFlix</div>
+    <h1>Portal Lesen Peranti</h1>
+    <p>Semak status lesen atau daftar peranti MTSFlix anda secara online.</p>
   </div>
 
-  <!-- Search Card -->
-  <div class="search-card">
-    <div class="search-label">🔍 Kod Peranti (Device Code)</div>
-    <div class="input-group">
-      <input
-        type="text"
-        id="codeInput"
-        class="code-input"
-        placeholder="MTSF-XXXX-XXXX-XXXX"
-        maxlength="19"
-        autocomplete="off"
-        autocapitalize="characters"
-        spellcheck="false"
-      >
-      <button class="btn-check" id="btnCheck" onclick="checkLicense()">
-        <div class="spinner" id="spinner"></div>
-        <span id="btnText">Semak Sekarang</span>
+  <!-- Tab Navigation -->
+  <div class="tab-nav">
+    <button class="tab-btn active" id="tab-check-btn" onclick="switchTab('check')">🔍 Semak Lesen</button>
+    <button class="tab-btn" id="tab-register-btn" onclick="switchTab('register')">📝 Daftar Peranti</button>
+  </div>
+
+  <!-- ══════════ TAB: SEMAK LESEN ══════════ -->
+  <div class="tab-panel active" id="tab-check">
+
+    <div class="card">
+      <div class="card-title">🔍 Masukkan Kod Peranti</div>
+      <div class="form-group">
+        <input type="text" id="checkCode" class="form-input code-style"
+          placeholder="MTSF-XXXX-XXXX-XXXX" maxlength="19"
+          autocomplete="off" autocapitalize="characters" spellcheck="false">
+        <div class="form-hint">💡 Salin kod dari aplikasi MTSFlix → Tetapan → Maklumat Peranti</div>
+      </div>
+      <button class="btn-primary" id="btnCheck" onclick="doCheck()">
+        <div class="spinner" id="checkSpinner"></div>
+        <span id="btnCheckText">Semak Sekarang</span>
       </button>
     </div>
-    <div class="hint-text">💡 Contoh: MTSF-5CDB-4808-57E2 — anda boleh salin terus dari aplikasi MTSFlix</div>
-  </div>
 
-  <!-- Result Card (hidden by default) -->
-  <div class="result-card" id="resultCard">
-    <div class="result-header">
-      <div class="status-icon" id="statusIcon"></div>
-      <div>
-        <div class="status-title" id="statusTitle"></div>
-        <div class="status-sub" id="statusSub"></div>
+    <!-- Check Result -->
+    <div class="result-card" id="checkResult">
+      <div class="result-header">
+        <div class="result-icon" id="checkIcon"></div>
+        <div>
+          <div class="result-title" id="checkTitle"></div>
+          <div class="result-sub" id="checkSub"></div>
+        </div>
       </div>
+      <div class="info-grid" id="checkInfo"></div>
+      <div id="checkBannedNote" class="banned-note" style="display:none"></div>
     </div>
-    <div class="info-grid" id="infoGrid"></div>
-    <div id="bannedReason" class="banned-reason" style="display:none;"></div>
-  </div>
 
-  <!-- How to find device code -->
-  <div class="info-box">
-    <div class="info-box-title">📱 Cara Dapatkan Kod Peranti</div>
-    <div class="step-list">
-      <div class="step">
-        <div class="step-num">1</div>
-        <div class="step-text">Buka aplikasi <strong>MTSFlix</strong> di peranti anda</div>
-      </div>
-      <div class="step">
-        <div class="step-num">2</div>
-        <div class="step-text">Pergi ke <strong>Tetapan → Maklumat Peranti</strong> atau skrin pendaftaran lesen</div>
-      </div>
-      <div class="step">
-        <div class="step-num">3</div>
-        <div class="step-text">Salin kod dalam format <strong>MTSF-XXXX-XXXX-XXXX</strong></div>
-      </div>
-      <div class="step">
-        <div class="step-num">4</div>
-        <div class="step-text">Tampal di kotak carian di atas dan klik <strong>Semak Sekarang</strong></div>
+    <!-- How to find code -->
+    <div class="card">
+      <div class="card-title">📱 Cara Dapatkan Kod Peranti</div>
+      <div class="step-list">
+        <div class="step"><div class="step-num">1</div><div class="step-text">Buka aplikasi <strong>MTSFlix</strong> di peranti anda</div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-text">Pergi ke <strong>Tetapan → Maklumat Peranti</strong> atau skrin pendaftaran lesen</div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-text">Salin kod dalam format <strong>MTSF-XXXX-XXXX-XXXX</strong></div></div>
+        <div class="step"><div class="step-num">4</div><div class="step-text">Tampal di kotak di atas dan klik <strong>Semak Sekarang</strong></div></div>
       </div>
     </div>
   </div>
 
-  <!-- Footer -->
+  <!-- ══════════ TAB: DAFTAR PERANTI ══════════ -->
+  <div class="tab-panel" id="tab-register">
+
+    <div class="card">
+      <div id="workerStatusBadge" class="worker-status">
+        <div class="dot"></div> <span id="workerStatusText">Menyemak sambungan...</span>
+      </div>
+
+      <div class="card-title">📝 Maklumat Pendaftaran</div>
+
+      <div class="form-group">
+        <label class="form-label">Kod Peranti (Device Code) *</label>
+        <input type="text" id="regCode" class="form-input code-style"
+          placeholder="MTSF-XXXX-XXXX-XXXX" maxlength="19"
+          autocomplete="off" autocapitalize="characters">
+        <div class="form-hint">Format auto: MTSF-XXXX-XXXX-XXXX</div>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">Nama Pengguna *</label>
+          <input type="text" id="regName" class="form-input" placeholder="cth: Ahmad TV Ruang Tamu">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input type="email" id="regEmail" class="form-input" placeholder="cth: ahmad@gmail.com">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Jenis Peranti</label>
+          <input type="text" id="regDevice" class="form-input" placeholder="cth: Xiaomi Stick, Samsung TV">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Catatan</label>
+          <input type="text" id="regNote" class="form-input" placeholder="cth: VIP, Bayaran RM50">
+        </div>
+      </div>
+
+      <button class="btn-primary" id="btnRegister" onclick="doRegister()">
+        <div class="spinner" id="regSpinner"></div>
+        <span id="btnRegisterText">📤 Hantar Permohonan Pendaftaran</span>
+      </button>
+    </div>
+
+    <!-- Register Result -->
+    <div class="result-card" id="regResult">
+      <div class="result-header">
+        <div class="result-icon" id="regIcon"></div>
+        <div>
+          <div class="result-title" id="regTitle"></div>
+          <div class="result-sub" id="regSub"></div>
+        </div>
+      </div>
+      <div class="info-grid" id="regInfo"></div>
+    </div>
+
+    <!-- Info -->
+    <div class="card">
+      <div class="card-title">ℹ️ Maklumat Pendaftaran</div>
+      <div class="step-list">
+        <div class="step"><div class="step-num">1</div><div class="step-text">Isi borang di atas dengan maklumat peranti anda</div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-text">Klik <strong>Hantar Permohonan</strong> — lesen akan diproses secara automatik</div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-text">Selepas berjaya, <strong>semak status</strong> di tab Semak Lesen menggunakan kod peranti anda</div></div>
+        <div class="step"><div class="step-num">4</div><div class="step-text">Buka semula aplikasi MTSFlix — lesen aktif dalam <strong>~30 saat</strong></div></div>
+      </div>
+    </div>
+  </div>
+
   <div class="footer">
-    <p>© 2026 MTSFlix · Portal Semakan Lesen Peranti</p>
-    <p style="margin-top:6px;">Untuk pendaftaran lesen baru, hubungi admin MTSFlix.</p>
+    <p>© 2026 MTSFlix · Portal Lesen Peranti</p>
   </div>
-
 </div>
 
 <script>
-  const LICENSES_URL = 'https://raw.githubusercontent.com/muhamadakmal854-svg/MTSFlix/main/licenses.json';
+  // ── CONFIG ──────────────────────────────────────────────────────
+  const WORKER_URL    = 'https://mtsflix-license.mts001.workers.dev';
+  const RAW_JSON_URL  = 'https://raw.githubusercontent.com/muhamadakmal854-svg/MTSFlix/main/licenses.json';
 
-  let licenseDB = null;
-  let loadError = false;
+  // ── TAB SWITCHING ────────────────────────────────────────────────
+  function switchTab(tab) {
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-' + tab).classList.add('active');
+    document.getElementById('tab-' + tab + '-btn').classList.add('active');
+    if (tab === 'register') checkWorkerStatus();
+  }
 
-  // Preload licenses on page load for fast lookup
-  async function preloadLicenses() {
+  // ── AUTO FORMAT CODE INPUT ───────────────────────────────────────
+  function setupCodeInput(inputId) {
+    document.getElementById(inputId).addEventListener('input', function(e) {
+      let raw = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+      if (raw.startsWith('MTSF')) raw = raw.slice(4);
+      raw = raw.slice(0, 12);
+      let parts = [];
+      for (let i = 0; i < raw.length; i += 4) parts.push(raw.slice(i, i + 4));
+      e.target.value = parts.length > 0 ? 'MTSF-' + parts.join('-') : '';
+    });
+    document.getElementById(inputId).addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') { if (inputId === 'checkCode') doCheck(); else doRegister(); }
+    });
+  }
+  setupCodeInput('checkCode');
+  setupCodeInput('regCode');
+
+  // ── WORKER STATUS CHECK ──────────────────────────────────────────
+  async function checkWorkerStatus() {
+    const badge = document.getElementById('workerStatusBadge');
+    const text  = document.getElementById('workerStatusText');
+    if (WORKER_URL === 'WORKER_URL_PLACEHOLDER') {
+      badge.className = 'worker-status offline';
+      text.textContent = 'Worker belum dikonfigurasi';
+      return;
+    }
     try {
-      const res = await fetch(LICENSES_URL + '?t=' + Date.now());
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      const data = await res.json();
-      licenseDB = data.licenses || [];
-    } catch (e) {
-      loadError = true;
-      console.warn('Preload failed:', e);
+      const res = await fetch(WORKER_URL + '/verify?code=MTSF-EXAM-PLE0-0001', { signal: AbortSignal.timeout(5000) });
+      badge.className = 'worker-status';
+      text.textContent = 'Worker Aktif — Siap untuk pendaftaran';
+    } catch {
+      badge.className = 'worker-status offline';
+      text.textContent = 'Worker tidak dapat dicapai';
     }
   }
 
-  preloadLicenses();
-
-  // Auto-format input as MTSF-XXXX-XXXX-XXXX
-  document.getElementById('codeInput').addEventListener('input', function(e) {
-    let raw = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
-    if (raw.startsWith('MTSF')) raw = raw.slice(4);
-    raw = raw.slice(0, 12);
-    let parts = [];
-    for (let i = 0; i < raw.length; i += 4) {
-      parts.push(raw.slice(i, i + 4));
-    }
-    if (parts.length > 0) {
-      e.target.value = 'MTSF-' + parts.join('-');
-    } else {
-      e.target.value = '';
-    }
-  });
-
-  // Press Enter to check
-  document.getElementById('codeInput').addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') checkLicense();
-  });
-
-  function setLoading(loading) {
-    const btn = document.getElementById('btnCheck');
-    const spinner = document.getElementById('spinner');
-    const btnText = document.getElementById('btnText');
-    btn.disabled = loading;
-    spinner.style.display = loading ? 'block' : 'none';
-    btnText.textContent = loading ? 'Menyemak...' : 'Semak Sekarang';
+  // ── SHOW RESULT ──────────────────────────────────────────────────
+  function showResult(cardId, type, icon, title, sub, infoItems, note) {
+    const card = document.getElementById(cardId);
+    card.className = 'result-card show ' + type;
+    document.getElementById(cardId.replace('Result','Icon')).textContent  = icon;
+    document.getElementById(cardId.replace('Result','Title')).textContent = title;
+    document.getElementById(cardId.replace('Result','Sub')).textContent   = sub;
+    const infoEl = document.getElementById(cardId.replace('Result','Info'));
+    if (infoEl && infoItems && infoItems.length) {
+      infoEl.innerHTML = infoItems.map(i => `<div class="info-item"><div class="info-lbl">${i.label}</div><div class="info-val">${i.value||'—'}</div></div>`).join('');
+    } else if (infoEl) infoEl.innerHTML = '';
+    const noteEl = document.getElementById(cardId === 'checkResult' ? 'checkBannedNote' : null);
+    if (noteEl) { noteEl.style.display = note ? 'block' : 'none'; if (note) noteEl.textContent = '🚫 ' + note; }
   }
 
-  function showResult(type, icon, title, sub, infoItems, reason) {
-    const card = document.getElementById('resultCard');
-    card.className = 'result-card ' + type;
-    document.getElementById('statusIcon').textContent = icon;
-    document.getElementById('statusTitle').textContent = title;
-    document.getElementById('statusSub').textContent = sub;
-
-    const grid = document.getElementById('infoGrid');
-    if (infoItems && infoItems.length > 0) {
-      grid.innerHTML = infoItems.map(item => `
-        <div class="info-item">
-          <div class="info-lbl">${item.label}</div>
-          <div class="info-val">${item.value || '—'}</div>
-        </div>
-      `).join('');
-    } else {
-      grid.innerHTML = '';
-    }
-
-    const reasonEl = document.getElementById('bannedReason');
-    if (reason) {
-      reasonEl.style.display = 'block';
-      reasonEl.textContent = '🚫 Sebab Penggantungan: ' + reason;
-    } else {
-      reasonEl.style.display = 'none';
-    }
-
-    card.style.display = 'none';
-    requestAnimationFrame(() => { card.style.display = 'block'; });
+  function setLoading(btnId, spinnerId, textId, loading, label) {
+    document.getElementById(btnId).disabled = loading;
+    document.getElementById(spinnerId).style.display = loading ? 'block' : 'none';
+    document.getElementById(textId).textContent = loading ? 'Sedang memproses...' : label;
   }
 
-  async function checkLicense() {
-    const raw = document.getElementById('codeInput').value.trim();
-    const formatted = raw.toUpperCase();
-
-    if (!formatted || formatted.length < 4) {
-      showResult('notfound', '⚠️', 'Kod Tidak Lengkap', 'Sila masukkan kod peranti yang lengkap (MTSF-XXXX-XXXX-XXXX)', [], null);
+  // ── SEMAK LESEN ──────────────────────────────────────────────────
+  async function doCheck() {
+    const code = document.getElementById('checkCode').value.trim().toUpperCase();
+    if (!code || code.length < 4) {
+      showResult('checkResult', 'notfound', '⚠️', 'Kod Tidak Lengkap', 'Sila masukkan kod peranti yang lengkap.', [], null);
       return;
     }
-
-    setLoading(true);
-
+    setLoading('btnCheck', 'checkSpinner', 'btnCheckText', true, 'Semak Sekarang');
     try {
-      // Reload fresh data from GitHub
-      const res = await fetch(LICENSES_URL + '?t=' + Date.now());
-      if (!res.ok) throw new Error('Gagal sambung ke server. Cuba sebentar lagi.');
-      const data = await res.json();
-      licenseDB = data.licenses || [];
+      let entry = null;
+      // Cuba Worker dulu, fallback ke raw GitHub
+      if (WORKER_URL && WORKER_URL !== 'WORKER_URL_PLACEHOLDER') {
+        try {
+          const res = await fetch(`${WORKER_URL}/verify?code=${code}`, { signal: AbortSignal.timeout(8000) });
+          const data = await res.json();
+          if (data.license) entry = data.license;
+          else if (!data.valid) { entry = null; }
+        } catch {}
+      }
+      if (entry === null) {
+        const res = await fetch(RAW_JSON_URL + '?t=' + Date.now());
+        const data = await res.json();
+        entry = (data.licenses || []).find(l => l.deviceCode && l.deviceCode.toUpperCase() === code) || false;
+      }
+      setLoading('btnCheck', 'checkSpinner', 'btnCheckText', false, 'Semak Sekarang');
+      if (entry === false || entry === null || entry === undefined) {
+        showResult('checkResult', 'notfound', '🔍', 'Lesen Tidak Dijumpai',
+          'Kod peranti ini belum didaftarkan. Gunakan tab Daftar Peranti untuk mendaftar.',
+          [{ label: 'Kod Dicari', value: code }], null);
+        return;
+      }
+      const today = new Date().toISOString().split('T')[0];
+      const isBanned  = entry.banned === true;
+      const isExpired = entry.expiredAt && entry.expiredAt < today;
+      const isActive  = !isBanned && !isExpired && entry.active !== false;
+      const info = [
+        { label: 'Kod Peranti', value: entry.deviceCode },
+        { label: 'Nama',        value: entry.username },
+        { label: 'Peranti',     value: entry.deviceInfo || 'Tidak dinyatakan' },
+        { label: 'Tarikh Daftar', value: entry.addedAt || '—' },
+        { label: 'Tarikh Luput',  value: entry.expiredAt || 'Tiada had' },
+      ];
+      if (isBanned)       showResult('checkResult', 'banned',   '🚫', 'Lesen Digantung', 'Peranti ini telah diharamkan.', info, 'Sebab: ' + (entry.bannedReason || 'Tiada sebab dinyatakan'));
+      else if (isExpired) showResult('checkResult', 'expired',  '⏰', 'Lesen Telah Tamat', 'Hubungi admin untuk pembaharuan lesen.', info, null);
+      else if (isActive)  showResult('checkResult', 'active',   '✅', 'Lesen Aktif & Sah', 'Peranti anda berdaftar dan boleh menggunakan MTSFlix.', info, null);
+      else                showResult('checkResult', 'notfound', '⚠️', 'Status Tidak Diketahui', 'Sila hubungi admin.', info, null);
     } catch (e) {
-      setLoading(false);
-      showResult('notfound', '🔌', 'Ralat Sambungan', e.message || 'Gagal sambung ke pangkalan data. Periksa sambungan internet anda.', [], null);
+      setLoading('btnCheck', 'checkSpinner', 'btnCheckText', false, 'Semak Sekarang');
+      showResult('checkResult', 'error', '🔌', 'Ralat Sambungan', e.message, [], null);
+    }
+  }
+
+  // ── DAFTAR PERANTI ───────────────────────────────────────────────
+  async function doRegister() {
+    if (WORKER_URL === 'WORKER_URL_PLACEHOLDER') {
+      showResult('regResult', 'error', '⚙️', 'Worker Belum Dikonfigurasi',
+        'Sistem pendaftaran sedang dalam persediaan. Sila cuba sebentar lagi atau hubungi admin.', [], null);
       return;
     }
-
-    setLoading(false);
-
-    const entry = licenseDB.find(l =>
-      l.deviceCode && l.deviceCode.toUpperCase() === formatted
-    );
-
-    if (!entry) {
-      showResult('notfound', '🔍', 'Lesen Tidak Dijumpai', 'Kod peranti ini belum didaftarkan dalam sistem MTSFlix.', [
-        { label: 'Kod Dicari', value: formatted },
-        { label: 'Tindakan', value: 'Hubungi admin untuk pendaftaran' }
-      ], null);
+    const code   = document.getElementById('regCode').value.trim().toUpperCase();
+    const name   = document.getElementById('regName').value.trim();
+    const email  = document.getElementById('regEmail').value.trim();
+    const device = document.getElementById('regDevice').value.trim();
+    const note   = document.getElementById('regNote').value.trim();
+    if (!code || code.length < 19) {
+      showResult('regResult', 'error', '⚠️', 'Kod Tidak Lengkap', 'Sila masukkan kod peranti yang lengkap (MTSF-XXXX-XXXX-XXXX).', [], null);
       return;
     }
-
-    const today = new Date().toISOString().split('T')[0];
-    const isBanned = entry.banned === true;
-    const isExpired = entry.expiredAt && entry.expiredAt < today;
-    const isActive = entry.active !== false && !isBanned && !isExpired;
-
-    const commonInfo = [
-      { label: 'Kod Peranti', value: entry.deviceCode },
-      { label: 'Nama Pemilik', value: entry.username },
-      { label: 'Peranti', value: entry.deviceInfo || 'Tidak dinyatakan' },
-      { label: 'Tarikh Daftar', value: entry.addedAt || '—' },
-      { label: 'Tarikh Luput', value: entry.expiredAt || 'Tiada had' },
-    ];
-
-    if (isBanned) {
-      showResult('banned', '🚫', 'Lesen Digantung (Banned)', 'Peranti anda telah digantung dan tidak boleh menggunakan MTSFlix.', commonInfo, entry.bannedReason || 'Tiada sebab dinyatakan');
-    } else if (isExpired) {
-      showResult('expired', '⏰', 'Lesen Telah Tamat', 'Tempoh lesen peranti anda telah habis. Hubungi admin untuk pembaharuan.', commonInfo, null);
-    } else if (isActive) {
-      showResult('active', '✅', 'Lesen Aktif & Sah', 'Peranti anda berdaftar dan boleh menggunakan MTSFlix sepenuhnya.', commonInfo, null);
-    } else {
-      showResult('notfound', '⚠️', 'Status Tidak Diketahui', 'Lesen ditemui tetapi statusnya tidak dapat ditentukan.', commonInfo, null);
+    if (!name) {
+      showResult('regResult', 'error', '⚠️', 'Nama Diperlukan', 'Sila masukkan nama pengguna atau pemilik peranti.', [], null);
+      return;
+    }
+    setLoading('btnRegister', 'regSpinner', 'btnRegisterText', true, '📤 Hantar Permohonan Pendaftaran');
+    try {
+      const res = await fetch(`${WORKER_URL}/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ deviceCode: code, username: name, email, deviceInfo: device, note, expiredAt: '2099-12-30' }),
+        signal: AbortSignal.timeout(15000)
+      });
+      const data = await res.json();
+      setLoading('btnRegister', 'regSpinner', 'btnRegisterText', false, '📤 Hantar Permohonan Pendaftaran');
+      if (data.ok) {
+        showResult('regResult', 'success', '🎉', 'Pendaftaran Berjaya!',
+          'Peranti anda telah didaftarkan. Buka semula MTSFlix dalam ~30 saat.',
+          [{ label: 'Kod Peranti', value: code }, { label: 'Nama', value: name }, { label: 'Status', value: 'AKTIF ✅' }], null);
+        // Clear form
+        ['regCode','regName','regEmail','regDevice','regNote'].forEach(id => { document.getElementById(id).value = ''; });
+      } else {
+        showResult('regResult', 'error', '❌', 'Pendaftaran Gagal', data.error || data.message || 'Cuba lagi sebentar.', [], null);
+      }
+    } catch (e) {
+      setLoading('btnRegister', 'regSpinner', 'btnRegisterText', false, '📤 Hantar Permohonan Pendaftaran');
+      showResult('regResult', 'error', '🔌', 'Ralat Sambungan', 'Gagal hubungi server. Sila cuba lagi.', [], null);
     }
   }
 </script>
-
 </body>
 </html>
