@@ -260,12 +260,8 @@ class LicenseManager:
 
         existing = next((l for l in data["licenses"] if l.get("deviceCode") == code), None)
         if existing:
-            warn(f"Kod {code} sudah wujud bagi: {existing.get('username', '?')}")
-            confirm = input("  Kemaskini rekod ini? (y/N): ").strip().lower()
-            if confirm != 'y':
-                info("Dibatalkan.")
-                return False
-            # Buang rekod lama, tapi SIMPAN semua yang lain
+            warn(f"Kod {code} sudah wujud bagi: {existing.get('username', '?')} — mengemaskini rekod...")
+            # Auto-update tanpa tanya input (selamat untuk web server)
             data["licenses"] = [l for l in data["licenses"] if l.get("deviceCode") != code]
 
         entry = {
