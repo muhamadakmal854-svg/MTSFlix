@@ -282,6 +282,20 @@
       "deviceInfo": "Android TV",
       "note": "VIP",
       "lastModified": "2026-07-28T16:03:43"
+    },
+    {
+      "id": "LIC-20260730-FBE29B46",
+      "deviceCode": "MTSF-87F9-194A-B9F8",
+      "username": "MTS",
+      "email": "mts@gmail.com",
+      "expiredAt": "2099-12-30",
+      "active": true,
+      "banned": false,
+      "bannedReason": "",
+      "addedAt": "2026-07-30",
+      "deviceInfo": "OPPO RENO 6 5G",
+      "note": "VIP",
+      "lastModified": "2026-07-30T03:21:05"
     }
   ]
 }
