@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MTSFlix — Semak Status Lesen Peranti</title>
+  <meta name="description" content="Semak status pendaftaran lesen peranti MTSFlix anda. Masukkan kod peranti untuk mengetahui status aktif, tamat, atau digantung.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:           #07070D;
+      --surface:      #0F0F1A;
+      --card:         #13131F;
+      --card2:        #1A1A2A;
+      --border:       #1E1E30;
+      --border-glow:  #E50914;
+      --red:          #E50914;
+      --red-dim:      rgba(229,9,20,0.18);
+      --red-glow:     rgba(229,9,20,0.35);
+      --green:        #22C55E;
+      --green-dim:    rgba(34,197,94,0.12);
+      --green-glow:   rgba(34,197,94,0.3);
+      --orange:       #F59E0B;
+      --orange-dim:   rgba(245,158,11,0.12);
+      --blue:         #3B82F6;
+      --blue-dim:     rgba(59,130,246,0.12);
+      --text:         #F0F0F8;
+      --text-muted:   #7070A0;
+      --text-dim:     #404060;
+      --radius:       16px;
+      --radius-sm:    10px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+      background-image:
+        radial-gradient(ellipse 80% 50% at 50% -10%, rgba(229,9,20,0.12) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 80% 110%, rgba(59,130,246,0.06) 0%, transparent 50%);
+    }
+
+    /* ── Animated background particles ── */
+    .bg-grid {
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(229,9,20,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(229,9,20,0.03) 1px, transparent 1px);
+      background-size: 60px 60px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .wrapper {
+      position: relative;
+      z-index: 1;
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 48px 20px 80px;
+    }
+
+    /* ── Header ── */
+    .header {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+
+    .logo-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: linear-gradient(135deg, var(--red) 0%, #a00008 100%);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      padding: 8px 20px;
+      border-radius: 50px;
+      margin-bottom: 24px;
+      box-shadow: 0 0 30px var(--red-glow), 0 4px 20px rgba(0,0,0,0.5);
+      animation: pulse-badge 3s ease-in-out infinite;
+    }
+
+    @keyframes pulse-badge {
+      0%, 100% { box-shadow: 0 0 30px var(--red-glow), 0 4px 20px rgba(0,0,0,0.5); }
+      50% { box-shadow: 0 0 50px var(--red-glow), 0 4px 20px rgba(0,0,0,0.5); }
+    }
+
+    .logo-dot {
+      width: 8px;
+      height: 8px;
+      background: #fff;
+      border-radius: 50%;
+      animation: blink 1.5s ease-in-out infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    .header h1 {
+      font-size: clamp(28px, 6vw, 42px);
+      font-weight: 900;
+      letter-spacing: -0.5px;
+      line-height: 1.1;
+      margin-bottom: 14px;
+      background: linear-gradient(135deg, #fff 30%, rgba(255,255,255,0.6) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .header p {
+      font-size: 15px;
+      color: var(--text-muted);
+      line-height: 1.6;
+      max-width: 480px;
+      margin: 0 auto;
+    }
+
+    /* ── Search Card ── */
+    .search-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 32px;
+      margin-bottom: 24px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .search-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--red), transparent);
+      opacity: 0.6;
+    }
+
+    .search-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-bottom: 12px;
+    }
+
+    .input-group {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .code-input {
+      flex: 1;
+      min-width: 200px;
+      background: var(--card2);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-family: 'Outfit', monospace;
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      padding: 16px 20px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .code-input::placeholder {
+      color: var(--text-dim);
+      letter-spacing: 1px;
+      font-weight: 400;
+      font-size: 15px;
+    }
+
+    .code-input:focus {
+      border-color: var(--red);
+      box-shadow: 0 0 0 3px var(--red-dim);
+    }
+
+    .btn-check {
+      background: linear-gradient(135deg, var(--red) 0%, #c00008 100%);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-family: 'Outfit', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      padding: 16px 28px;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.2s, opacity 0.2s;
+      box-shadow: 0 4px 20px var(--red-dim);
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-check:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px var(--red-glow);
+    }
+
+    .btn-check:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    .btn-check:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .hint-text {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 12px;
+    }
+
+    /* ── Result Card ── */
+    .result-card {
+      border-radius: var(--radius);
+      padding: 28px 32px;
+      margin-bottom: 24px;
+      display: none;
+      animation: slideIn 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .result-card.active {
+      display: block;
+      background: var(--green-dim);
+      border: 1.5px solid var(--green);
+      box-shadow: 0 0 40px rgba(34,197,94,0.1);
+    }
+
+    .result-card.banned {
+      display: block;
+      background: var(--red-dim);
+      border: 1.5px solid var(--red);
+      box-shadow: 0 0 40px rgba(229,9,20,0.1);
+    }
+
+    .result-card.expired {
+      display: block;
+      background: var(--orange-dim);
+      border: 1.5px solid var(--orange);
+      box-shadow: 0 0 40px rgba(245,158,11,0.1);
+    }
+
+    .result-card.notfound {
+      display: block;
+      background: var(--blue-dim);
+      border: 1.5px solid var(--blue);
+    }
+
+    .result-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .status-icon {
+      font-size: 36px;
+      flex-shrink: 0;
+    }
+
+    .status-title {
+      font-size: 22px;
+      font-weight: 800;
+    }
+
+    .status-sub {
+      font-size: 13px;
+      opacity: 0.7;
+      margin-top: 2px;
+    }
+
+    .result-card.active .status-title { color: var(--green); }
+    .result-card.banned .status-title  { color: var(--red); }
+    .result-card.expired .status-title { color: var(--orange); }
+    .result-card.notfound .status-title { color: var(--blue); }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .info-item {
+      background: rgba(0,0,0,0.25);
+      border-radius: var(--radius-sm);
+      padding: 12px 16px;
+    }
+
+    .info-lbl {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .info-val {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      word-break: break-all;
+    }
+
+    .banned-reason {
+      margin-top: 14px;
+      background: rgba(229,9,20,0.1);
+      border: 1px solid rgba(229,9,20,0.3);
+      border-radius: var(--radius-sm);
+      padding: 12px 16px;
+      font-size: 13px;
+      color: #FFB3B3;
+    }
+
+    /* ── Loading Spinner ── */
+    .spinner {
+      display: none;
+      width: 20px;
+      height: 20px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Info Box ── */
+    .info-box {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px 28px;
+      margin-bottom: 24px;
+    }
+
+    .info-box-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      font-size: 11px;
+    }
+
+    .step-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .step {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+    }
+
+    .step-num {
+      background: var(--red-dim);
+      color: var(--red);
+      border: 1px solid rgba(229,9,20,0.3);
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 800;
+      flex-shrink: 0;
+    }
+
+    .step-text {
+      font-size: 14px;
+      color: var(--text-muted);
+      padding-top: 4px;
+      line-height: 1.5;
+    }
+
+    .step-text strong {
+      color: var(--text);
+    }
+
+    /* ── Footer ── */
+    .footer {
+      text-align: center;
+      padding-top: 32px;
+      border-top: 1px solid var(--border);
+      font-size: 12px;
+      color: var(--text-dim);
+      line-height: 1.8;
+    }
+
+    .footer a {
+      color: var(--red);
+      text-decoration: none;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 480px) {
+      .wrapper { padding: 32px 16px 60px; }
+      .search-card { padding: 24px 20px; }
+      .code-input { font-size: 15px; letter-spacing: 1px; }
+      .btn-check { padding: 16px 20px; }
+      .result-card { padding: 22px 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="bg-grid"></div>
+
+<div class="wrapper">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="logo-badge">
+      <div class="logo-dot"></div>
+      MTSFlix
+    </div>
+    <h1>Semak Status<br>Lesen Peranti Anda</h1>
+    <p>Masukkan kod peranti MTSFlix anda untuk semak status pendaftaran lesen secara langsung.</p>
+  </div>
+
+  <!-- Search Card -->
+  <div class="search-card">
+    <div class="search-label">🔍 Kod Peranti (Device Code)</div>
+    <div class="input-group">
+      <input
+        type="text"
+        id="codeInput"
+        class="code-input"
+        placeholder="MTSF-XXXX-XXXX-XXXX"
+        maxlength="19"
+        autocomplete="off"
+        autocapitalize="characters"
+        spellcheck="false"
+      >
+      <button class="btn-check" id="btnCheck" onclick="checkLicense()">
+        <div class="spinner" id="spinner"></div>
+        <span id="btnText">Semak Sekarang</span>
+      </button>
+    </div>
+    <div class="hint-text">💡 Contoh: MTSF-5CDB-4808-57E2 — anda boleh salin terus dari aplikasi MTSFlix</div>
+  </div>
+
+  <!-- Result Card (hidden by default) -->
+  <div class="result-card" id="resultCard">
+    <div class="result-header">
+      <div class="status-icon" id="statusIcon"></div>
+      <div>
+        <div class="status-title" id="statusTitle"></div>
+        <div class="status-sub" id="statusSub"></div>
+      </div>
+    </div>
+    <div class="info-grid" id="infoGrid"></div>
+    <div id="bannedReason" class="banned-reason" style="display:none;"></div>
+  </div>
+
+  <!-- How to find device code -->
+  <div class="info-box">
+    <div class="info-box-title">📱 Cara Dapatkan Kod Peranti</div>
+    <div class="step-list">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-text">Buka aplikasi <strong>MTSFlix</strong> di peranti anda</div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-text">Pergi ke <strong>Tetapan → Maklumat Peranti</strong> atau skrin pendaftaran lesen</div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-text">Salin kod dalam format <strong>MTSF-XXXX-XXXX-XXXX</strong></div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-text">Tampal di kotak carian di atas dan klik <strong>Semak Sekarang</strong></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <p>© 2026 MTSFlix · Portal Semakan Lesen Peranti</p>
+    <p style="margin-top:6px;">Untuk pendaftaran lesen baru, hubungi admin MTSFlix.</p>
+  </div>
+
+</div>
+
+<script>
+  const LICENSES_URL = 'https://raw.githubusercontent.com/muhamadakmal854-svg/MTSFlix/main/licenses.json';
+
+  let licenseDB = null;
+  let loadError = false;
+
+  // Preload licenses on page load for fast lookup
+  async function preloadLicenses() {
+    try {
+      const res = await fetch(LICENSES_URL + '?t=' + Date.now());
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      licenseDB = data.licenses || [];
+    } catch (e) {
+      loadError = true;
+      console.warn('Preload failed:', e);
+    }
+  }
+
+  preloadLicenses();
+
+  // Auto-format input as MTSF-XXXX-XXXX-XXXX
+  document.getElementById('codeInput').addEventListener('input', function(e) {
+    let raw = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (raw.startsWith('MTSF')) raw = raw.slice(4);
+    raw = raw.slice(0, 12);
+    let parts = [];
+    for (let i = 0; i < raw.length; i += 4) {
+      parts.push(raw.slice(i, i + 4));
+    }
+    if (parts.length > 0) {
+      e.target.value = 'MTSF-' + parts.join('-');
+    } else {
+      e.target.value = '';
+    }
+  });
+
+  // Press Enter to check
+  document.getElementById('codeInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') checkLicense();
+  });
+
+  function setLoading(loading) {
+    const btn = document.getElementById('btnCheck');
+    const spinner = document.getElementById('spinner');
+    const btnText = document.getElementById('btnText');
+    btn.disabled = loading;
+    spinner.style.display = loading ? 'block' : 'none';
+    btnText.textContent = loading ? 'Menyemak...' : 'Semak Sekarang';
+  }
+
+  function showResult(type, icon, title, sub, infoItems, reason) {
+    const card = document.getElementById('resultCard');
+    card.className = 'result-card ' + type;
+    document.getElementById('statusIcon').textContent = icon;
+    document.getElementById('statusTitle').textContent = title;
+    document.getElementById('statusSub').textContent = sub;
+
+    const grid = document.getElementById('infoGrid');
+    if (infoItems && infoItems.length > 0) {
+      grid.innerHTML = infoItems.map(item => `
+        <div class="info-item">
+          <div class="info-lbl">${item.label}</div>
+          <div class="info-val">${item.value || '—'}</div>
+        </div>
+      `).join('');
+    } else {
+      grid.innerHTML = '';
+    }
+
+    const reasonEl = document.getElementById('bannedReason');
+    if (reason) {
+      reasonEl.style.display = 'block';
+      reasonEl.textContent = '🚫 Sebab Penggantungan: ' + reason;
+    } else {
+      reasonEl.style.display = 'none';
+    }
+
+    card.style.display = 'none';
+    requestAnimationFrame(() => { card.style.display = 'block'; });
+  }
+
+  async function checkLicense() {
+    const raw = document.getElementById('codeInput').value.trim();
+    const formatted = raw.toUpperCase();
+
+    if (!formatted || formatted.length < 4) {
+      showResult('notfound', '⚠️', 'Kod Tidak Lengkap', 'Sila masukkan kod peranti yang lengkap (MTSF-XXXX-XXXX-XXXX)', [], null);
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      // Reload fresh data from GitHub
+      const res = await fetch(LICENSES_URL + '?t=' + Date.now());
+      if (!res.ok) throw new Error('Gagal sambung ke server. Cuba sebentar lagi.');
+      const data = await res.json();
+      licenseDB = data.licenses || [];
+    } catch (e) {
+      setLoading(false);
+      showResult('notfound', '🔌', 'Ralat Sambungan', e.message || 'Gagal sambung ke pangkalan data. Periksa sambungan internet anda.', [], null);
+      return;
+    }
+
+    setLoading(false);
+
+    const entry = licenseDB.find(l =>
+      l.deviceCode && l.deviceCode.toUpperCase() === formatted
+    );
+
+    if (!entry) {
+      showResult('notfound', '🔍', 'Lesen Tidak Dijumpai', 'Kod peranti ini belum didaftarkan dalam sistem MTSFlix.', [
+        { label: 'Kod Dicari', value: formatted },
+        { label: 'Tindakan', value: 'Hubungi admin untuk pendaftaran' }
+      ], null);
+      return;
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+    const isBanned = entry.banned === true;
+    const isExpired = entry.expiredAt && entry.expiredAt < today;
+    const isActive = entry.active !== false && !isBanned && !isExpired;
+
+    const commonInfo = [
+      { label: 'Kod Peranti', value: entry.deviceCode },
+      { label: 'Nama Pemilik', value: entry.username },
+      { label: 'Peranti', value: entry.deviceInfo || 'Tidak dinyatakan' },
+      { label: 'Tarikh Daftar', value: entry.addedAt || '—' },
+      { label: 'Tarikh Luput', value: entry.expiredAt || 'Tiada had' },
+    ];
+
+    if (isBanned) {
+      showResult('banned', '🚫', 'Lesen Digantung (Banned)', 'Peranti anda telah digantung dan tidak boleh menggunakan MTSFlix.', commonInfo, entry.bannedReason || 'Tiada sebab dinyatakan');
+    } else if (isExpired) {
+      showResult('expired', '⏰', 'Lesen Telah Tamat', 'Tempoh lesen peranti anda telah habis. Hubungi admin untuk pembaharuan.', commonInfo, null);
+    } else if (isActive) {
+      showResult('active', '✅', 'Lesen Aktif & Sah', 'Peranti anda berdaftar dan boleh menggunakan MTSFlix sepenuhnya.', commonInfo, null);
+    } else {
+      showResult('notfound', '⚠️', 'Status Tidak Diketahui', 'Lesen ditemui tetapi statusnya tidak dapat ditentukan.', commonInfo, null);
+    }
+  }
+</script>
+
+</body>
+</html>
