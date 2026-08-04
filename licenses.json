@@ -296,6 +296,20 @@
       "deviceInfo": "OPPO RENO 6 5G",
       "note": "VIP",
       "lastModified": "2026-07-30T03:21:05"
+    },
+    {
+      "id": "LIC-20260804-FBE29B47",
+      "deviceCode": "MTSF-F134-7763-8612",
+      "username": "ABG SYAFIQ",
+      "email": "syafiq@gmail.com",
+      "expiredAt": "2099-12-30",
+      "active": true,
+      "banned": false,
+      "bannedReason": "",
+      "addedAt": "2026-08-04",
+      "deviceInfo": "TIDAK DIKENALPASTI",
+      "note": "VIP",
+      "lastModified": "2026-08-04T11:30:05"
     }
   ]
 }
