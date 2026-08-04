@@ -310,6 +310,20 @@
       "deviceInfo": "TIDAK DIKENALPASTI",
       "note": "VIP",
       "lastModified": "2026-08-04T11:30:05"
+    },
+    {
+      "id": "LIC-20260804-FBE29B48",
+      "deviceCode": "MTSF-D1EC-529A-BC0D",
+      "username": "PAKLONG",
+      "email": "paklong@gmail.com",
+      "expiredAt": "2099-12-30",
+      "active": true,
+      "banned": false,
+      "bannedReason": "",
+      "addedAt": "2026-08-04",
+      "deviceInfo": "Vivo",
+      "note": "VIP",
+      "lastModified": "2026-08-04T09:30:05"
     }
   ]
 }
