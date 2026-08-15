@@ -1071,16 +1071,16 @@ else:
             val act = activity ?: return@setOnPreferenceClickListener false
             ioSafe {
                 try {
-                    com.lagradost.cloudstream3.utils.Coroutines.main {
+                    act.runOnUiThread {
                         showToast("Memuatkan semula Extensions...", android.widget.Toast.LENGTH_SHORT)
                     }
                     @Suppress("DEPRECATION")
                     com.lagradost.cloudstream3.plugins.PluginManager.___DO_NOT_CALL_FROM_A_PLUGIN_manuallyReloadAndUpdatePlugins(act)
-                    com.lagradost.cloudstream3.utils.Coroutines.main {
+                    act.runOnUiThread {
                         showToast("Extensions berjaya dimuatkan semula!", android.widget.Toast.LENGTH_SHORT)
                     }
                 } catch (e: Exception) {
-                    com.lagradost.cloudstream3.utils.Coroutines.main {
+                    act.runOnUiThread {
                         showToast("Gagal reload: ${e.message}", android.widget.Toast.LENGTH_LONG)
                     }
                 }
