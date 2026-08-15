@@ -657,6 +657,17 @@ try:
             android:exported="false"
             android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboard|keyboardHidden"
             android:theme="@style/AppTheme" />
+        <!-- MTSFlix: Provider Lock Screen v1.1.4 -->
+        <activity
+            android:name="com.mts.mtsflix.license.ProviderLockManageActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboard|keyboardHidden"
+            android:theme="@style/AppTheme" />
+        <activity
+            android:name="com.mts.mtsflix.license.ProviderLockPinActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboard|keyboardHidden"
+            android:theme="@style/AppTheme" />
         <!-- MTSFlix: Device Verification (LAUNCHER) -->'''
         c = c.replace('<!-- MTSFlix: Device Verification (LAUNCHER) -->', profile_activities)
         open(path,'w',encoding='utf-8').write(c)
@@ -1097,10 +1108,109 @@ else:
             print('  WARN: Could not find anchor in SettingsAccount.kt')
 PYEOF
 
+# --- 18. Provider Lock PIN Feature (v1.1.4) --------------------------------
+echo "[18/18] Patching Provider Lock PIN Feature under Account & Security..."
+python3 - << 'PYEOF'
+import os
+cs_dir = os.environ.get('CS_DIR','cloudstream')
+
+# 18a. Add Preference to settings_account.xml
+xml_path = cs_dir + '/app/src/main/res/xml/settings_account.xml'
+if os.path.exists(xml_path):
+    c = open(xml_path, encoding='utf-8').read()
+    if 'lock_providers_key' not in c:
+        lock_pref = '''
+        <Preference
+            android:key="lock_providers_key"
+            android:icon="@drawable/video_locked"
+            android:title="🔒 Kunci Provider (PIN Lock)"
+            android:summary="Kunci Provider tertentu dengan PIN 4-digit untuk sekat akses" />
+'''
+        if 'reload_extensions_key' in c:
+            c = c.replace('android:key="reload_extensions_key"', 'android:key="reload_extensions_key"')
+            c = c.replace('</PreferenceCategory>\n\n</PreferenceScreen>', lock_pref + '\n    </PreferenceCategory>\n\n</PreferenceScreen>')
+            if 'lock_providers_key' not in c:
+                c = c.replace('</PreferenceScreen>', lock_pref + '\n</PreferenceScreen>')
+        else:
+            c = c.replace('</PreferenceScreen>', lock_pref + '\n</PreferenceScreen>')
+        open(xml_path, 'w', encoding='utf-8').write(c)
+        print('  OK: Lock providers preference added to settings_account.xml')
+
+# 18b. Add listener in SettingsAccount.kt
+kt_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/ui/settings/SettingsAccount.kt'
+if os.path.exists(kt_path):
+    c = open(kt_path, encoding='utf-8').read()
+    if 'lock_providers_key' not in c:
+        handler = '''
+        findPreference<androidx.preference.Preference>("lock_providers_key")?.setOnPreferenceClickListener {
+            val act = activity ?: return@setOnPreferenceClickListener false
+            val intent = android.content.Intent(act, com.mts.mtsflix.license.ProviderLockManageActivity::class.java)
+            act.startActivity(intent)
+            true
+        }
+'''
+        anchor = 'for ((key, api) in syncApis) {'
+        if anchor in c:
+            c = c.replace(anchor, handler + '\n        ' + anchor)
+            open(kt_path, 'w', encoding='utf-8').write(c)
+            print('  OK: Lock providers handler patched in SettingsAccount.kt')
+
+# 18c. Patch AppContextUtils.kt loadResult to check PIN for locked providers
+app_ctx_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/utils/AppContextUtils.kt'
+if os.path.exists(app_ctx_path):
+    c = open(app_ctx_path, encoding='utf-8').read()
+    if 'ProviderLockManager' not in c:
+        target = 'fun FragmentActivity.loadResult(\n        url: String,\n        apiName: String,\n        name: String,\n        startAction: Int = 0,\n        startValue: Int = 0\n    ) {'
+        lock_check = '''fun FragmentActivity.loadResult(
+        url: String,
+        apiName: String,
+        name: String,
+        startAction: Int = 0,
+        startValue: Int = 0
+    ) {
+        if (com.mts.mtsflix.license.ProviderLockManager.requiresPin(this, apiName)) {
+            val intent = android.content.Intent(this, com.mts.mtsflix.license.ProviderLockPinActivity::class.java).apply {
+                putExtra(com.mts.mtsflix.license.ProviderLockPinActivity.EXTRA_MODE, com.mts.mtsflix.license.ProviderLockPinActivity.MODE_VERIFY_PROVIDER)
+                putExtra(com.mts.mtsflix.license.ProviderLockPinActivity.EXTRA_PROVIDER_NAME, apiName)
+            }
+            startActivity(intent)
+            return
+        }'''
+        if target in c:
+            c = c.replace(target, lock_check)
+            open(app_ctx_path, 'w', encoding='utf-8').write(c)
+            print('  OK: loadResult patched with Provider PIN check in AppContextUtils.kt')
+
+# 18d. Patch HomeFragment.kt provider list selection to check PIN
+home_frag_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/ui/home/HomeFragment.kt'
+if os.path.exists(home_frag_path):
+    c = open(home_frag_path, encoding='utf-8').read()
+    target_hf = 'currentApiName = currentValidApis[i].name\n                        //to switch to apply simply remove this\n                        currentApiName.let(callback)\n                        dialog.dismissSafe()'
+    replacement_hf = '''val targetApi = currentValidApis[i].name
+                        if (com.mts.mtsflix.license.ProviderLockManager.requiresPin(requireContext(), targetApi)) {
+                            val intent = android.content.Intent(requireContext(), com.mts.mtsflix.license.ProviderLockPinActivity::class.java).apply {
+                                putExtra(com.mts.mtsflix.license.ProviderLockPinActivity.EXTRA_MODE, com.mts.mtsflix.license.ProviderLockPinActivity.MODE_VERIFY_PROVIDER)
+                                putExtra(com.mts.mtsflix.license.ProviderLockPinActivity.EXTRA_PROVIDER_NAME, targetApi)
+                            }
+                            startActivity(intent)
+                            dialog.dismissSafe()
+                            return@setOnItemClickListener
+                        }
+                        currentApiName = targetApi
+                        currentApiName.let(callback)
+                        dialog.dismissSafe()'''
+    if target_hf in c and 'ProviderLockManager' not in c:
+        c = c.replace(target_hf, replacement_hf)
+        open(home_frag_path, 'w', encoding='utf-8').write(c)
+        print('  OK: HomeFragment provider selection patched with Provider PIN check')
+PYEOF
+
 echo "======================================================"
-echo "    MTSFlix Customization Complete! v1.1.3"
-echo "    Reload Extensions Button in Account & Security ADDED"
+echo "    MTSFlix Customization Complete! v1.1.4"
+echo "    Provider Lock PIN Feature ADDED"
+echo "    Reload Extensions Button in Account & Security"
 echo "    Netflix Profiles + Emoji Avatar + Kids Filter"
 echo "    Download Progress Bar READY"
 echo "======================================================"
+
 
