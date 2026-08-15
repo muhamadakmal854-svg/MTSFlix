@@ -1319,7 +1319,7 @@ if os.path.exists(kt_path):
             true
         }
         findPreference<androidx.preference.Preference>("mtsflix_watchlist_key")?.setOnPreferenceClickListener {
-            android.widget.Toast.makeText(activity, "Senarai Tonton: ${com.mts.mtsflix.watchlist.WatchlistManager.getWatchlist(requireContext()).size} item", android.widget.Toast.LENGTH_SHORT).show()
+            startActivity(android.content.Intent(activity, com.mts.mtsflix.watchlist.WatchlistActivity::class.java))
             true
         }
 '''
@@ -1529,6 +1529,15 @@ if os.path.exists(path):
         <!-- MTSFlix v1.1.5: Device Management -->
         <activity
             android:name="com.mts.mtsflix.license.DeviceManageActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboard|keyboardHidden"
+            android:theme="@style/AppTheme" />'''
+
+    if 'WatchlistActivity' not in c:
+        new_activities += '''
+        <!-- MTSFlix v1.1.5: Watchlist -->
+        <activity
+            android:name="com.mts.mtsflix.watchlist.WatchlistActivity"
             android:exported="false"
             android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboard|keyboardHidden"
             android:theme="@style/AppTheme" />'''

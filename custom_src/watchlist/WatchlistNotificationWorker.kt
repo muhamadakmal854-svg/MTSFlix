@@ -8,16 +8,17 @@ import android.content.Intent
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.work.*
-import com.lagradost.cloudstream3.APIHolder
-import com.lagradost.cloudstream3.LoadResponse
 import com.lagradost.cloudstream3.TvSeriesLoadResponse
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
 
 /**
- * MTSFlix Watchlist Notification Worker v1.1.5
- * Background job yang menyemak episod baru setiap 6 jam dan menghantar notifikasi.
+ * MTSFlix Watchlist Notification Worker v1.1.5 (Updated)
+ * - Baca dari sejarah tontonan DataStoreHelper
+ * - Semak hanya show yang diaktifkan 🔔 oleh pengguna
+ * - Semak hanya provider yang tidak dimatikan notifikasinya
+ * - Hantar notifikasi apabila episod baru ditemui
  */
 class WatchlistNotificationWorker(
     appContext: Context,
@@ -25,27 +26,23 @@ class WatchlistNotificationWorker(
 ) : CoroutineWorker(appContext, workerParams) {
 
     companion object {
-        private const val WORK_NAME       = "mtsflix_watchlist_check"
-        private const val CHANNEL_ID      = "mtsflix_watchlist_channel"
-        private const val CHANNEL_NAME    = "MTSFlix Episod Baru"
+        private const val WORK_NAME    = "mtsflix_watchlist_check"
+        private const val CHANNEL_ID   = "mtsflix_watchlist_channel"
+        private const val CHANNEL_NAME = "MTSFlix — Episod Baru"
         private const val CHECK_INTERVAL_HOURS = 6L
 
         fun schedulePeriodicCheck(context: Context) {
             val constraints = Constraints.Builder()
                 .setRequiredNetworkType(NetworkType.CONNECTED)
                 .build()
-
             val request = PeriodicWorkRequestBuilder<WatchlistNotificationWorker>(
                 CHECK_INTERVAL_HOURS, TimeUnit.HOURS
             )
                 .setConstraints(constraints)
                 .setBackoffCriteria(BackoffPolicy.LINEAR, 30, TimeUnit.MINUTES)
                 .build()
-
             WorkManager.getInstance(context).enqueueUniquePeriodicWork(
-                WORK_NAME,
-                ExistingPeriodicWorkPolicy.KEEP,
-                request
+                WORK_NAME, ExistingPeriodicWorkPolicy.KEEP, request
             )
         }
 
@@ -60,8 +57,8 @@ class WatchlistNotificationWorker(
                 ).apply {
                     description = "Notifikasi episod baru dari senarai tonton anda"
                 }
-                val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-                nm.createNotificationChannel(channel)
+                (context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
+                    .createNotificationChannel(channel)
             }
         }
     }
@@ -70,26 +67,53 @@ class WatchlistNotificationWorker(
         return withContext(Dispatchers.IO) {
             try {
                 createNotificationChannel(applicationContext)
-                val watchlist = WatchlistManager.getWatchlist(applicationContext)
-                if (watchlist.isEmpty()) return@withContext Result.success()
 
-                watchlist.forEach { item ->
+                // 1. Baca sejarah tontonan dari DataStoreHelper
+                val historyItems = WatchlistManager.getHistoryFromDataStore()
+                if (historyItems.isEmpty()) return@withContext Result.success()
+
+                // 2. Dapatkan senarai URL yang diaktifkan notifikasi oleh pengguna
+                val enabledUrls = WatchlistManager.getEnabledNotificationUrls(applicationContext)
+                if (enabledUrls.isEmpty()) return@withContext Result.success()
+
+                // 3. Dapatkan senarai provider yang dimatikan
+                val disabledProviders = WatchlistManager.getDisabledProviders(applicationContext)
+
+                // 4. Tapis: hanya process item yang:
+                //    - Notifikasi diaktifkan (URL dalam enabledUrls)
+                //    - Provider tidak dimatikan
+                val itemsToCheck = historyItems.filter { item ->
+                    enabledUrls.contains(item.url) &&
+                    !disabledProviders.contains(item.apiName)
+                }
+
+                if (itemsToCheck.isEmpty()) return@withContext Result.success()
+
+                // 5. Semak episod baru untuk setiap item
+                itemsToCheck.forEach { item ->
                     try {
-                        val api = APIHolder.getApiFromNameNull(item.apiName) ?: return@forEach
+                        val api = com.lagradost.cloudstream3.APIHolder.getApiFromNameNull(item.apiName)
+                            ?: return@forEach
+
                         val loadResponse = api.load(item.url)
+
                         if (loadResponse is TvSeriesLoadResponse) {
-                            val newEpCount = loadResponse.episodes.size
-                            val oldEpCount = item.lastKnownEpisodeCount
-                            if (newEpCount > oldEpCount && oldEpCount > 0) {
-                                val newEps = newEpCount - oldEpCount
-                                sendNewEpisodeNotification(item, newEps, newEpCount)
-                            }
-                            if (newEpCount != oldEpCount) {
-                                WatchlistManager.updateLastEpisodeCount(applicationContext, item.url, newEpCount)
+                            val currentCount = loadResponse.episodes.size
+                            val lastKnownCount = WatchlistManager.getLastEpisodeCount(applicationContext, item.url)
+
+                            if (currentCount > lastKnownCount) {
+                                val newEps = currentCount - lastKnownCount
+                                if (lastKnownCount > 0) {
+                                    // Ada episod baru — hantar notifikasi!
+                                    sendNotification(item, newEps, currentCount)
+                                }
+                                // Simpan kiraan terkini
+                                WatchlistManager.setLastEpisodeCount(applicationContext, item.url, currentCount)
                             }
                         }
-                    } catch (e: Exception) { /* skip item silently */ }
+                    } catch (e: Exception) { /* skip silently */ }
                 }
+
                 Result.success()
             } catch (e: Exception) {
                 Result.retry()
@@ -97,8 +121,8 @@ class WatchlistNotificationWorker(
         }
     }
 
-    private fun sendNewEpisodeNotification(
-        item: WatchlistManager.WatchlistItem,
+    private fun sendNotification(
+        item: WatchlistManager.WatchHistoryItem,
         newEpisodes: Int,
         totalEpisodes: Int
     ) {
@@ -107,26 +131,31 @@ class WatchlistNotificationWorker(
             ?.apply { addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP) }
 
         val pendingIntent = PendingIntent.getActivity(
-            applicationContext, item.url.hashCode(), launchIntent ?: Intent(),
+            applicationContext,
+            item.url.hashCode(),
+            launchIntent ?: Intent(),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val notifBody = if (newEpisodes == 1)
-            "1 episod baru tersedia! (Jumlah: $totalEpisodes episod)"
+        val body = if (newEpisodes == 1)
+            "1 episod baru tersedia! Jumlah: $totalEpisodes episod"
         else
-            "$newEpisodes episod baru tersedia! (Jumlah: $totalEpisodes episod)"
+            "$newEpisodes episod baru tersedia! Jumlah: $totalEpisodes episod"
 
         val notification = NotificationCompat.Builder(applicationContext, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.stat_notify_more)
             .setContentTitle("🔔 ${item.name}")
-            .setContentText(notifBody)
-            .setStyle(NotificationCompat.BigTextStyle().bigText("${item.name}\n$notifBody\n\nTekan untuk menonton sekarang!"))
+            .setContentText(body)
+            .setStyle(
+                NotificationCompat.BigTextStyle()
+                    .bigText("${item.name}\n$body\n\nProvider: ${item.apiName}\n\nTekan untuk menonton sekarang!")
+            )
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
             .build()
 
-        val nm = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        nm.notify(item.url.hashCode(), notification)
+        (applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
+            .notify(item.url.hashCode(), notification)
     }
 }
