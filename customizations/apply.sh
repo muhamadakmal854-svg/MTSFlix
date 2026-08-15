@@ -1221,13 +1221,351 @@ if os.path.exists(path_ma):
             print('  OK: MainActivity.onStop patched to clear session PIN locks on exit')
 PYEOF
 
+# ============================================================
+# --- v1.1.5 Features (Steps 19-24) -------------------------
+# ============================================================
+
+echo "[v1.1.5 Step 19] Auto-Select Fastest Server + settings preferences..."
+python3 - << 'PYEOF'
+import os
+cs_dir = os.environ.get('CS_DIR', 'cloudstream')
+
+# 19a. Add settings preferences for Speed Test and Auto-Skip and Watchlist
+prefs_path = cs_dir + '/app/src/main/res/xml/settings_account.xml'
+if os.path.exists(prefs_path):
+    c = open(prefs_path, encoding='utf-8').read()
+    mtsflix_prefs = '''
+    <!-- MTSFlix v1.1.5 Feature Settings -->
+    <PreferenceCategory
+        android:title="MTSFlix — Ciri Eksklusif">
+
+        <SwitchPreference
+            android:key="mtsflix_auto_speed_test"
+            android:title="⚡ Auto-Pilih Pelayan Terpantas"
+            android:summary="Uji kelajuan pelayan video dan pilih yang terpantas secara automatik"
+            android:defaultValue="true" />
+
+        <SwitchPreference
+            android:key="mtsflix_auto_skip_intro"
+            android:title="🍿 Auto-Skip Intro"
+            android:summary="Lompat bahagian intro episod secara automatik (2 minit pertama)"
+            android:defaultValue="true" />
+
+        <SwitchPreference
+            android:key="mtsflix_auto_next_ep"
+            android:title="▶ Auto-Main Episod Seterusnya"
+            android:summary="Paparkan countdown dan main episod berikutnya secara automatik"
+            android:defaultValue="true" />
+
+        <Preference
+            android:key="mtsflix_theme_picker_key"
+            android:title="🎨 Tema Warna Aplikasi"
+            android:summary="Pilih tema warna UI — Netflix Red, Disney+ Blue, HBO Purple, VIP Gold" />
+
+        <Preference
+            android:key="mtsflix_device_manage_key"
+            android:title="🛡️ Urus Peranti Anda"
+            android:summary="Lihat dan log keluar peranti yang berdaftar dengan akaun Google anda" />
+
+        <Preference
+            android:key="mtsflix_watchlist_key"
+            android:title="🔔 Senarai Tonton Saya"
+            android:summary="Urus senarai drama/anime yang ingin dimaklumkan apabila episod baru keluar" />
+
+    </PreferenceCategory>'''
+
+    if 'mtsflix_auto_speed_test' not in c:
+        c = c.replace('</PreferenceScreen>', mtsflix_prefs + '\n</PreferenceScreen>')
+        open(prefs_path, 'w', encoding='utf-8').write(c)
+        print('  OK: MTSFlix v1.1.5 preferences added to settings_account.xml')
+PYEOF
+
+echo "[v1.1.5 Step 20] Theme Picker — patch MainActivity + LicenseCheckActivity..."
+python3 - << 'PYEOF'
+import os
+cs_dir = os.environ.get('CS_DIR', 'cloudstream')
+
+# 20a. Patch MainActivity.onCreate to apply theme
+path_ma = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/MainActivity.kt'
+if os.path.exists(path_ma):
+    c = open(path_ma, encoding='utf-8').read()
+    if 'MTSFlixThemeManager' not in c:
+        c = c.replace(
+            'override fun onResume() {',
+            '''override fun onResume() {
+        com.mts.mtsflix.theme.MTSFlixThemeManager.applyToWindow(this)'''
+        )
+        # Also clear session locks on onPause (app goes background)
+        if 'ProviderLockManager.clearSessionLocks()' not in c:
+            c = c.replace(
+                'override fun onPause() {\n        super.onPause()',
+                'override fun onPause() {\n        super.onPause()\n        com.mts.mtsflix.license.ProviderLockManager.clearSessionLocks()'
+            )
+        open(path_ma, 'w', encoding='utf-8').write(c)
+        print('  OK: MainActivity patched for theme apply and session lock clear on onPause')
+
+# 20b. Patch SettingsAccount.kt for theme picker, device manager, watchlist preferences
+kt_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/ui/settings/SettingsAccount.kt'
+if os.path.exists(kt_path):
+    c = open(kt_path, encoding='utf-8').read()
+    if 'mtsflix_theme_picker_key' not in c:
+        handler = '''
+        findPreference<androidx.preference.Preference>("mtsflix_theme_picker_key")?.setOnPreferenceClickListener {
+            startActivity(android.content.Intent(activity, com.mts.mtsflix.theme.ThemePickerActivity::class.java))
+            true
+        }
+        findPreference<androidx.preference.Preference>("mtsflix_device_manage_key")?.setOnPreferenceClickListener {
+            startActivity(android.content.Intent(activity, com.mts.mtsflix.license.DeviceManageActivity::class.java))
+            true
+        }
+        findPreference<androidx.preference.Preference>("mtsflix_watchlist_key")?.setOnPreferenceClickListener {
+            android.widget.Toast.makeText(activity, "Senarai Tonton: ${com.mts.mtsflix.watchlist.WatchlistManager.getWatchlist(requireContext()).size} item", android.widget.Toast.LENGTH_SHORT).show()
+            true
+        }
+'''
+        anchor = 'for ((key, api) in syncApis) {'
+        if anchor in c:
+            c = c.replace(anchor, handler + '\n        ' + anchor)
+            open(kt_path, 'w', encoding='utf-8').write(c)
+            print('  OK: SettingsAccount.kt patched with theme/device/watchlist handlers')
+PYEOF
+
+echo "[v1.1.5 Step 21] Quick Favorites Provider Bar — patch HomeFragment..."
+python3 - << 'PYEOF'
+import os
+cs_dir = os.environ.get('CS_DIR', 'cloudstream')
+
+home_frag_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/ui/home/HomeFragment.kt'
+if os.path.exists(home_frag_path):
+    c = open(home_frag_path, encoding='utf-8').read()
+    if 'FavoritesManager' not in c:
+        # Find onCreateView or similar place to inject favorites bar injection call
+        # We patch the provider selection long-click to add to favorites
+        target_selection = 'currentApiName.let(callback)\n                        dialog.dismissSafe()'
+        fav_patch = '''currentApiName.let(callback)
+                        dialog.dismissSafe()'''
+
+        # Patch ListView item long-click (inside provider dropdown dialog) for favorites toggle
+        longclick_target = 'listView.setOnItemClickListener'
+        longclick_patch = '''listView.setOnItemLongClickListener { _, _, i, _ ->
+                    val favName = currentValidApis[i].name
+                    val ctx = dialog.context
+                    val added = com.mts.mtsflix.home.FavoritesManager.toggleFavorite(ctx, favName)
+                    val msg = if (added) "⭐ $favName ditambah ke Kegemaran!" else "❌ $favName dibuang dari Kegemaran"
+                    android.widget.Toast.makeText(ctx, msg, android.widget.Toast.LENGTH_SHORT).show()
+                    true
+                }
+                listView.setOnItemClickListener'''
+
+        if longclick_target in c and 'setOnItemLongClickListener' not in c:
+            c = c.replace(longclick_target, longclick_patch)
+            open(home_frag_path, 'w', encoding='utf-8').write(c)
+            print('  OK: HomeFragment patched with long-press to add/remove Provider Favorites')
+PYEOF
+
+echo "[v1.1.5 Step 22] Auto-Skip Intro + Next Episode — patch GeneratorPlayer..."
+python3 - << 'PYEOF'
+import os
+cs_dir = os.environ.get('CS_DIR', 'cloudstream')
+
+player_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/ui/player/GeneratorPlayer.kt'
+if os.path.exists(player_path):
+    c = open(player_path, encoding='utf-8').read()
+    if 'AutoSkipManager' not in c:
+        # Inject AutoSkip listener after player is ready
+        # We look for onResume or observe(viewModel.player) or similar
+        anchor = 'override fun onResume() {'
+        skip_init = '''override fun onResume() {
+        // MTSFlix v1.1.5: Auto-Skip Intro + Next Episode listener
+        val skipHandler = android.os.Handler(android.os.Looper.getMainLooper())
+        val ctx = requireContext()
+        val skipRunnable = object : Runnable {
+            override fun run() {
+                try {
+                    val player = activity?.let { com.lagradost.cloudstream3.ui.player.CS3IPlayer.getPlayer() }
+                    if (player != null) {
+                        val pos = player.currentPositionMs ?: 0L
+                        val dur = player.durationMs ?: 0L
+                        val isEpBased = viewModel.loadedLinks.value?.let { true } ?: false
+
+                        // Auto-Skip Intro
+                        if (com.mts.mtsflix.player.AutoSkipManager.isAutoSkipIntroEnabled(ctx)
+                            && com.mts.mtsflix.player.AutoSkipManager.shouldShowSkipIntro(pos, isEpBased)) {
+                            // Show skip intro button if not already showing
+                            activity?.runOnUiThread {
+                                binding.root.findViewWithTag<android.widget.TextView>("skip_intro_btn")
+                                    ?: run {
+                                        val btn = android.widget.TextView(ctx).apply {
+                                            tag = "skip_intro_btn"
+                                            text = ">> Skip Intro"
+                                            textSize = 15f
+                                            typeface = android.graphics.Typeface.DEFAULT_BOLD
+                                            setTextColor(android.graphics.Color.WHITE)
+                                            setBackgroundColor(android.graphics.Color.parseColor("#AA000000"))
+                                            setPadding(32, 12, 32, 12)
+                                            isFocusable = true
+                                            setOnClickListener {
+                                                val skipTo = com.mts.mtsflix.player.AutoSkipManager.getSkipToPosition(pos, dur)
+                                                player.seekTo(skipTo)
+                                                (it.parent as? android.view.ViewGroup)?.removeView(it)
+                                            }
+                                        }
+                                        (binding.root as? android.widget.FrameLayout)?.addView(btn,
+                                            android.widget.FrameLayout.LayoutParams(
+                                                android.widget.FrameLayout.LayoutParams.WRAP_CONTENT,
+                                                android.widget.FrameLayout.LayoutParams.WRAP_CONTENT,
+                                                android.view.Gravity.BOTTOM or android.view.Gravity.END
+                                            ).also { it.setMargins(0, 0, 80, 160) }
+                                        )
+                                    }
+                            }
+                        } else {
+                            activity?.runOnUiThread {
+                                (binding.root as? android.view.ViewGroup)
+                                    ?.findViewWithTag<android.view.View>("skip_intro_btn")?.let {
+                                        (it.parent as? android.view.ViewGroup)?.removeView(it)
+                                    }
+                            }
+                        }
+
+                        // Auto-Next Episode
+                        val countdown = if (com.mts.mtsflix.player.AutoSkipManager.isAutoNextEpEnabled(ctx))
+                            com.mts.mtsflix.player.AutoSkipManager.getNextEpCountdownSecs(pos, dur)
+                        else null
+                        if (countdown != null && countdown <= com.mts.mtsflix.player.AutoSkipManager.NEXT_EP_COUNTDOWN_SECS) {
+                            activity?.runOnUiThread {
+                                val tag = "next_ep_overlay"
+                                val existing = binding.root.findViewWithTag<android.widget.TextView>(tag)
+                                if (existing != null) {
+                                    existing.text = "▶ Episod Seterusnya dalam ${countdown}s"
+                                } else {
+                                    val overlay = android.widget.TextView(ctx).apply {
+                                        this.tag = tag
+                                        text = "▶ Episod Seterusnya dalam ${countdown}s"
+                                        textSize = 16f
+                                        typeface = android.graphics.Typeface.DEFAULT_BOLD
+                                        setTextColor(android.graphics.Color.WHITE)
+                                        setBackgroundColor(android.graphics.Color.parseColor("#CC000000"))
+                                        setPadding(36, 14, 36, 14)
+                                        isFocusable = true
+                                        setOnClickListener {
+                                            viewModel.nextEpisode()
+                                            (it.parent as? android.view.ViewGroup)?.removeView(it)
+                                        }
+                                    }
+                                    (binding.root as? android.widget.FrameLayout)?.addView(overlay,
+                                        android.widget.FrameLayout.LayoutParams(
+                                            android.widget.FrameLayout.LayoutParams.WRAP_CONTENT,
+                                            android.widget.FrameLayout.LayoutParams.WRAP_CONTENT,
+                                            android.view.Gravity.BOTTOM or android.view.Gravity.START
+                                        ).also { it.setMargins(80, 0, 0, 160) }
+                                    )
+                                }
+                                if (countdown <= 0) {
+                                    viewModel.nextEpisode()
+                                    (binding.root as? android.view.ViewGroup)?.findViewWithTag<android.view.View>(tag)
+                                        ?.let { (it.parent as? android.view.ViewGroup)?.removeView(it) }
+                                }
+                            }
+                        }
+                    }
+                } catch (e: Exception) { /* silent */ }
+                skipHandler.postDelayed(this, 1000)
+            }
+        }
+        skipHandler.postDelayed(skipRunnable, 1000)'''
+
+        if anchor in c:
+            c = c.replace(anchor, skip_init, 1)
+            open(player_path, 'w', encoding='utf-8').write(c)
+            print('  OK: GeneratorPlayer.kt patched with Auto-Skip Intro + Next Episode overlay')
+PYEOF
+
+echo "[v1.1.5 Step 23] Watchlist Worker — register in CloudStreamApp..."
+python3 - << 'PYEOF'
+import os
+cs_dir = os.environ.get('CS_DIR', 'cloudstream')
+
+# Patch CloudStreamApp.kt to schedule watchlist worker on startup
+app_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/CloudStreamApp.kt'
+if os.path.exists(app_path):
+    c = open(app_path, encoding='utf-8').read()
+    if 'WatchlistNotificationWorker' not in c:
+        anchor = 'super.onCreate()'
+        patch = '''super.onCreate()
+        // MTSFlix v1.1.5: Schedule Watchlist episode check notifications
+        try {
+            com.mts.mtsflix.watchlist.WatchlistNotificationWorker.schedulePeriodicCheck(this)
+        } catch (e: Exception) { /* silent */ }'''
+        if anchor in c:
+            c = c.replace(anchor, patch, 1)
+            open(app_path, 'w', encoding='utf-8').write(c)
+            print('  OK: CloudStreamApp.kt patched to schedule WatchlistNotificationWorker')
+PYEOF
+
+echo "[v1.1.5 Step 24] Device Management — register Activity + patch TVPairingActivity..."
+python3 - << 'PYEOF'
+import re, os
+cs_dir = os.environ.get('CS_DIR', 'cloudstream')
+mtsflix_dir = os.environ.get('MTSFLIX_DIR', '.')
+
+# 24a. Register new Activities in AndroidManifest.xml
+path = cs_dir + '/app/src/main/AndroidManifest.xml'
+if os.path.exists(path):
+    c = open(path, encoding='utf-8').read()
+
+    new_activities = ''
+    if 'ThemePickerActivity' not in c:
+        new_activities += '''
+        <!-- MTSFlix v1.1.5: Theme Picker -->
+        <activity
+            android:name="com.mts.mtsflix.theme.ThemePickerActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboard|keyboardHidden"
+            android:theme="@style/AppTheme" />'''
+
+    if 'DeviceManageActivity' not in c:
+        new_activities += '''
+        <!-- MTSFlix v1.1.5: Device Management -->
+        <activity
+            android:name="com.mts.mtsflix.license.DeviceManageActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboard|keyboardHidden"
+            android:theme="@style/AppTheme" />'''
+
+    if new_activities:
+        c = c.replace('</application>', new_activities + '\n    </application>')
+        open(path, 'w', encoding='utf-8').write(c)
+        print('  OK: AndroidManifest.xml updated with v1.1.5 activities')
+
+# 24b. Patch TVPairingActivity.onConfirmed to register device
+tv_pair_path = mtsflix_dir + '/custom_src/license/TVPairingActivity.kt'
+if os.path.exists(tv_pair_path):
+    c = open(tv_pair_path, encoding='utf-8').read()
+    if 'DeviceManager.registerDevice' not in c:
+        anchor = 'try { com.mts.mtsflix.cloud.MTSFlixCloudSync.restoreWatchHistory(this, email) } catch (e: Exception) {}'
+        patch = '''try { com.mts.mtsflix.cloud.MTSFlixCloudSync.restoreWatchHistory(this, email) } catch (e: Exception) {}
+                        try { com.mts.mtsflix.license.DeviceManager.registerDevice(this, email) } catch (e: Exception) {}'''
+        if anchor in c:
+            c = c.replace(anchor, patch)
+            open(tv_pair_path, 'w', encoding='utf-8').write(c)
+            print('  OK: TVPairingActivity.kt patched to register device on Google login')
+PYEOF
+
 echo "======================================================"
-echo "    MTSFlix Customization Complete! v1.1.4"
-echo "    Provider Lock PIN Feature ADDED"
-echo "    Auto-resume & Google Account Backup/Restore READY"
+echo "    MTSFlix Customization Complete! v1.1.5"
+echo ""
+echo "    v1.1.4 Features:"
+echo "    Provider Lock PIN + Confirmation + Old PIN check"
+echo "    Auto-resume after PIN + App exit resets session"
+echo "    Google Account Backup/Restore PIN + Locked Providers"
 echo "    Reload Extensions Button in Account & Security"
-echo "    Netflix Profiles + Emoji Avatar + Kids Filter"
-echo "    Download Progress Bar READY"
+echo ""
+echo "    v1.1.5 NEW Features:"
+echo "    ⚡ Auto-Select Fastest Server (Speed Test)"
+echo "    🎨 UI Theme Color Picker (4 themes)"
+echo "    ⭐ Quick Favorites Provider Bar (long-press)"
+echo "    🍿 Auto-Skip Intro + Auto-Next Episode"
+echo "    🔔 Watchlist Episode Notifications (every 6h)"
+echo "    🛡️ Remote Device Management (revoke sessions)"
 echo "======================================================"
-
-
