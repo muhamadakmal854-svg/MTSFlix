@@ -1027,104 +1027,80 @@ else:
 PYEOF
 
 # --- 17. Reload Extensions Button -----------------------------------------
-echo "[17/17] Patching Extensions — tambah butang Reload Provider..."
+# --- 17. Reload Extensions Button in Account & Security ---------------------
+echo "[17/17] Patching SettingsAccount — tambah Reload Provider di bawah Account & Security..."
 python3 - << 'PYEOF'
-import os, re
+import os
 cs_dir = os.environ.get('CS_DIR','cloudstream')
 
-# 17a. Tambah item 'Reload' ke menu repository_search.xml
-menu_path = cs_dir + '/app/src/main/res/menu/repository_search.xml'
-if os.path.exists(menu_path):
-    c = open(menu_path, encoding='utf-8').read()
-    if 'mtsflix_reload_extensions' not in c:
-        reload_item = '''    <item
-        android:id="@+id/mtsflix_reload_extensions"
-        android:icon="@drawable/ic_refresh"
-        android:title="Reload Extensions"
-        app:showAsAction="ifRoom" />'''
-        c = c.replace('</menu>', reload_item + '\n</menu>')
-        open(menu_path, 'w', encoding='utf-8').write(c)
-        print('  OK: Reload button added to repository_search.xml menu')
+# 17a. Patch settings_account.xml — tambah Preference
+xml_path = cs_dir + '/app/src/main/res/xml/settings_account.xml'
+if os.path.exists(xml_path):
+    c = open(xml_path, encoding='utf-8').read()
+    if 'reload_extensions_key' not in c:
+        category = '''
+    <PreferenceCategory
+        android:title="Kemaskini Extensions &amp; Provider">
+
+        <Preference
+            android:key="reload_extensions_key"
+            android:icon="@drawable/ic_refresh"
+            android:title="Reload Extensions &amp; Provider"
+            android:summary="Muat semula semua Provider &amp; Extensions terkini secara serta-merta" />
+
+    </PreferenceCategory>'''
+        c = c.replace('</PreferenceScreen>', category + '\n</PreferenceScreen>')
+        open(xml_path, 'w', encoding='utf-8').write(c)
+        print('  OK: Reload preference added to settings_account.xml')
     else:
-        print('  OK: Reload button already in menu')
+        print('  OK: Reload preference already in settings_account.xml')
 else:
-    print('  SKIP: repository_search.xml not found')
+    print('  SKIP: settings_account.xml not found')
 
-# 17b. Patch ExtensionsFragment.kt — handle butang Reload klik
-frag_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/ui/settings/extensions/ExtensionsFragment.kt'
-if not os.path.exists(frag_path):
-    print('  SKIP: ExtensionsFragment.kt not found')
+# 17b. Patch SettingsAccount.kt — handle preference click
+kt_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/ui/settings/SettingsAccount.kt'
+if not os.path.exists(kt_path):
+    print('  SKIP: SettingsAccount.kt not found')
 else:
-    c = open(frag_path, encoding='utf-8').read()
-    if 'mtsflix_reload_extensions' in c:
-        print('  OK: Reload handler already patched in ExtensionsFragment.kt')
+    c = open(kt_path, encoding='utf-8').read()
+    if 'reload_extensions_key' in c:
+        print('  OK: Reload handler already in SettingsAccount.kt')
     else:
-        # Tambah import PluginManager jika belum ada
-        if 'import com.lagradost.cloudstream3.plugins.PluginManager' not in c:
-            c = c.replace(
-                'import com.lagradost.cloudstream3.plugins.RepositoryManager',
-                'import com.lagradost.cloudstream3.plugins.PluginManager\nimport com.lagradost.cloudstream3.plugins.RepositoryManager'
-            )
-
-        # Tambah import InternalAPI jika belum ada
-        if 'import com.lagradost.cloudstream3.plugins.PluginManager.InternalAPI' not in c and 'InternalAPI' not in c:
-            c = c.replace(
-                'import com.lagradost.cloudstream3.plugins.PluginManager',
-                'import com.lagradost.cloudstream3.plugins.PluginManager'
-            )
-
-        # Tambah handler butang Reload selepas searchView setup (selepas blok searchView.setOnQueryTextListener)
-        reload_handler = '''
-
-        // MTSFlix v1.1.3: Butang Reload Extensions
-        binding.settingsToolbar.setOnMenuItemClickListener { menuItem ->
-            when (menuItem.itemId) {
-                R.id.mtsflix_reload_extensions -> {
-                    ioSafe {
-                        try {
-                            main {
-                                showToast("Memuatkan semula Extensions...", Toast.LENGTH_SHORT)
-                            }
-                            @Suppress("DEPRECATION")
-                            PluginManager.___DO_NOT_CALL_FROM_A_PLUGIN_manuallyReloadAndUpdatePlugins(
-                                activity ?: return@ioSafe
-                            )
-                            main {
-                                reloadRepositories()
-                                showToast("Extensions berjaya dimuatkan semula!", Toast.LENGTH_SHORT)
-                            }
-                        } catch (e: Exception) {
-                            main {
-                                showToast("Gagal reload: ${e.message}", Toast.LENGTH_LONG)
-                            }
-                        }
+        handler = '''
+        findPreference<androidx.preference.Preference>("reload_extensions_key")?.setOnPreferenceClickListener {
+            val act = activity ?: return@setOnPreferenceClickListener false
+            ioSafe {
+                try {
+                    com.lagradost.cloudstream3.utils.Coroutines.main {
+                        showToast("Memuatkan semula Extensions...", android.widget.Toast.LENGTH_SHORT)
                     }
-                    true
+                    @Suppress("DEPRECATION")
+                    com.lagradost.cloudstream3.plugins.PluginManager.___DO_NOT_CALL_FROM_A_PLUGIN_manuallyReloadAndUpdatePlugins(act)
+                    com.lagradost.cloudstream3.utils.Coroutines.main {
+                        showToast("Extensions berjaya dimuatkan semula!", android.widget.Toast.LENGTH_SHORT)
+                    }
+                } catch (e: Exception) {
+                    com.lagradost.cloudstream3.utils.Coroutines.main {
+                        showToast("Gagal reload: ${e.message}", android.widget.Toast.LENGTH_LONG)
+                    }
                 }
-                else -> false
             }
-        }'''
-
-        # Sisipkan sebelum blok addRepositoryClick
-        target_anchor = '\n        val addRepositoryClick = View.OnClickListener {'
-        if target_anchor in c:
-            c = c.replace(target_anchor, reload_handler + target_anchor)
-            open(frag_path, 'w', encoding='utf-8').write(c)
-            print('  OK: Reload handler patched in ExtensionsFragment.kt')
+            true
+        }
+'''
+        anchor = 'for ((key, api) in syncApis) {'
+        if anchor in c:
+            c = c.replace(anchor, handler + '\n        ' + anchor)
+            open(kt_path, 'w', encoding='utf-8').write(c)
+            print('  OK: Reload handler patched in SettingsAccount.kt')
         else:
-            # Cuba cari anchor alternatif — sebelum binding.apply
-            alt_anchor = '\n        val isTv = isLayout(TV)'
-            if alt_anchor in c:
-                c = c.replace(alt_anchor, reload_handler + alt_anchor)
-                open(frag_path, 'w', encoding='utf-8').write(c)
-                print('  OK: Reload handler patched (alt anchor) in ExtensionsFragment.kt')
-            else:
-                print('  WARN: Could not find anchor in ExtensionsFragment.kt')
+            print('  WARN: Could not find anchor in SettingsAccount.kt')
 PYEOF
 
 echo "======================================================"
 echo "    MTSFlix Customization Complete! v1.1.3"
-echo "    Reload Extensions Button ADDED"
+echo "    Reload Extensions Button in Account & Security ADDED"
 echo "    Netflix Profiles + Emoji Avatar + Kids Filter"
 echo "    Download Progress Bar READY"
 echo "======================================================"
+
