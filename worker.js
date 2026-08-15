@@ -1050,26 +1050,36 @@ function getAdminDashboardHTML(adminKey) {
 
     async function loadLicenses() {
       const tbody = document.getElementById('licenseTbody');
-      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#AAAACC;padding:24px">⏳ Memuatkan data dari GitHub...</td></tr>';
       try {
-        // Baca terus dari raw GitHub — paling laju, tidak perlukan token
-        const rawUrl = 'https://raw.githubusercontent.com/muhamadakmal854-svg/MTSFlix/main/licenses.json?t=' + Date.now();
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 10000);
-        const res = await fetch(rawUrl, { signal: controller.signal });
-        clearTimeout(timeout);
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        const data = await res.json();
-        if (data && data.licenses) {
-          allLicenses = data.licenses;
+        let licenses = null;
+        try {
+          const res = await fetch('/licenses?key=' + encodeURIComponent(ADMIN_KEY));
+          const data = await res.json();
+          if (data.ok && data.licenses) {
+            licenses = data.licenses;
+          }
+        } catch (e) {
+          console.warn('API fetch failed, trying direct raw fallback:', e);
+        }
+
+        if (!licenses) {
+          const rawUrl = 'https://raw.githubusercontent.com/muhamadakmal854-svg/MTSFlix/main/licenses.json?t=' + Date.now();
+          const rawRes = await fetch(rawUrl);
+          const rawData = await rawRes.json();
+          if (rawData && rawData.licenses) {
+            licenses = rawData.licenses;
+          }
+        }
+
+        if (licenses) {
+          allLicenses = licenses;
           updateStats(allLicenses);
           renderTable(allLicenses);
         } else {
-          throw new Error('Format data tidak sah');
+          tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#FF5555; padding:20px;">Gagal memuatkan data dari GitHub.</td></tr>';
         }
       } catch (err) {
-        const msg = err.name === 'AbortError' ? 'Timeout — GitHub lambat bertindak balas' : err.message;
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#FF5555;padding:24px">❌ Ralat: ' + msg + ' — <button onclick="loadLicenses()" style="background:#E50914;color:#fff;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;margin-left:8px">Cuba Semula</button></td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#FF5555; padding:20px;">Ralat sambungan: ' + err.message + '</td></tr>';
       }
     }
 
@@ -1139,25 +1149,18 @@ function getAdminDashboardHTML(adminKey) {
 
     async function loadLicenses() {
       const tbody = document.getElementById('licenseTbody');
-      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#AAAACC;padding:24px">⏳ Memuatkan data dari GitHub...</td></tr>';
       try {
-        const rawUrl = 'https://raw.githubusercontent.com/muhamadakmal854-svg/MTSFlix/main/licenses.json?t=' + Date.now();
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 10000);
-        const res = await fetch(rawUrl, { signal: controller.signal });
-        clearTimeout(timeout);
-        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const res = await fetch('/licenses?key=' + encodeURIComponent(ADMIN_KEY));
         const data = await res.json();
-        if (data && data.licenses) {
+        if (data.ok && data.licenses) {
           allLicenses = data.licenses;
           updateStats(allLicenses);
           renderTable(allLicenses);
         } else {
-          throw new Error('Format data tidak sah');
+          tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#FF5555; padding:20px;">Gagal memuatkan data dari GitHub.</td></tr>';
         }
       } catch (err) {
-        const msg = err.name === 'AbortError' ? 'Timeout — GitHub lambat bertindak balas' : err.message;
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#FF5555;padding:24px">❌ Ralat: ' + msg + ' — <button onclick="loadLicenses()" style="background:#E50914;color:#fff;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;margin-left:8px">Cuba Semula</button></td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#FF5555; padding:20px;">Ralat sambungan ke Worker API.</td></tr>';
       }
     }
 

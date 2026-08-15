@@ -1026,8 +1026,105 @@ else:
         print('  WARN: Could not find is18Row anchor in HomeViewModel.kt')
 PYEOF
 
+# --- 17. Reload Extensions Button -----------------------------------------
+echo "[17/17] Patching Extensions — tambah butang Reload Provider..."
+python3 - << 'PYEOF'
+import os, re
+cs_dir = os.environ.get('CS_DIR','cloudstream')
+
+# 17a. Tambah item 'Reload' ke menu repository_search.xml
+menu_path = cs_dir + '/app/src/main/res/menu/repository_search.xml'
+if os.path.exists(menu_path):
+    c = open(menu_path, encoding='utf-8').read()
+    if 'mtsflix_reload_extensions' not in c:
+        reload_item = '''    <item
+        android:id="@+id/mtsflix_reload_extensions"
+        android:icon="@drawable/ic_refresh"
+        android:title="Reload Extensions"
+        app:showAsAction="ifRoom" />'''
+        c = c.replace('</menu>', reload_item + '\n</menu>')
+        open(menu_path, 'w', encoding='utf-8').write(c)
+        print('  OK: Reload button added to repository_search.xml menu')
+    else:
+        print('  OK: Reload button already in menu')
+else:
+    print('  SKIP: repository_search.xml not found')
+
+# 17b. Patch ExtensionsFragment.kt — handle butang Reload klik
+frag_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/ui/settings/extensions/ExtensionsFragment.kt'
+if not os.path.exists(frag_path):
+    print('  SKIP: ExtensionsFragment.kt not found')
+else:
+    c = open(frag_path, encoding='utf-8').read()
+    if 'mtsflix_reload_extensions' in c:
+        print('  OK: Reload handler already patched in ExtensionsFragment.kt')
+    else:
+        # Tambah import PluginManager jika belum ada
+        if 'import com.lagradost.cloudstream3.plugins.PluginManager' not in c:
+            c = c.replace(
+                'import com.lagradost.cloudstream3.plugins.RepositoryManager',
+                'import com.lagradost.cloudstream3.plugins.PluginManager\nimport com.lagradost.cloudstream3.plugins.RepositoryManager'
+            )
+
+        # Tambah import InternalAPI jika belum ada
+        if 'import com.lagradost.cloudstream3.plugins.PluginManager.InternalAPI' not in c and 'InternalAPI' not in c:
+            c = c.replace(
+                'import com.lagradost.cloudstream3.plugins.PluginManager',
+                'import com.lagradost.cloudstream3.plugins.PluginManager'
+            )
+
+        # Tambah handler butang Reload selepas searchView setup (selepas blok searchView.setOnQueryTextListener)
+        reload_handler = '''
+
+        // MTSFlix v1.1.3: Butang Reload Extensions
+        binding.settingsToolbar.setOnMenuItemClickListener { menuItem ->
+            when (menuItem.itemId) {
+                R.id.mtsflix_reload_extensions -> {
+                    ioSafe {
+                        try {
+                            main {
+                                showToast("\uD83D\uDD04 Memuatkan semula Extensions...", Toast.LENGTH_SHORT)
+                            }
+                            @Suppress("DEPRECATION")
+                            PluginManager.___DO_NOT_CALL_FROM_A_PLUGIN_manuallyReloadAndUpdatePlugins(
+                                activity ?: return@ioSafe
+                            )
+                            main {
+                                reloadRepositories()
+                                showToast("\u2705 Extensions berjaya dimuatkan semula!", Toast.LENGTH_SHORT)
+                            }
+                        } catch (e: Exception) {
+                            main {
+                                showToast("\u26A0\uFE0F Gagal reload: ${e.message}", Toast.LENGTH_LONG)
+                            }
+                        }
+                    }
+                    true
+                }
+                else -> false
+            }
+        }'''
+
+        # Sisipkan sebelum blok addRepositoryClick
+        target_anchor = '\n        val addRepositoryClick = View.OnClickListener {'
+        if target_anchor in c:
+            c = c.replace(target_anchor, reload_handler + target_anchor)
+            open(frag_path, 'w', encoding='utf-8').write(c)
+            print('  OK: Reload handler patched in ExtensionsFragment.kt')
+        else:
+            # Cuba cari anchor alternatif — sebelum binding.apply
+            alt_anchor = '\n        val isTv = isLayout(TV)'
+            if alt_anchor in c:
+                c = c.replace(alt_anchor, reload_handler + alt_anchor)
+                open(frag_path, 'w', encoding='utf-8').write(c)
+                print('  OK: Reload handler patched (alt anchor) in ExtensionsFragment.kt')
+            else:
+                print('  WARN: Could not find anchor in ExtensionsFragment.kt')
+PYEOF
+
 echo "======================================================"
-echo "    MTSFlix Customization Complete! v1.1.1"
+echo "    MTSFlix Customization Complete! v1.1.3"
+echo "    Reload Extensions Button ADDED"
 echo "    Netflix Profiles + Emoji Avatar + Kids Filter"
 echo "    Download Progress Bar READY"
 echo "======================================================"
