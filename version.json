@@ -1,11 +1,11 @@
 {
   "version": "1.1.3",
-  "versionCode": 6,
+  "versionCode": 7,
   "downloadUrl": "https://github.com/muhamadakmal854-svg/MTSFlix/releases/download/v1.1.3/MTSFlix-v1.1.3.apk",
-  "releaseNotes": "Butang Reload Extensions - tekan icon refresh untuk update Provider terus tanpa restart aplikasi",
+  "releaseNotes": "Fix Reload Extensions - butang refresh provider terus tanpa restart",
   "mandatory": false,
   "sha256": "",
-  "publishedAt": "2026-08-15T13:43:07Z",
+  "publishedAt": "2026-08-15T13:56:32Z",
   "minAndroid": 21,
   "providerUrl": "https://cdn.jsdelivr.net/gh/muhamadakmal854-svg/Provider@builds/repo.json"
 }
