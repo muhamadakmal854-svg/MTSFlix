@@ -1083,7 +1083,7 @@ else:
                     ioSafe {
                         try {
                             main {
-                                showToast("\uD83D\uDD04 Memuatkan semula Extensions...", Toast.LENGTH_SHORT)
+                                showToast("Memuatkan semula Extensions...", Toast.LENGTH_SHORT)
                             }
                             @Suppress("DEPRECATION")
                             PluginManager.___DO_NOT_CALL_FROM_A_PLUGIN_manuallyReloadAndUpdatePlugins(
@@ -1091,11 +1091,11 @@ else:
                             )
                             main {
                                 reloadRepositories()
-                                showToast("\u2705 Extensions berjaya dimuatkan semula!", Toast.LENGTH_SHORT)
+                                showToast("Extensions berjaya dimuatkan semula!", Toast.LENGTH_SHORT)
                             }
                         } catch (e: Exception) {
                             main {
-                                showToast("\u26A0\uFE0F Gagal reload: ${e.message}", Toast.LENGTH_LONG)
+                                showToast("Gagal reload: ${e.message}", Toast.LENGTH_LONG)
                             }
                         }
                     }
