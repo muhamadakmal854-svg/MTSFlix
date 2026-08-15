@@ -1,11 +1,11 @@
 {
   "version": "1.1.4",
-  "versionCode": 6,
+  "versionCode": 7,
   "downloadUrl": "https://github.com/muhamadakmal854-svg/MTSFlix/releases/download/v1.1.4/MTSFlix-v1.1.4.apk",
-  "releaseNotes": "v1.1.4 — Kunci Provider (PIN Lock): Tetapkan PIN 4-digit untuk menyekat akses ke Provider pilihan anda",
+  "releaseNotes": "Kunci Provider (PIN Lock): Tetapkan PIN 4-digit untuk menyekat akses ke Provider pilihan anda",
   "mandatory": false,
   "sha256": "",
-  "publishedAt": "2026-08-15T14:48:00Z",
+  "publishedAt": "2026-08-15T14:47:35Z",
   "minAndroid": 21,
   "providerUrl": "https://cdn.jsdelivr.net/gh/muhamadakmal854-svg/Provider@builds/repo.json"
 }
