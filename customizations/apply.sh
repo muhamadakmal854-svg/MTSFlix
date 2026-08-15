@@ -614,15 +614,16 @@ path = os.environ.get('CS_DIR','cloudstream') + '/app/src/main/AndroidManifest.x
 try:
     c = open(path, encoding='utf-8').read()
 
-    # FIX: System App issue on Xiaomi/AOSP TV sticks
-    # Remove UPDATE_PACKAGES_WITHOUT_USER_ACTION — this is a privileged permission that
-    # causes Xiaomi Mi Stick and similar devices to categorize the app as a System App
+    # FIX: System App issue on Xiaomi/AOSP TV sticks & Google TV
+    # Remove UPDATE_PACKAGES_WITHOUT_USER_ACTION & TV EPG permissions which cause System App classification
     c = c.replace('<uses-permission android:name="android.permission.UPDATE_PACKAGES_WITHOUT_USER_ACTION" />', '<!-- MTSFlix: removed UPDATE_PACKAGES_WITHOUT_USER_ACTION to prevent System App categorization -->')
+    c = c.replace('<uses-permission android:name="com.android.providers.tv.permission.WRITE_EPG_DATA" />', '')
+    c = c.replace('<uses-permission android:name="com.android.providers.tv.permission.READ_EPG_DATA" />', '')
     # Add installLocation=auto to <manifest> tag so OS treats it as user-installed app
     if 'android:installLocation' not in c:
         c = c.replace('<manifest xmlns:android=', '<manifest android:installLocation="auto" xmlns:android=')
         print('  OK: Added installLocation=auto to manifest')
-    print('  OK: Removed privileged permission UPDATE_PACKAGES_WITHOUT_USER_ACTION')
+    print('  OK: Removed privileged permissions to prevent System App categorization')
 
     if 'LicenseCheckActivity' not in c:
         pattern = re.compile(r'<intent-filter[\s\S]*?</intent-filter>')

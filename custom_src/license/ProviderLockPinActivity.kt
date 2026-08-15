@@ -13,22 +13,24 @@ import androidx.appcompat.app.AppCompatActivity
 
 /**
  * MTSFlix Provider Lock PIN Activity v1.1.4
- * Paparan PIN 4-digit untuk buka Provider terkunci atau tetapkan PIN baru.
+ * Paparan PIN 4-digit dengan pengesahan (confirmation) dan pengesahan PIN lama.
  */
 class ProviderLockPinActivity : AppCompatActivity() {
 
     companion object {
         const val MODE_VERIFY_PROVIDER = "verify_provider"
-        const val MODE_SET_PIN = "set_pin"
-        const val MODE_SETTINGS_ACCESS = "settings_access"
-        const val EXTRA_MODE = "mode"
-        const val EXTRA_PROVIDER_NAME = "provider_name"
+        const val MODE_VERIFY_OLD_PIN  = "verify_old_pin"
+        const val MODE_SET_PIN         = "set_pin"
+        const val EXTRA_MODE           = "mode"
+        const val EXTRA_PROVIDER_NAME  = "provider_name"
     }
 
     private val pin = StringBuilder()
     private val MAX = 4
     private val MAX_ATTEMPTS = 3
     private var attempts = 0
+
+    private var firstEnteredPin: String? = null
 
     private lateinit var dots: List<View>
     private lateinit var tvHint: TextView
@@ -64,10 +66,10 @@ class ProviderLockPinActivity : AppCompatActivity() {
         }
         root.addView(iconTv)
 
-        // Title
+        // Title & Hint based on mode
         val titleText = when (mode) {
-            MODE_SET_PIN -> "Tetapkan PIN 4-Digit Baru"
-            MODE_SETTINGS_ACCESS -> "Pengurusan Kunci Provider"
+            MODE_SET_PIN -> "Masukkan PIN 4-Digit Baru"
+            MODE_VERIFY_OLD_PIN -> "Masukkan PIN 4-Digit Lama"
             else -> if (providerName.isNotEmpty()) "Provider Terkunci: $providerName" else "Provider Terkunci"
         }
 
@@ -77,10 +79,9 @@ class ProviderLockPinActivity : AppCompatActivity() {
         }
         root.addView(tvTitle)
 
-        // Hint Text
         val hintText = when (mode) {
             MODE_SET_PIN -> "Masukkan 4 digit PIN pilihan anda"
-            MODE_SETTINGS_ACCESS -> "Masukkan PIN keselamatan untuk mengakses tetapan"
+            MODE_VERIFY_OLD_PIN -> "Masukkan PIN lama anda untuk membuat perubahan"
             else -> "Masukkan PIN 4-digit untuk mengakses Provider ini"
         }
 
@@ -183,13 +184,39 @@ class ProviderLockPinActivity : AppCompatActivity() {
         val enteredPin = pin.toString()
 
         if (mode == MODE_SET_PIN) {
-            ProviderLockManager.setPin(this, enteredPin)
-            Toast.makeText(this, "✅ PIN 4-digit berjaya ditetapkan!", Toast.LENGTH_SHORT).show()
-            setResult(RESULT_OK)
-            finish()
-            return
+            if (firstEnteredPin == null) {
+                // Step 1 done: store first PIN & request confirmation
+                firstEnteredPin = enteredPin
+                pin.clear()
+                updateDots()
+                tvTitle.text = "Sahkan PIN 4-Digit Anda"
+                tvTitle.setTextColor(Color.parseColor("#FFC107"))
+                tvHint.text = "Masukkan semula PIN 4-digit yang sama untuk pengesahan"
+                tvHint.setTextColor(Color.WHITE)
+                return
+            } else {
+                // Step 2 done: verify confirmation matches first PIN
+                if (enteredPin == firstEnteredPin) {
+                    ProviderLockManager.setPin(this, enteredPin)
+                    Toast.makeText(this, "✅ PIN 4-digit berjaya ditetapkan!", Toast.LENGTH_SHORT).show()
+                    setResult(RESULT_OK)
+                    finish()
+                    return
+                } else {
+                    // Confirmation failed — reset to step 1
+                    firstEnteredPin = null
+                    pin.clear()
+                    updateDots()
+                    tvTitle.text = "Masukkan PIN 4-Digit Baru"
+                    tvTitle.setTextColor(Color.WHITE)
+                    tvHint.text = "❌ PIN Tidak Sama! Sila masukkan semula PIN baru."
+                    tvHint.setTextColor(Color.parseColor("#E50914"))
+                    return
+                }
+            }
         }
 
+        // Verification mode (MODE_VERIFY_OLD_PIN or MODE_VERIFY_PROVIDER)
         if (ProviderLockManager.verifyPin(this, enteredPin)) {
             if (mode == MODE_VERIFY_PROVIDER) {
                 ProviderLockManager.unlockSession(providerName)
@@ -207,7 +234,7 @@ class ProviderLockPinActivity : AppCompatActivity() {
                 tvHint.setTextColor(Color.parseColor("#E50914"))
                 window.decorView.postDelayed({
                     attempts = 0
-                    tvHint.text = "Masukkan PIN"
+                    tvHint.text = "Masukkan PIN 4-digit"
                     tvHint.setTextColor(Color.parseColor("#888888"))
                 }, 30000)
             } else {

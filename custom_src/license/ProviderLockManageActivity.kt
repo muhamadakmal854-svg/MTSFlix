@@ -15,18 +15,34 @@ import com.lagradost.cloudstream3.MainAPI
 
 /**
  * MTSFlix Provider Lock Management Activity v1.1.4
- * Paparan senarai Provider untuk aktifkan/matikan kunci PIN pada setiap Provider.
+ * Paparan senarai Provider dengan pengesahan PIN Lama & Confirmation PIN Baru.
  */
 class ProviderLockManageActivity : AppCompatActivity() {
+
+    companion object {
+        private const val REQ_VERIFY_OLD_PIN = 2001
+        private const val REQ_SET_NEW_PIN = 2002
+    }
 
     private lateinit var listView: ListView
     private lateinit var tvStatus: TextView
     private lateinit var btnChangePin: Button
+    private var isUnlockedForManagement = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.statusBarColor = Color.parseColor("#0A0A0F")
         window.navigationBarColor = Color.parseColor("#0A0A0F")
+
+        // Jika PIN sudah wujud dan belum disahkan dalam sesi pengurusan ini, minta PIN Lama dahulu!
+        if (ProviderLockManager.hasCustomPin(this) && !isUnlockedForManagement) {
+            val intent = Intent(this, ProviderLockPinActivity::class.java).apply {
+                putExtra(ProviderLockPinActivity.EXTRA_MODE, ProviderLockPinActivity.MODE_VERIFY_OLD_PIN)
+            }
+            startActivityForResult(intent, REQ_VERIFY_OLD_PIN)
+        } else {
+            isUnlockedForManagement = true
+        }
 
         buildUI()
     }
@@ -85,10 +101,14 @@ class ProviderLockManageActivity : AppCompatActivity() {
                 }
             }
             setOnClickListener {
-                val intent = Intent(this@ProviderLockManageActivity, ProviderLockPinActivity::class.java).apply {
-                    putExtra(ProviderLockPinActivity.EXTRA_MODE, ProviderLockPinActivity.MODE_SET_PIN)
+                if (ProviderLockManager.hasCustomPin(this@ProviderLockManageActivity) && !isUnlockedForManagement) {
+                    val verifyIntent = Intent(this@ProviderLockManageActivity, ProviderLockPinActivity::class.java).apply {
+                        putExtra(ProviderLockPinActivity.EXTRA_MODE, ProviderLockPinActivity.MODE_VERIFY_OLD_PIN)
+                    }
+                    startActivityForResult(verifyIntent, REQ_VERIFY_OLD_PIN)
+                } else {
+                    openSetPinScreen()
                 }
-                startActivityForResult(intent, 1001)
             }
         }
         root.addView(btnChangePin)
@@ -152,7 +172,7 @@ class ProviderLockManageActivity : AppCompatActivity() {
                     val newLocked = !currentLocked
                     ProviderLockManager.setProviderLocked(context, provider.name, newLocked)
                     lockSwitch.isChecked = newLocked
-                    val msg = if (newLocked) "🔒 Provider ${provider.name} Dlock!" else "🔓 Provider ${provider.name} Di-unlock"
+                    val msg = if (newLocked) "🔒 Provider ${provider.name} Dikunci!" else "🔓 Provider ${provider.name} Di-unlock"
                     Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                 }
 
@@ -166,9 +186,23 @@ class ProviderLockManageActivity : AppCompatActivity() {
         setContentView(root)
     }
 
+    private fun openSetPinScreen() {
+        val intent = Intent(this, ProviderLockPinActivity::class.java).apply {
+            putExtra(ProviderLockPinActivity.EXTRA_MODE, ProviderLockPinActivity.MODE_SET_PIN)
+        }
+        startActivityForResult(intent, REQ_SET_NEW_PIN)
+    }
+
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == 1001 && resultCode == RESULT_OK) {
+        if (requestCode == REQ_VERIFY_OLD_PIN) {
+            if (resultCode == RESULT_OK) {
+                isUnlockedForManagement = true
+            } else {
+                Toast.makeText(this, "❌ Pengesahan PIN Lama Gagal", Toast.LENGTH_SHORT).show()
+                finish()
+            }
+        } else if (requestCode == REQ_SET_NEW_PIN && resultCode == RESULT_OK) {
             tvStatus.text = "📌 Status PIN: Terkustom (PIN Kustom Aktif)"
         }
     }
