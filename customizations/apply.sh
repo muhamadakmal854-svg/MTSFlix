@@ -1187,12 +1187,13 @@ if os.path.exists(home_frag_path):
     c = open(home_frag_path, encoding='utf-8').read()
     target_hf = 'currentApiName = currentValidApis[i].name\n                        //to switch to apply simply remove this\n                        currentApiName.let(callback)\n                        dialog.dismissSafe()'
     replacement_hf = '''val targetApi = currentValidApis[i].name
-                        if (com.mts.mtsflix.license.ProviderLockManager.requiresPin(requireContext(), targetApi)) {
-                            val intent = android.content.Intent(requireContext(), com.mts.mtsflix.license.ProviderLockPinActivity::class.java).apply {
+                        val ctx = context ?: return@setOnItemClickListener
+                        if (com.mts.mtsflix.license.ProviderLockManager.requiresPin(ctx, targetApi)) {
+                            val intent = android.content.Intent(ctx, com.mts.mtsflix.license.ProviderLockPinActivity::class.java).apply {
                                 putExtra(com.mts.mtsflix.license.ProviderLockPinActivity.EXTRA_MODE, com.mts.mtsflix.license.ProviderLockPinActivity.MODE_VERIFY_PROVIDER)
                                 putExtra(com.mts.mtsflix.license.ProviderLockPinActivity.EXTRA_PROVIDER_NAME, targetApi)
                             }
-                            startActivity(intent)
+                            ctx.startActivity(intent)
                             dialog.dismissSafe()
                             return@setOnItemClickListener
                         }
