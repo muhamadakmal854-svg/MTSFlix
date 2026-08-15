@@ -13,17 +13,19 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
-import com.lagradost.cloudstream3.APIHolder
+import androidx.preference.PreferenceManager
 import com.mts.mtsflix.theme.MTSFlixThemeManager
 
 /**
- * MTSFlix Watchlist Activity v1.1.5
- * Paparan senarai tontonan dari sejarah tontonan pengguna.
- * - Bahagian atas: Toggle provider mana yang diaktifkan notifikasi
- * - Bahagian bawah: Senarai show dari sejarah tontonan, setiap satu ada butang 🔔/🔕
+ * MTSFlix Watchlist Activity v1.1.5 (Updated)
+ * 3 bahagian:
+ *   1. Toggle jenis notifikasi (Episod, Filem, Siri, Anime, Drama Asia)
+ *   2. Toggle penapis provider (hidup/mati per provider)
+ *   3. Senarai show dari sejarah tontonan dengan 🔔/🔕 toggle per-show
  */
 class WatchlistActivity : AppCompatActivity() {
 
+    private lateinit var notifTypeSection: LinearLayout
     private lateinit var providerChipsRow: LinearLayout
     private lateinit var listView: ListView
     private lateinit var progressBar: ProgressBar
@@ -41,145 +43,250 @@ class WatchlistActivity : AppCompatActivity() {
     }
 
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
+    private fun sp(v: Float) = v * resources.displayMetrics.scaledDensity
 
+    // ═══════════════════════════════════════════════════════════════
+    //  BUILD UI
+    // ═══════════════════════════════════════════════════════════════
     private fun buildUI() {
+        val scroll = ScrollView(this).apply {
+            setBackgroundColor(Color.parseColor("#0A0A0F"))
+            isFillViewport = true
+        }
+
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(Color.parseColor("#0A0A0F"))
-            layoutParams = LinearLayout.LayoutParams(-1, -1)
+            layoutParams = LinearLayout.LayoutParams(-1, -2)
         }
+        scroll.addView(root)
 
         // ── Header ──────────────────────────────────────────────────
-        val header = LinearLayout(this).apply {
+        root.addView(buildHeader())
+
+        // ── Section 1: Notification Types ───────────────────────────
+        root.addView(buildSectionLabel("JENIS NOTIFIKASI"))
+        notifTypeSection = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(20), dp(20), dp(20), dp(12))
-            setBackgroundColor(Color.parseColor("#111118"))
+            setPadding(dp(16), 0, dp(16), dp(4))
         }
+        buildNotifTypeToggles()
+        root.addView(notifTypeSection)
 
-        val tvIcon = TextView(this).apply { text = "🔔"; textSize = 30f; gravity = Gravity.CENTER }
-        val tvTitle = TextView(this).apply {
-            text = "Senarai Tonton Saya"; textSize = 22f
-            typeface = Typeface.DEFAULT_BOLD
-            setTextColor(Color.WHITE); gravity = Gravity.CENTER
-            setPadding(0, dp(4), 0, dp(4))
-        }
-        val tvSub = TextView(this).apply {
-            text = "Diambil dari sejarah tontonan anda. Hidupkan 🔔 untuk terima notifikasi episod baru."
-            textSize = 12f; setTextColor(Color.parseColor("#AAAAAA"))
-            gravity = Gravity.CENTER; setPadding(dp(8), 0, dp(8), 0)
-        }
-        tvCount = TextView(this).apply {
-            textSize = 12f; setTextColor(Color.parseColor("#666666"))
-            gravity = Gravity.CENTER; setPadding(0, dp(6), 0, 0)
-        }
-        header.addView(tvIcon); header.addView(tvTitle); header.addView(tvSub); header.addView(tvCount)
-        root.addView(header)
+        // ── Divider ──────────────────────────────────────────────────
+        root.addView(makeDivider())
 
-        // ── Provider Chips Section ────────────────────────────────────
-        val providerSection = LinearLayout(this).apply {
+        // ── Section 2: Provider Filter ───────────────────────────────
+        root.addView(buildSectionLabel("PENAPIS PROVIDER — hidup/matikan notifikasi per-provider:"))
+        val providerScrollWrapper = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(16), dp(12), dp(16), dp(8))
-            setBackgroundColor(Color.parseColor("#0D0D14"))
+            setPadding(dp(16), dp(4), dp(16), dp(8))
         }
-
-        val tvProviderLabel = TextView(this).apply {
-            text = "PENAPIS PROVIDER — Pilih yang hendak diaktifkan notifikasi:"
-            textSize = 11f; typeface = Typeface.DEFAULT_BOLD
-            setTextColor(Color.parseColor("#E50914")); setPadding(0, 0, 0, dp(8))
-        }
-        providerSection.addView(tvProviderLabel)
-
-        providerChipsRow = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-        }
-        val providerScroll = HorizontalScrollView(this).apply {
+        providerChipsRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        val hScroll = HorizontalScrollView(this).apply {
             isHorizontalScrollBarEnabled = false
             addView(providerChipsRow)
         }
-        providerSection.addView(providerScroll)
-        root.addView(providerSection)
+        providerScrollWrapper.addView(hScroll)
+        root.addView(providerScrollWrapper)
 
-        // ── Divider ─────────────────────────────────────────────────
-        root.addView(View(this).apply {
-            layoutParams = LinearLayout.LayoutParams(-1, dp(1))
-            setBackgroundColor(Color.parseColor("#222222"))
-        })
+        // ── Divider ──────────────────────────────────────────────────
+        root.addView(makeDivider())
 
-        // ── Loading bar ─────────────────────────────────────────────
+        // ── Section 3: Show List ─────────────────────────────────────
+        root.addView(buildSectionLabel("SEJARAH TONTONAN — tekan 🔔 untuk aktifkan notifikasi episod baru:"))
+
+        tvCount = TextView(this).apply {
+            textSize = 12f; setTextColor(Color.parseColor("#666666"))
+            setPadding(dp(16), dp(4), dp(16), dp(4))
+        }
+        root.addView(tvCount)
+
         progressBar = ProgressBar(this).apply {
             visibility = View.VISIBLE
             layoutParams = LinearLayout.LayoutParams(-2, -2).also {
-                it.gravity = Gravity.CENTER; it.topMargin = dp(20)
+                it.gravity = Gravity.CENTER; it.topMargin = dp(20); it.bottomMargin = dp(20)
             }
         }
         root.addView(progressBar)
 
-        // ── Empty state ──────────────────────────────────────────────
         tvEmpty = TextView(this).apply {
-            text = "Tiada sejarah tontonan ditemui.\nTonton sesuatu dahulu untuk ia muncul di sini."
+            text = "Tiada sejarah tontonan ditemui.\nTonton sesuatu terlebih dahulu untuk ia muncul di sini."
             textSize = 14f; setTextColor(Color.parseColor("#555555"))
-            gravity = Gravity.CENTER; setPadding(dp(32), dp(40), dp(32), 0)
+            gravity = Gravity.CENTER; setPadding(dp(32), dp(24), dp(32), dp(24))
             visibility = View.GONE
         }
         root.addView(tvEmpty)
 
-        // ── Show list ────────────────────────────────────────────────
         listView = ListView(this).apply {
-            divider = null; dividerHeight = dp(8)
-            layoutParams = LinearLayout.LayoutParams(-1, 0, 1f)
+            divider = null; dividerHeight = dp(6)
+            layoutParams = LinearLayout.LayoutParams(-1, -2)
+            isNestedScrollingEnabled = true
         }
         root.addView(listView)
 
-        setContentView(root)
+        // Bottom padding
+        root.addView(View(this).apply { layoutParams = LinearLayout.LayoutParams(-1, dp(40)) })
+
+        setContentView(scroll)
     }
 
-    // ── Load watch history from DataStoreHelper ──────────────────────
-    private fun loadData() {
-        progressBar.visibility = View.VISIBLE
-        Thread {
-            val items = WatchlistManager.getHistoryFromDataStore()
-            Handler(Looper.getMainLooper()).post {
-                progressBar.visibility = View.GONE
-                historyItems = items
-                tvCount.text = "${items.size} siri/filem dalam sejarah tontonan"
+    // ── Header ────────────────────────────────────────────────────────
+    private fun buildHeader(): View {
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(20), dp(20), dp(20), dp(14))
+            setBackgroundColor(Color.parseColor("#0D0D18"))
 
-                if (items.isEmpty()) {
-                    tvEmpty.visibility = View.VISIBLE
-                    listView.visibility = View.GONE
-                } else {
-                    tvEmpty.visibility = View.GONE
-                    listView.visibility = View.VISIBLE
-                    buildProviderChips(items)
-                    setupListAdapter(items)
-                }
+            addView(TextView(this@WatchlistActivity).apply { text = "🔔"; textSize = 32f; gravity = Gravity.CENTER })
+            addView(TextView(this@WatchlistActivity).apply {
+                text = "Senarai Tonton & Notifikasi"; textSize = 21f; typeface = Typeface.DEFAULT_BOLD
+                setTextColor(Color.WHITE); gravity = Gravity.CENTER; setPadding(0, dp(6), 0, dp(4))
+            })
+            addView(TextView(this@WatchlistActivity).apply {
+                text = "Sejarah tontonan anda diambil terus dari CloudStream.\nKonfigurasikan jenis kandungan yang ingin anda terima notifikasi."
+                textSize = 12f; setTextColor(Color.parseColor("#999999"))
+                gravity = Gravity.CENTER; setPadding(dp(8), 0, dp(8), 0)
+            })
+        }
+    }
+
+    // ── Section label ──────────────────────────────────────────────────
+    private fun buildSectionLabel(text: String): View {
+        return TextView(this).apply {
+            this.text = text; textSize = 11f; typeface = Typeface.DEFAULT_BOLD
+            setTextColor(accent); setPadding(dp(16), dp(14), dp(16), dp(6))
+        }
+    }
+
+    // ── Divider ────────────────────────────────────────────────────────
+    private fun makeDivider(): View = View(this).apply {
+        layoutParams = LinearLayout.LayoutParams(-1, dp(1))
+        setBackgroundColor(Color.parseColor("#1E1E28"))
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    //  SECTION 1: Notification Type Toggles
+    // ═══════════════════════════════════════════════════════════════
+    private fun buildNotifTypeToggles() {
+        notifTypeSection.removeAllViews()
+        val types = listOf(
+            Triple(ContentDiscoveryManager.PREF_NOTIF_NEW_EPISODES, "🔔  Episod baru (untuk show yang anda tonton)", Color.parseColor("#2244AA")),
+            Triple(ContentDiscoveryManager.PREF_NOTIF_NEW_MOVIES,   "🎬  Filem baru ditambah ke provider",           Color.parseColor("#AA4422")),
+            Triple(ContentDiscoveryManager.PREF_NOTIF_NEW_SERIES,   "📺  Siri TV baru ditambah ke provider",         Color.parseColor("#226644")),
+            Triple(ContentDiscoveryManager.PREF_NOTIF_NEW_ANIME,    "🇯🇵  Anime baru (termasuk OVA)",                Color.parseColor("#884499")),
+            Triple(ContentDiscoveryManager.PREF_NOTIF_NEW_ASIAN,    "🇨🇳  Drama Asia / China baru",                 Color.parseColor("#AA6622")),
+        )
+        types.forEach { (key, label, indicatorColor) ->
+            notifTypeSection.addView(buildToggleRow(key, label, indicatorColor))
+        }
+    }
+
+    private fun buildToggleRow(prefKey: String, label: String, indicatorColor: Int): View {
+        val prefs = PreferenceManager.getDefaultSharedPreferences(this)
+        val isOn = prefs.getBoolean(prefKey, true)
+
+        val row = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(12), dp(10), dp(12), dp(10))
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE; cornerRadius = dp(8).toFloat()
+                setColor(Color.parseColor("#12121C"))
             }
-        }.start()
+            val lp = LinearLayout.LayoutParams(-1, -2); lp.bottomMargin = dp(6); layoutParams = lp
+            isFocusable = true; isFocusableInTouchMode = false
+        }
+
+        // Indicator strip
+        val strip = View(this).apply {
+            layoutParams = LinearLayout.LayoutParams(dp(4), dp(32)).also { it.marginEnd = dp(12) }
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE; cornerRadius = dp(2).toFloat()
+                setColor(if (isOn) indicatorColor else Color.parseColor("#333333"))
+            }
+        }
+        row.addView(strip)
+
+        // Label
+        val tvLabel = TextView(this).apply {
+            text = label; textSize = 13f
+            setTextColor(if (isOn) Color.WHITE else Color.parseColor("#666666"))
+            layoutParams = LinearLayout.LayoutParams(0, -2, 1f)
+        }
+        row.addView(tvLabel)
+
+        // Toggle switch (visual)
+        val tvToggle = buildToggleSwitch(isOn)
+        row.addView(tvToggle)
+
+        val toggle = {
+            val newState = !prefs.getBoolean(prefKey, true)
+            prefs.edit().putBoolean(prefKey, newState).apply()
+            // Update visuals
+            strip.background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE; cornerRadius = dp(2).toFloat()
+                setColor(if (newState) indicatorColor else Color.parseColor("#333333"))
+            }
+            tvLabel.setTextColor(if (newState) Color.WHITE else Color.parseColor("#666666"))
+            updateToggleSwitch(tvToggle, newState)
+        }
+
+        row.setOnClickListener { toggle() }
+        row.setOnFocusChangeListener { v, f ->
+            v.background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE; cornerRadius = dp(8).toFloat()
+                setColor(if (f) Color.parseColor("#1E1E30") else Color.parseColor("#12121C"))
+                if (f) setStroke(dp(1), accent)
+            }
+        }
+        row.setOnKeyListener { _, k, e ->
+            if (e.action == KeyEvent.ACTION_DOWN && (k == KeyEvent.KEYCODE_DPAD_CENTER || k == KeyEvent.KEYCODE_ENTER)) {
+                toggle(); true
+            } else false
+        }
+        return row
     }
 
-    // ── Provider chips ───────────────────────────────────────────────
+    private fun buildToggleSwitch(isOn: Boolean): TextView {
+        return TextView(this).apply {
+            text = if (isOn) "ON" else "OFF"
+            textSize = 11f; typeface = Typeface.DEFAULT_BOLD
+            setTextColor(Color.WHITE); gravity = Gravity.CENTER
+            setPadding(dp(10), dp(4), dp(10), dp(4))
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE; cornerRadius = dp(10).toFloat()
+                setColor(if (isOn) Color.parseColor("#22BB44") else Color.parseColor("#AA2222"))
+            }
+            val lp = LinearLayout.LayoutParams(dp(48), -2); lp.marginStart = dp(8); layoutParams = lp
+        }
+    }
+
+    private fun updateToggleSwitch(tv: TextView, isOn: Boolean) {
+        tv.text = if (isOn) "ON" else "OFF"
+        tv.background = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE; cornerRadius = dp(10).toFloat()
+            setColor(if (isOn) Color.parseColor("#22BB44") else Color.parseColor("#AA2222"))
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    //  SECTION 2: Provider chips
+    // ═══════════════════════════════════════════════════════════════
     private fun buildProviderChips(items: List<WatchlistManager.WatchHistoryItem>) {
         providerChipsRow.removeAllViews()
-
-        // Get unique API names from history items (intersect with installed APIs)
         val apiNames = items.map { it.apiName }.distinct().sorted()
-
         if (apiNames.isEmpty()) return
 
-        // "Semua" toggle chip
-        val btnAll = buildChip("⚡ Semua", true) {
+        providerChipsRow.addView(buildChip("⚡ Semua ON", true) {
             apiNames.forEach { WatchlistManager.setProviderNotificationEnabled(this, it, true) }
             buildProviderChips(items)
-        }
-        providerChipsRow.addView(btnAll)
-
-        apiNames.forEach { apiName ->
-            val enabled = WatchlistManager.isProviderNotificationEnabled(this, apiName)
-            val chip = buildChip(if (enabled) "✅ $apiName" else "❌ $apiName", enabled) {
-                val newState = !WatchlistManager.isProviderNotificationEnabled(this, apiName)
-                WatchlistManager.setProviderNotificationEnabled(this, apiName, newState)
-                buildProviderChips(items) // rebuild chips
-            }
-            providerChipsRow.addView(chip)
+        })
+        apiNames.forEach { name ->
+            val enabled = WatchlistManager.isProviderNotificationEnabled(this, name)
+            providerChipsRow.addView(buildChip(if (enabled) "✅ $name" else "❌ $name", enabled) {
+                val newState = !WatchlistManager.isProviderNotificationEnabled(this, name)
+                WatchlistManager.setProviderNotificationEnabled(this, name, newState)
+                buildProviderChips(items)
+            })
         }
     }
 
@@ -187,16 +294,16 @@ class WatchlistActivity : AppCompatActivity() {
         return TextView(this).apply {
             this.text = text; textSize = 12f; typeface = Typeface.DEFAULT_BOLD
             setTextColor(if (active) Color.WHITE else Color.parseColor("#888888"))
-            setPadding(dp(12), dp(6), dp(12), dp(6))
+            setPadding(dp(12), dp(7), dp(12), dp(7))
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE; cornerRadius = dp(16).toFloat()
-                setColor(if (active) accent else Color.parseColor("#222222"))
+                setColor(if (active) accent else Color.parseColor("#1E1E1E"))
                 if (!active) setStroke(dp(1), Color.parseColor("#333333"))
             }
             val lp = LinearLayout.LayoutParams(-2, -2); lp.setMargins(0, 0, dp(8), 0); layoutParams = lp
             isFocusable = true; isFocusableInTouchMode = false
             setOnFocusChangeListener { v, f ->
-                v.animate().scaleX(if (f) 1.1f else 1f).scaleY(if (f) 1.1f else 1f).setDuration(100).start()
+                v.animate().scaleX(if (f) 1.08f else 1f).scaleY(if (f) 1.08f else 1f).setDuration(100).start()
             }
             setOnClickListener { onClick() }
             setOnKeyListener { _, k, e ->
@@ -207,100 +314,131 @@ class WatchlistActivity : AppCompatActivity() {
         }
     }
 
-    // ── Show list adapter ────────────────────────────────────────────
+    // ═══════════════════════════════════════════════════════════════
+    //  SECTION 3: Show List
+    // ═══════════════════════════════════════════════════════════════
+    private fun loadData() {
+        progressBar.visibility = View.VISIBLE
+        Thread {
+            val items = WatchlistManager.getHistoryFromDataStore()
+            Handler(Looper.getMainLooper()).post {
+                progressBar.visibility = View.GONE
+                historyItems = items
+                tvCount.text = "${items.size} siri / filem dalam sejarah tontonan"
+                if (items.isEmpty()) {
+                    tvEmpty.visibility = View.VISIBLE; listView.visibility = View.GONE
+                } else {
+                    tvEmpty.visibility = View.GONE; listView.visibility = View.VISIBLE
+                    buildProviderChips(items)
+                    setupListAdapter(items)
+                }
+            }
+        }.start()
+    }
+
     private fun setupListAdapter(items: List<WatchlistManager.WatchHistoryItem>) {
         val adapter = object : ArrayAdapter<WatchlistManager.WatchHistoryItem>(this, 0, items) {
-            override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
-                val item = getItem(position) ?: return View(context)
-                val notifEnabled = WatchlistManager.isShowNotificationEnabled(context, item.url)
-                val providerEnabled = WatchlistManager.isProviderNotificationEnabled(context, item.apiName)
+            override fun getView(pos: Int, cv: View?, parent: ViewGroup): View {
+                val item = getItem(pos) ?: return View(context)
+                val notifOn = WatchlistManager.isShowNotificationEnabled(context, item.url)
+                val providerOn = WatchlistManager.isProviderNotificationEnabled(context, item.apiName)
 
                 val row = LinearLayout(context).apply {
-                    orientation = LinearLayout.HORIZONTAL
-                    gravity = Gravity.CENTER_VERTICAL
-                    setPadding(dp(16), dp(12), dp(16), dp(12))
+                    orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
+                    setPadding(dp(14), dp(12), dp(14), dp(12))
+                    val lp = LinearLayout.LayoutParams(-1, -2); lp.setMargins(dp(12), 0, dp(12), 0); layoutParams = lp
                     background = GradientDrawable().apply {
                         shape = GradientDrawable.RECTANGLE; cornerRadius = dp(10).toFloat()
-                        setColor(Color.parseColor("#141418"))
+                        setColor(Color.parseColor("#141420"))
+                        if (notifOn) setStroke(dp(1), Color.parseColor("#224433"))
                     }
                     isFocusable = true; isFocusableInTouchMode = false
                     setOnFocusChangeListener { v, f ->
                         v.background = GradientDrawable().apply {
                             shape = GradientDrawable.RECTANGLE; cornerRadius = dp(10).toFloat()
-                            setColor(if (f) Color.parseColor("#202028") else Color.parseColor("#141418"))
+                            setColor(if (f) Color.parseColor("#1E1E30") else Color.parseColor("#141420"))
+                            if (notifOn || f) setStroke(dp(1), if (f) accent else Color.parseColor("#224433"))
                         }
                     }
                 }
 
-                // Icon / type indicator
+                // Type icon
                 val tvType = TextView(context).apply {
-                    text = if (item.url.contains("movie", true)) "🎬" else "📺"
+                    text = when (item.url) {
+                        else -> if (item.name.lowercase().contains("movie") || item.name.lowercase().contains("filem")) "🎬" else "📺"
+                    }
                     textSize = 20f; gravity = Gravity.CENTER
-                    val lp = LinearLayout.LayoutParams(dp(38), dp(38)); lp.marginEnd = dp(12); layoutParams = lp
+                    val lp = LinearLayout.LayoutParams(dp(36), dp(36)); lp.marginEnd = dp(12); layoutParams = lp
                 }
                 row.addView(tvType)
 
-                // Name + provider info
-                val infoCol = LinearLayout(context).apply {
+                // Name + provider + status
+                val col = LinearLayout(context).apply {
                     orientation = LinearLayout.VERTICAL
                     layoutParams = LinearLayout.LayoutParams(0, -2, 1f)
                 }
-                val tvName = TextView(context).apply {
+                col.addView(TextView(context).apply {
                     text = item.name; textSize = 14f; typeface = Typeface.DEFAULT_BOLD
                     setTextColor(Color.WHITE); maxLines = 1
                     ellipsize = android.text.TextUtils.TruncateAt.END
-                }
-                val tvProvider = TextView(context).apply {
-                    val providerStatus = if (providerEnabled) "" else " (Notifikasi Provider OFF)"
-                    text = "📡 ${item.apiName}$providerStatus"
+                })
+                col.addView(TextView(context).apply {
+                    val provStr = if (!providerOn) " ⚠️ Provider dimatikan" else ""
+                    text = "📡 ${item.apiName}$provStr"
                     textSize = 11f
-                    setTextColor(if (providerEnabled) Color.parseColor("#888888") else Color.parseColor("#E55050"))
+                    setTextColor(if (providerOn) Color.parseColor("#888888") else Color.parseColor("#CC4444"))
+                })
+                if (notifOn) {
+                    val lastCount = WatchlistManager.getLastEpisodeCount(context, item.url)
+                    if (lastCount > 0) {
+                        col.addView(TextView(context).apply {
+                            text = "Terakhir dikesan: $lastCount episod"
+                            textSize = 10f; setTextColor(Color.parseColor("#556655"))
+                        })
+                    }
                 }
-                infoCol.addView(tvName); infoCol.addView(tvProvider)
-                row.addView(infoCol)
+                row.addView(col)
 
-                // Notification bell toggle
-                val tvBell = TextView(context).apply {
-                    text = if (notifEnabled) "🔔" else "🔕"
+                // Bell toggle button
+                val bell = TextView(context).apply {
+                    text = if (notifOn) "🔔" else "🔕"
                     textSize = 22f; gravity = Gravity.CENTER
-                    val lp = LinearLayout.LayoutParams(dp(44), dp(44)); layoutParams = lp
-                    isFocusable = true; isFocusableInTouchMode = false
                     background = GradientDrawable().apply {
                         shape = GradientDrawable.OVAL
-                        setColor(if (notifEnabled) Color.parseColor("#1A2A1A") else Color.parseColor("#2A1A1A"))
+                        setColor(if (notifOn) Color.parseColor("#1A3A1A") else Color.parseColor("#2A1A1A"))
                     }
+                    val lp = LinearLayout.LayoutParams(dp(46), dp(46)); lp.marginStart = dp(8); layoutParams = lp
+                    isFocusable = true; isFocusableInTouchMode = false
                     setOnFocusChangeListener { v, f ->
                         v.animate().scaleX(if (f) 1.2f else 1f).scaleY(if (f) 1.2f else 1f).setDuration(100).start()
                     }
-                    setOnClickListener {
+                    val toggleFn = {
                         val newState = !WatchlistManager.isShowNotificationEnabled(context, item.url)
                         WatchlistManager.setShowNotificationEnabled(context, item.url, newState)
-                        notifyDataSetChanged()
-                        val msg = if (newState) "🔔 Notifikasi diaktifkan untuk ${item.name}" else "🔕 Notifikasi dimatikan untuk ${item.name}"
+                        val msg = if (newState) "🔔 Notifikasi diaktifkan: ${item.name}" else "🔕 Notifikasi dimatikan: ${item.name}"
                         Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                        notifyDataSetChanged()
                     }
+                    setOnClickListener { toggleFn() }
                     setOnKeyListener { _, k, e ->
                         if (e.action == KeyEvent.ACTION_DOWN && (k == KeyEvent.KEYCODE_DPAD_CENTER || k == KeyEvent.KEYCODE_ENTER)) {
-                            performClick(); true
+                            toggleFn(); true
                         } else false
                     }
                 }
-                row.addView(tvBell)
+                row.addView(bell)
 
-                // Row click = toggle notification too
                 row.setOnClickListener {
                     val newState = !WatchlistManager.isShowNotificationEnabled(context, item.url)
                     WatchlistManager.setShowNotificationEnabled(context, item.url, newState)
+                    Toast.makeText(context, if (newState) "🔔 ${item.name}" else "🔕 ${item.name}", Toast.LENGTH_SHORT).show()
                     notifyDataSetChanged()
-                    val msg = if (newState) "🔔 Notifikasi diaktifkan untuk ${item.name}" else "🔕 Notifikasi dimatikan untuk ${item.name}"
-                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                 }
                 row.setOnKeyListener { _, k, e ->
                     if (e.action == KeyEvent.ACTION_DOWN && (k == KeyEvent.KEYCODE_DPAD_CENTER || k == KeyEvent.KEYCODE_ENTER)) {
                         row.callOnClick(); true
                     } else false
                 }
-
                 return row
             }
         }

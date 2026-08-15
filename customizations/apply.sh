@@ -1269,8 +1269,44 @@ if os.path.exists(prefs_path):
 
         <Preference
             android:key="mtsflix_watchlist_key"
-            android:title="🔔 Senarai Tonton Saya"
-            android:summary="Urus senarai drama/anime yang ingin dimaklumkan apabila episod baru keluar" />
+            android:title="🔔 Senarai Tonton &amp; Notifikasi"
+            android:summary="Urus sejarah tontonan, pilih jenis notifikasi &amp; provider yang ingin dimaklumkan" />
+
+    </PreferenceCategory>
+
+    <!-- MTSFlix v1.1.5: Content Discovery Notifications -->
+    <PreferenceCategory
+        android:title="MTSFlix — Notifikasi Kandungan Baru">
+
+        <SwitchPreference
+            android:key="mtsflix_notif_new_episodes"
+            android:title="🔔 Episod Baru"
+            android:summary="Notifikasi apabila episod baru keluar untuk show yang anda tonton"
+            android:defaultValue="true" />
+
+        <SwitchPreference
+            android:key="mtsflix_notif_new_movies"
+            android:title="🎬 Filem Baru Ditambah"
+            android:summary="Notifikasi apabila filem baru ditambah ke mana-mana provider"
+            android:defaultValue="true" />
+
+        <SwitchPreference
+            android:key="mtsflix_notif_new_series"
+            android:title="📺 Siri TV Baru Ditambah"
+            android:summary="Notifikasi apabila siri TV baru muncul di provider anda"
+            android:defaultValue="true" />
+
+        <SwitchPreference
+            android:key="mtsflix_notif_new_anime"
+            android:title="🇯🇵 Anime Baru Ditambah"
+            android:summary="Notifikasi untuk anime baru Jepun, OVA, dan anime movie"
+            android:defaultValue="true" />
+
+        <SwitchPreference
+            android:key="mtsflix_notif_new_asian"
+            android:title="🇨🇳 Drama Asia / China Baru"
+            android:summary="Notifikasi untuk drama Asia, drama China, K-drama baru"
+            android:defaultValue="true" />
 
     </PreferenceCategory>'''
 
@@ -1493,14 +1529,17 @@ if os.path.exists(app_path):
     if 'WatchlistNotificationWorker' not in c:
         anchor = 'super.onCreate()'
         patch = '''super.onCreate()
-        // MTSFlix v1.1.5: Schedule Watchlist episode check notifications
+        // MTSFlix v1.1.5: Schedule content discovery & watchlist notification workers
         try {
             com.mts.mtsflix.watchlist.WatchlistNotificationWorker.schedulePeriodicCheck(this)
+        } catch (e: Exception) { /* silent */ }
+        try {
+            com.mts.mtsflix.watchlist.ContentDiscoveryWorker.schedulePeriodicCheck(this)
         } catch (e: Exception) { /* silent */ }'''
         if anchor in c:
             c = c.replace(anchor, patch, 1)
             open(app_path, 'w', encoding='utf-8').write(c)
-            print('  OK: CloudStreamApp.kt patched to schedule WatchlistNotificationWorker')
+            print('  OK: CloudStreamApp.kt patched to schedule both WatchlistNotification & ContentDiscovery workers')
 PYEOF
 
 echo "[v1.1.5 Step 24] Device Management — register Activity + patch TVPairingActivity..."
