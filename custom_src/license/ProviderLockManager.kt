@@ -2,24 +2,26 @@ package com.mts.mtsflix.license
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.preference.PreferenceManager
+import org.json.JSONArray
+import org.json.JSONObject
 import java.security.MessageDigest
 
 /**
  * MTSFlix Provider Lock Manager v1.1.4
- * Menguruskan kunci PIN untuk Provider (Extensions) tertentu.
+ * Menguruskan kunci PIN untuk Provider (Extensions), pengesahan sesi, dan penyelarasan akaun Google.
  */
 object ProviderLockManager {
 
-    private const val PREF_NAME = "mtsflix_provider_lock_prefs"
-    private const val KEY_PIN_HASH = "provider_lock_pin_hash"
-    private const val KEY_LOCKED_PROVIDERS = "locked_providers_set"
+    private const val KEY_PIN_HASH = "mtsflix_provider_lock_pin_hash"
+    private const val KEY_LOCKED_PROVIDERS = "mtsflix_locked_providers_set"
     private const val DEFAULT_PIN = "0000"
 
     // Sesi aktif: menyimpan senarai Provider yang telah dimasukkan PIN dengan betul semasa aplikasi dibuka
     private val unlockedSessionProviders = mutableSetOf<String>()
 
     private fun getPrefs(context: Context): SharedPreferences {
-        return context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+        return PreferenceManager.getDefaultSharedPreferences(context.applicationContext)
     }
 
     private fun hashPin(pin: String): String {
@@ -73,10 +75,56 @@ object ProviderLockManager {
         }
     }
 
+    /**
+     * Kosongkan sesi apabila pengguna keluar aplikasi / masuk semula
+     */
+    fun clearSessionLocks() {
+        unlockedSessionProviders.clear()
+    }
+
     fun requiresPin(context: Context, providerName: String?): Boolean {
         if (providerName.isNullOrBlank()) return false
         val locked = isProviderLocked(context, providerName)
         val sessionUnlocked = isSessionUnlocked(providerName)
         return locked && !sessionUnlocked
+    }
+
+    // --- GOOGLE / GIST SYNC BACKUP & RESTORE ---
+
+    fun exportBackupJson(context: Context): JSONObject {
+        val json = JSONObject()
+        val storedHash = getPrefs(context).getString(KEY_PIN_HASH, "")
+        json.put("pin_hash", storedHash)
+
+        val lockedArray = JSONArray()
+        getLockedProviders(context).forEach { lockedArray.put(it) }
+        json.put("locked_providers", lockedArray)
+
+        return json
+    }
+
+    fun importBackupJson(context: Context, json: JSONObject?) {
+        if (json == null) return
+        val prefs = getPrefs(context).edit()
+
+        if (json.has("pin_hash")) {
+            val hash = json.optString("pin_hash", "")
+            if (hash.isNotEmpty()) {
+                prefs.putString(KEY_PIN_HASH, hash)
+            }
+        }
+
+        if (json.has("locked_providers")) {
+            val arr = json.optJSONArray("locked_providers")
+            if (arr != null) {
+                val set = mutableSetOf<String>()
+                for (i in 0 until arr.length()) {
+                    set.add(arr.getString(i))
+                }
+                prefs.putStringSet(KEY_LOCKED_PROVIDERS, set)
+            }
+        }
+
+        prefs.apply()
     }
 }

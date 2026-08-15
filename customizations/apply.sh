@@ -1156,7 +1156,7 @@ if os.path.exists(kt_path):
             open(kt_path, 'w', encoding='utf-8').write(c)
             print('  OK: Lock providers handler patched in SettingsAccount.kt')
 
-# 18c. Patch AppContextUtils.kt loadResult to check PIN for locked providers
+# 18c. Patch AppContextUtils.kt loadResult to check PIN for locked providers and auto-resume
 app_ctx_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/utils/AppContextUtils.kt'
 if os.path.exists(app_ctx_path):
     c = open(app_ctx_path, encoding='utf-8').read()
@@ -1173,6 +1173,10 @@ if os.path.exists(app_ctx_path):
             val intent = android.content.Intent(this, com.mts.mtsflix.license.ProviderLockPinActivity::class.java).apply {
                 putExtra(com.mts.mtsflix.license.ProviderLockPinActivity.EXTRA_MODE, com.mts.mtsflix.license.ProviderLockPinActivity.MODE_VERIFY_PROVIDER)
                 putExtra(com.mts.mtsflix.license.ProviderLockPinActivity.EXTRA_PROVIDER_NAME, apiName)
+                putExtra(com.mts.mtsflix.license.ProviderLockPinActivity.EXTRA_TARGET_URL, url)
+                putExtra(com.mts.mtsflix.license.ProviderLockPinActivity.EXTRA_TARGET_NAME, name)
+                putExtra(com.mts.mtsflix.license.ProviderLockPinActivity.EXTRA_TARGET_START_ACTION, startAction)
+                putExtra(com.mts.mtsflix.license.ProviderLockPinActivity.EXTRA_TARGET_START_VALUE, startValue)
             }
             startActivity(intent)
             return
@@ -1180,7 +1184,7 @@ if os.path.exists(app_ctx_path):
         if target in c:
             c = c.replace(target, lock_check)
             open(app_ctx_path, 'w', encoding='utf-8').write(c)
-            print('  OK: loadResult patched with Provider PIN check in AppContextUtils.kt')
+            print('  OK: loadResult patched with Provider PIN check & auto-resume in AppContextUtils.kt')
 
 # 18d. Patch HomeFragment.kt provider list selection to check PIN
 home_frag_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/ui/home/HomeFragment.kt'
@@ -1205,11 +1209,22 @@ if os.path.exists(home_frag_path):
         c = c.replace(target_hf, replacement_hf)
         open(home_frag_path, 'w', encoding='utf-8').write(c)
         print('  OK: HomeFragment provider selection patched with Provider PIN check')
+
+# 18e. Clear session locks when MainActivity stops (app backgrounded or exited)
+path_ma = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/MainActivity.kt'
+if os.path.exists(path_ma):
+    c_ma = open(path_ma, encoding='utf-8').read()
+    if 'ProviderLockManager.clearSessionLocks()' not in c_ma:
+        if 'override fun onStop() {' in c_ma:
+            c_ma = c_ma.replace('override fun onStop() {', 'override fun onStop() {\n        com.mts.mtsflix.license.ProviderLockManager.clearSessionLocks()')
+            open(path_ma, 'w', encoding='utf-8').write(c_ma)
+            print('  OK: MainActivity.onStop patched to clear session PIN locks on exit')
 PYEOF
 
 echo "======================================================"
 echo "    MTSFlix Customization Complete! v1.1.4"
 echo "    Provider Lock PIN Feature ADDED"
+echo "    Auto-resume & Google Account Backup/Restore READY"
 echo "    Reload Extensions Button in Account & Security"
 echo "    Netflix Profiles + Emoji Avatar + Kids Filter"
 echo "    Download Progress Bar READY"

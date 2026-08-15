@@ -13,7 +13,7 @@ import androidx.appcompat.app.AppCompatActivity
 
 /**
  * MTSFlix Provider Lock PIN Activity v1.1.4
- * Paparan PIN 4-digit dengan pengesahan (confirmation) dan pengesahan PIN lama.
+ * Paparan PIN 4-digit dengan pengesahan (confirmation), pengesahan PIN lama, dan auto-resuming ke Provider / Media.
  */
 class ProviderLockPinActivity : AppCompatActivity() {
 
@@ -23,6 +23,11 @@ class ProviderLockPinActivity : AppCompatActivity() {
         const val MODE_SET_PIN         = "set_pin"
         const val EXTRA_MODE           = "mode"
         const val EXTRA_PROVIDER_NAME  = "provider_name"
+
+        const val EXTRA_TARGET_URL          = "target_url"
+        const val EXTRA_TARGET_NAME         = "target_name"
+        const val EXTRA_TARGET_START_ACTION = "target_start_action"
+        const val EXTRA_TARGET_START_VALUE  = "target_start_value"
     }
 
     private val pin = StringBuilder()
@@ -221,6 +226,17 @@ class ProviderLockPinActivity : AppCompatActivity() {
             if (mode == MODE_VERIFY_PROVIDER) {
                 ProviderLockManager.unlockSession(providerName)
                 Toast.makeText(this, "✅ PIN Sah — Akses Dibenarkan", Toast.LENGTH_SHORT).show()
+
+                // Resume target media load if passed
+                if (intent.hasExtra(EXTRA_TARGET_URL)) {
+                    val url = intent.getStringExtra(EXTRA_TARGET_URL) ?: ""
+                    val name = intent.getStringExtra(EXTRA_TARGET_NAME) ?: ""
+                    val startAction = intent.getIntExtra(EXTRA_TARGET_START_ACTION, 0)
+                    val startValue = intent.getIntExtra(EXTRA_TARGET_START_VALUE, 0)
+                    com.lagradost.cloudstream3.utils.AppContextUtils.apply {
+                        this@ProviderLockPinActivity.loadResult(url, providerName, name, startAction, startValue)
+                    }
+                }
             }
             val resIntent = Intent()
             resIntent.putExtra(EXTRA_PROVIDER_NAME, providerName)
