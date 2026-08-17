@@ -733,19 +733,17 @@
       }
     }
 
-    // Fetch Licenses directly from GitHub API (or fallback with no-store)
+    // Fetch Licenses directly from GitHub API (or fallback with cache buster)
     async function fetchGitHubJSON() {
-      const token = getStoredToken();
-      // 1. Try GitHub REST API first for 100% real-time instant data (no CDN caching delay)
-      if (token) {
+      const token = localStorage.getItem('MTSFLIX_GH_TOKEN');
+      // 1. Try GitHub REST API if token is saved in localStorage
+      if (token && token.trim()) {
         try {
-          const apiRes = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/licenses.json?ref=${GITHUB_BRANCH}`, {
+          const apiRes = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/licenses.json?ref=${GITHUB_BRANCH}&t=${Date.now()}`, {
             headers: {
-              'Authorization': `Bearer ${token}`,
-              'Accept': 'application/vnd.github+json',
-              'Cache-Control': 'no-cache'
-            },
-            cache: 'no-store'
+              'Authorization': `token ${token.trim()}`,
+              'Accept': 'application/vnd.github+json'
+            }
           });
           if (apiRes.ok) {
             const fileObj = await apiRes.json();
@@ -754,15 +752,12 @@
             return JSON.parse(decoded);
           }
         } catch (e) {
-          console.warn('API fetch failed, falling back to raw:', e);
+          console.warn('API fetch error:', e);
         }
       }
 
-      // 2. Fallback to raw.githubusercontent.com with cache-busting
-      const res = await fetch(`${RAW_URL}?cb=${Date.now()}_${Math.floor(Math.random()*10000)}`, {
-        cache: 'no-store',
-        headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate', 'Pragma': 'no-cache' }
-      });
+      // 2. Clean fetch from raw.githubusercontent.com (No custom headers = No CORS preflight errors!)
+      const res = await fetch(`${RAW_URL}?t=${Date.now()}`);
       if (!res.ok) throw new Error(`HTTP ${res.status} gagal ambil licenses.json`);
       return await res.json();
     }
