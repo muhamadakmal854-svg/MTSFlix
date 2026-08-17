@@ -312,10 +312,10 @@
       "lastModified": "2026-08-17T23:17:41"
     },
     {
-      "id": "LIC-20260817-98ZKZ90D",
-      "deviceCode": "MTSF-8899-8989-8989",
-      "username": "TEST",
-      "email": "TEST@GMAIL.COM",
+      "id": "LIC-20260817-UAB7V9O7",
+      "deviceCode": "MTSF-2582-6154-5151",
+      "username": "KOLOP",
+      "email": "kolop@gmail.com",
       "expiredAt": "2099-12-30",
       "active": true,
       "banned": false,
@@ -323,7 +323,7 @@
       "addedAt": "2026-08-17",
       "deviceInfo": "Tidak dinyatakan",
       "note": "",
-      "lastModified": "2026-08-17T20:03:52.893Z"
+      "lastModified": "2026-08-17T20:07:15.939Z"
     }
   ]
 }
