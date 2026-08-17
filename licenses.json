@@ -310,20 +310,6 @@
       "deviceInfo": "SAMSUNG A07",
       "note": "VIP",
       "lastModified": "2026-08-17T23:17:41"
-    },
-    {
-      "id": "LIC-20260818-72146D4B",
-      "deviceCode": "MTSF-8888-8888-8888",
-      "username": "TEST_DEVICE",
-      "email": "",
-      "expiredAt": "2099-12-30",
-      "active": true,
-      "banned": false,
-      "bannedReason": "",
-      "addedAt": "2026-08-18",
-      "deviceInfo": "Test",
-      "note": "",
-      "lastModified": "2026-08-18T03:46:32"
     }
   ]
 }
