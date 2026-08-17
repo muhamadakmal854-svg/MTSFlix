@@ -310,20 +310,6 @@
       "deviceInfo": "SAMSUNG A07",
       "note": "VIP",
       "lastModified": "2026-08-17T23:17:41"
-    },
-    {
-      "id": "LIC-20260817-F702HU73",
-      "deviceCode": "MTSF-1548-4854-8484",
-      "username": "wayang",
-      "email": "",
-      "expiredAt": "2099-12-30",
-      "active": true,
-      "banned": false,
-      "bannedReason": "",
-      "addedAt": "2026-08-17",
-      "deviceInfo": "Tidak dinyatakan",
-      "note": "",
-      "lastModified": "2026-08-17T20:15:49.887Z"
     }
   ]
 }
