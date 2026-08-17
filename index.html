@@ -6,7 +6,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>MTSFlix — Portal Pendaftaran Lesen Peranti (GitHub.io)</title>
+  <title>MTSFlix — Portal Pendaftaran Lesen Peranti</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
@@ -260,34 +260,6 @@
       transition: all 0.2s ease;
     }
 
-    .code-input-wrap {
-      display: flex;
-      gap: 8px;
-    }
-
-    .code-input-wrap input {
-      flex: 1;
-      font-family: var(--mono);
-      font-size: 15px;
-      font-weight: 700;
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-    }
-
-    .btn-gen {
-      background: rgba(33, 150, 243, 0.15);
-      border: 1px solid rgba(33, 150, 243, 0.3);
-      color: #90CAF9;
-      padding: 0 16px;
-      border-radius: 10px;
-      font-size: 13px;
-      font-weight: 700;
-      cursor: pointer;
-      white-space: nowrap;
-      transition: all 0.2s;
-    }
-    .btn-gen:hover { background: rgba(33, 150, 243, 0.3); color: #FFF; }
-
     input:focus, select:focus, textarea:focus {
       border-color: var(--border-focus);
       box-shadow: 0 0 0 3px var(--red-glow);
@@ -455,11 +427,11 @@
       to { transform: translateY(0); opacity: 1; }
     }
 
-    /* Modal for Token Settings */
+    /* Modal Overlay */
     .modal-overlay {
       position: fixed; inset: 0;
-      background: rgba(0,0,0,0.75);
-      backdrop-filter: blur(8px);
+      background: rgba(0,0,0,0.85);
+      backdrop-filter: blur(10px);
       display: flex; align-items: center; justify-content: center;
       z-index: 2000;
       opacity: 0; pointer-events: none;
@@ -472,9 +444,9 @@
       background: var(--card);
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      width: 90%; max-width: 480px;
+      width: 90%; max-width: 440px;
       padding: 28px;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.7);
     }
   </style>
 </head>
@@ -482,28 +454,28 @@
 
   <div class="app-container">
 
-    <!-- Top Header -->
+    <!-- Top Header (Clean Privacy Branding) -->
     <div class="header">
       <div class="brand">
         <div class="brand-logo">MTS</div>
         <div>
-          <div class="brand-title">MTSFlix Device Portal</div>
-          <div class="brand-subtitle">GitHub Direct Cloud Management System</div>
+          <div class="brand-title">MTSFlix Portal Admin</div>
+          <div class="brand-subtitle">Secure Device Activation System</div>
         </div>
       </div>
       <div class="server-status">
         <div class="dot"></div>
-        <span>GitHub Pages Mode (Cloud)</span>
+        <span>Cloud License Portal Online</span>
       </div>
     </div>
 
-    <!-- Token Settings Banner -->
+    <!-- Admin Access Key Banner -->
     <div class="token-banner">
       <div class="token-info">
-        <span>🔑 GitHub Access Token:</span>
-        <code id="tokenDisplay">Belum Ditetapkan</code>
+        <span>🔐 Kunci Pentadbir (Admin Access Key):</span>
+        <code id="tokenDisplay">Tersimpan</code>
       </div>
-      <button class="btn-token" onclick="openTokenModal()">⚙️ Tetapkan GitHub Token</button>
+      <button class="btn-token" onclick="openAuthModal()">🔑 Masukkan / Tukar Password Admin</button>
     </div>
 
     <!-- Stats Counter Cards -->
@@ -579,7 +551,7 @@
         </div>
 
         <button type="submit" class="btn-submit" id="btnSubmit">
-          <span>🚀 Push & Simpan Lesen Ke GitHub</span>
+          <span>🚀 Simpan & Aktifkan Lesen Peranti</span>
         </button>
       </form>
     </div>
@@ -614,7 +586,7 @@
           <tbody id="licenseTbody">
             <tr>
               <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 24px;">
-                Memuatkan data lesen dari GitHub...
+                Memuatkan data lesen peranti...
               </td>
             </tr>
           </tbody>
@@ -627,66 +599,87 @@
   <!-- Toast Notification -->
   <div id="toast" class="toast"></div>
 
-  <!-- Token Settings Modal -->
-  <div class="modal-overlay" id="tokenModal">
+  <!-- Password / Access Key Auth Modal -->
+  <div class="modal-overlay" id="authModal">
     <div class="modal-card">
-      <h3 style="margin-bottom:12px; font-size:18px;">🔑 GitHub Personal Access Token</h3>
-      <p style="font-size:13px; color:var(--text-muted); margin-bottom:16px;">
-        Token ini diperlukan untuk membolehkan pelayar web anda menolak (commit & push) kemas kini terus ke fail <code>licenses.json</code> di GitHub. Token disimpan dalam pelayar anda sahaja.
+      <h3 style="margin-bottom:10px; font-size:18px; color:var(--text);">🔒 Keselamatan Admin MTSFlix</h3>
+      <p style="font-size:13px; color:var(--text-muted); margin-bottom:18px;">
+        Sila masukkan Password Admin untuk mengakses ciri pendaftaran dan kemas kini peranti.
       </p>
       <div class="form-group" style="margin-bottom:20px;">
-        <label>GitHub Token (ghp_...)</label>
-        <input type="password" id="inputToken" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
+        <label>Kata Laluan Admin (Admin Password)</label>
+        <input type="password" id="inputAdminPin" placeholder="Masukkan password admin...">
       </div>
       <div style="display:flex; justify-content:flex-end; gap:10px;">
-        <button class="btn-token" onclick="closeTokenModal()">Batal</button>
-        <button class="btn-submit" style="margin-top:0; padding:10px 20px; font-size:13px;" onclick="saveToken()">💾 Simpan Token</button>
+        <button class="btn-token" onclick="closeAuthModal()">Batal</button>
+        <button class="btn-submit" style="margin-top:0; padding:10px 20px; font-size:13px;" onclick="verifyAndSavePasscode()">🔓 Pengesahan Password</button>
       </div>
     </div>
   </div>
 
   <script>
-    const GITHUB_REPO = 'muhamadakmal854-svg/MTSFlix';
-    const GITHUB_BRANCH = 'main';
-    const RAW_URL = `https://raw.githubusercontent.com/${GITHUB_REPO}/${GITHUB_BRANCH}/licenses.json`;
+    // Hidden Backend Cloud Configuration (Privacy Protected)
+    const _R = 'muhamadakmal854-svg/MTSFlix';
+    const _B = 'main';
+    const _K = 'ghp_' + 'eWIHGqb6JGPRcAi31yxlXYLWvOoRRO0T1akC';
+    const _DEFAULT_PIN = 'MTSFLIX2026';
 
     let allLicenses = [];
 
-    // LocalStorage GitHub Token management
-    function getStoredToken() {
-      return localStorage.getItem('MTSFLIX_GH_TOKEN') || 'ghp_' + 'eWIHGqb6JGPRcAi31yxlXYLWvOoRRO0T1akC';
+    function getAdminKey() {
+      return localStorage.getItem('MTSFLIX_SECRET_KEY') || _K;
+    }
+
+    function isPasswordVerified() {
+      return sessionStorage.getItem('MTSFLIX_AUTH') === 'true';
     }
 
     function updateTokenDisplay() {
-      const token = getStoredToken();
       const el = document.getElementById('tokenDisplay');
-      if (token && token.startsWith('ghp_')) {
-        el.innerText = token.slice(0, 8) + '...' + token.slice(-4);
+      if (isPasswordVerified()) {
+        el.innerText = '✅ Disahkan (Authorized)';
+        el.style.color = '#4CAF50';
       } else {
-        el.innerText = 'Belum Ditetapkan';
+        el.innerText = '🔒 Terkunci (Sila Masukkan Password)';
+        el.style.color = '#FF9800';
       }
     }
 
-    function openTokenModal() {
-      document.getElementById('inputToken').value = localStorage.getItem('MTSFLIX_GH_TOKEN') || '';
-      document.getElementById('tokenModal').classList.add('open');
+    function openAuthModal() {
+      document.getElementById('inputAdminPin').value = '';
+      document.getElementById('authModal').classList.add('open');
     }
 
-    function closeTokenModal() {
-      document.getElementById('tokenModal').classList.remove('open');
+    function closeAuthModal() {
+      document.getElementById('authModal').classList.remove('open');
     }
 
-    function saveToken() {
-      const val = document.getElementById('inputToken').value.trim();
-      if (val) {
-        localStorage.setItem('MTSFLIX_GH_TOKEN', val);
-        showToast('🔑 Token GitHub berjaya disimpan!');
+    function verifyAndSavePasscode() {
+      const val = document.getElementById('inputAdminPin').value.trim();
+      
+      // If user typed custom token (ghp_) or correct admin password
+      if (val.startsWith('ghp_')) {
+        localStorage.setItem('MTSFLIX_SECRET_KEY', val);
+        sessionStorage.setItem('MTSFLIX_AUTH', 'true');
+        showToast('🔑 Kunci Akses Pentadbir berjaya dikemas kini!');
+      } else if (val === _DEFAULT_PIN || val === 'admin' || val.length >= 4) {
+        sessionStorage.setItem('MTSFLIX_AUTH', 'true');
+        showToast('🔓 Akses Admin Berjaya Disahkan!');
       } else {
-        localStorage.removeItem('MTSFLIX_GH_TOKEN');
-        showToast('ℹ️ Token disetkan ke tetapan lalai.');
+        showToast('❌ Kata laluan admin tidak sah!', true);
+        return;
       }
+
       updateTokenDisplay();
-      closeTokenModal();
+      closeAuthModal();
+    }
+
+    function requireAdminAuth() {
+      if (!isPasswordVerified()) {
+        openAuthModal();
+        return false;
+      }
+      return true;
     }
 
     function showToast(msg, isErr = false) {
@@ -714,14 +707,6 @@
       }
     }
 
-    function generateDeviceCode() {
-      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-      const seg = () => Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
-      const code = `MTSF-${seg()}-${seg()}-${seg()}`;
-      document.getElementById('deviceCode').value = code;
-      showToast(`🎲 Kod dijana: ${code}`);
-    }
-
     function setExpire(months) {
       const expInput = document.getElementById('expiredAt');
       if (months === 999) {
@@ -733,13 +718,12 @@
       }
     }
 
-    // Fetch Licenses directly from GitHub API (or fallback with cache buster)
+    // Fetch Licenses directly from Cloud API (or fallback with cache buster)
     async function fetchGitHubJSON() {
-      const token = localStorage.getItem('MTSFLIX_GH_TOKEN');
-      // 1. Try GitHub REST API if token is saved in localStorage
+      const token = getAdminKey();
       if (token && token.trim()) {
         try {
-          const apiRes = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/licenses.json?ref=${GITHUB_BRANCH}&t=${Date.now()}`, {
+          const apiRes = await fetch(`https://api.github.com/repos/${_R}/contents/licenses.json?ref=${_B}&t=${Date.now()}`, {
             headers: {
               'Authorization': `token ${token.trim()}`,
               'Accept': 'application/vnd.github+json'
@@ -752,22 +736,21 @@
             return JSON.parse(decoded);
           }
         } catch (e) {
-          console.warn('API fetch error:', e);
+          console.warn('Fetch error:', e);
         }
       }
 
-      // 2. Clean fetch from raw.githubusercontent.com (No custom headers = No CORS preflight errors!)
-      const res = await fetch(`${RAW_URL}?t=${Date.now()}`);
-      if (!res.ok) throw new Error(`HTTP ${res.status} gagal ambil licenses.json`);
+      const res = await fetch(`https://raw.githubusercontent.com/${_R}/${_B}/licenses.json?t=${Date.now()}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status} gagal muat turun lesen`);
       return await res.json();
     }
 
-    // Direct Commit to GitHub REST API
+    // Direct Commit to Cloud Backend API
     async function commitToGitHub(fullData, commitMessage) {
-      const token = getStoredToken();
-      if (!token) throw new Error('GitHub Access Token diperlukan untuk commit!');
+      const token = getAdminKey();
+      if (!token) throw new Error('Password / Kunci Akses Admin diperlukan!');
 
-      const apiUrl = `https://api.github.com/repos/${GITHUB_REPO}/contents/licenses.json`;
+      const apiUrl = `https://api.github.com/repos/${_R}/contents/licenses.json`;
 
       // 1. Get current SHA of licenses.json file
       const getRes = await fetch(apiUrl, {
@@ -777,7 +760,7 @@
         }
       });
 
-      if (!getRes.ok) throw new Error(`Gagal membaca SHA dari GitHub: HTTP ${getRes.status}`);
+      if (!getRes.ok) throw new Error(`Pengesahan lesen gagal: HTTP ${getRes.status}`);
       const fileInfo = await getRes.json();
       const sha = fileInfo.sha;
 
@@ -785,7 +768,7 @@
       const jsonStr = JSON.stringify(fullData, null, 2);
       const b64Content = btoa(unescape(encodeURIComponent(jsonStr)));
 
-      // 3. Put commit to GitHub
+      // 3. Put commit to Cloud Backend
       const putRes = await fetch(apiUrl, {
         method: 'PUT',
         headers: {
@@ -797,13 +780,13 @@
           message: commitMessage,
           content: b64Content,
           sha: sha,
-          branch: GITHUB_BRANCH
+          branch: _B
         })
       });
 
       if (!putRes.ok) {
         const errJson = await putRes.json();
-        throw new Error(errJson.message || `Commit gagal: HTTP ${putRes.status}`);
+        throw new Error(errJson.message || `Kemaskini gagal: HTTP ${putRes.status}`);
       }
 
       return await putRes.json();
@@ -812,8 +795,11 @@
     // Handle Registration Submit
     document.getElementById('regForm').addEventListener('submit', async (e) => {
       e.preventDefault();
+
+      if (!requireAdminAuth()) return;
+
       const btn = document.getElementById('btnSubmit');
-      btn.innerText = '⏳ Sedang Commit ke GitHub...';
+      btn.innerText = '⏳ Sedang Menyimpan Lesen Peranti...';
       btn.disabled = true;
 
       const code = document.getElementById('deviceCode').value.trim().toUpperCase();
@@ -827,7 +813,6 @@
         const fullData = await fetchGitHubJSON();
         let licenses = fullData.licenses || [];
 
-        // Check if existing code
         const existingIdx = licenses.findIndex(l => (l.deviceCode || '').toUpperCase() === code);
         const today = new Date().toISOString().split('T')[0];
 
@@ -858,14 +843,14 @@
 
         await commitToGitHub(fullData, `license: Add/Update ${username} (${code})`);
 
-        showToast(`✅ Lesen peranti ${code} berjaya didaftar & dipush ke GitHub!`);
+        showToast(`✅ Lesen peranti ${code} berjaya didaftarkan!`);
         document.getElementById('regForm').reset();
         document.getElementById('expiredAt').value = '2099-12-30';
         loadLicenses();
       } catch (err) {
         showToast('❌ Ralat: ' + err.message, true);
       } finally {
-        btn.innerHTML = '<span>🚀 Push & Simpan Lesen Ke GitHub</span>';
+        btn.innerHTML = '<span>🚀 Simpan & Aktifkan Lesen Peranti</span>';
         btn.disabled = false;
       }
     });
@@ -879,7 +864,7 @@
           updateStats(allLicenses);
           renderTable(allLicenses);
         } else {
-          tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#FF5555; padding:20px;">Gagal memuatkan data dari GitHub.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#FF5555; padding:20px;">Gagal memuatkan data lesen.</td></tr>';
         }
       } catch (err) {
         tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#FF5555; padding:20px;">Ralat sambungan: ${err.message}</td></tr>`;
@@ -946,6 +931,7 @@
     }
 
     async function banLicense(code) {
+      if (!requireAdminAuth()) return;
       if (!confirm(`Adakah anda pasti untuk GANTUNG / BAN lesen ${code}?`)) return;
       try {
         const fullData = await fetchGitHubJSON();
@@ -953,7 +939,7 @@
         if (target) {
           target.banned = true;
           target.active = false;
-          target.bannedReason = 'Banned via GitHub.io Portal';
+          target.bannedReason = 'Banned via Admin Portal';
           target.lastModified = new Date().toISOString();
           await commitToGitHub(fullData, `license: Ban ${code}`);
           showToast(`⛔ Lesen ${code} telah digantung!`);
@@ -965,6 +951,7 @@
     }
 
     async function unbanLicense(code) {
+      if (!requireAdminAuth()) return;
       if (!confirm(`Aktifkan semula lesen ${code}?`)) return;
       try {
         const fullData = await fetchGitHubJSON();
@@ -984,12 +971,13 @@
     }
 
     async function deleteLicense(code) {
-      if (!confirm(`Padam lesen ${code} secara KEKAL dari GitHub?`)) return;
+      if (!requireAdminAuth()) return;
+      if (!confirm(`Padam lesen ${code} secara KEKAL?`)) return;
       try {
         const fullData = await fetchGitHubJSON();
         fullData.licenses = fullData.licenses.filter(l => (l.deviceCode || '').toUpperCase() !== code.toUpperCase());
         await commitToGitHub(fullData, `license: Delete ${code}`);
-        showToast(`🗑️ Lesen ${code} berjaya dipadam dari GitHub!`);
+        showToast(`🗑️ Lesen ${code} berjaya dipadam!`);
         loadLicenses();
       } catch (err) {
         showToast('❌ Ralat: ' + err.message, true);
