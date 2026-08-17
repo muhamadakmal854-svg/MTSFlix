@@ -1,7 +1,7 @@
 {
   "version": 1,
   "description": "MTSFlix Device License Registry",
-  "lastUpdated": "2026-08-18",
+  "lastUpdated": "2026-08-17",
   "licenses": [
     {
       "id": "LIC-20260816-CF758B3B",
@@ -310,6 +310,20 @@
       "deviceInfo": "SAMSUNG A07",
       "note": "VIP",
       "lastModified": "2026-08-17T23:17:41"
+    },
+    {
+      "id": "LIC-20260817-98ZKZ90D",
+      "deviceCode": "MTSF-8899-8989-8989",
+      "username": "TEST",
+      "email": "TEST@GMAIL.COM",
+      "expiredAt": "2099-12-30",
+      "active": true,
+      "banned": false,
+      "bannedReason": "",
+      "addedAt": "2026-08-17",
+      "deviceInfo": "Tidak dinyatakan",
+      "note": "",
+      "lastModified": "2026-08-17T20:03:52.893Z"
     }
   ]
 }
