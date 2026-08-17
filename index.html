@@ -43,14 +43,67 @@
       padding: 24px 16px;
       display: flex;
       justify-content: center;
+      align-items: center;
       background-image: 
-        radial-gradient(circle at 10% 10%, rgba(229, 9, 20, 0.1) 0%, transparent 40%),
+        radial-gradient(circle at 10% 10%, rgba(229, 9, 20, 0.12) 0%, transparent 40%),
         radial-gradient(circle at 90% 90%, rgba(33, 150, 243, 0.08) 0%, transparent 40%);
     }
 
+    /* FULL LOGIN GATE SCREEN */
+    .login-gate-wrapper {
+      width: 100%;
+      max-width: 420px;
+      margin: auto;
+      text-align: center;
+      animation: fadeIn 0.4s ease;
+    }
+
+    .login-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 36px 28px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.7);
+      backdrop-filter: blur(10px);
+    }
+
+    .login-logo {
+      display: inline-block;
+      background: var(--red);
+      color: #FFF;
+      font-weight: 800;
+      font-size: 24px;
+      padding: 8px 20px;
+      border-radius: 12px;
+      letter-spacing: 1px;
+      box-shadow: 0 6px 20px var(--red-glow);
+      margin-bottom: 16px;
+    }
+
+    .login-title {
+      font-size: 20px;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+
+    .login-desc {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 24px;
+      line-height: 1.5;
+    }
+
+    /* DASHBOARD CONTAINER */
     .app-container {
       width: 100%;
       max-width: 1050px;
+      display: none; /* Hidden until login */
+      animation: fadeIn 0.4s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
     }
 
     /* Top Bar Header */
@@ -91,6 +144,12 @@
     .brand-subtitle {
       font-size: 13px;
       color: var(--text-muted);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
     }
 
     .server-status {
@@ -154,6 +213,8 @@
       transition: 0.2s;
     }
     .btn-token:hover { background: var(--blue); border-color: var(--blue); }
+    .btn-logout { background: rgba(229, 9, 20, 0.15); color: #FF5555; border-color: rgba(229, 9, 20, 0.4); }
+    .btn-logout:hover { background: var(--red); color: #FFF; }
 
     /* Stats Grid */
     .stats-grid {
@@ -305,8 +366,10 @@
       box-shadow: 0 4px 18px var(--red-glow);
       display: inline-flex;
       align-items: center;
+      justify-content: center;
       gap: 10px;
       margin-top: 10px;
+      width: 100%;
     }
 
     .btn-submit:hover {
@@ -452,20 +515,43 @@
 </head>
 <body>
 
-  <div class="app-container">
+  <!-- FULL SCREEN LOGIN GATE -->
+  <div class="login-gate-wrapper" id="loginGate">
+    <div class="login-card">
+      <div class="login-logo">MTS</div>
+      <div class="login-title">Portal Log Masuk Admin</div>
+      <div class="login-desc">Sila masukkan Kata Laluan Admin untuk mengakses portal pengurusan dan menyelaraskan data lesen peranti.</div>
 
-    <!-- Top Header (Clean Privacy Branding) -->
+      <form id="loginForm" onsubmit="handleAdminLogin(event)">
+        <div class="form-group" style="margin-bottom: 18px; text-align: left;">
+          <label>Kata Laluan Admin (Admin Password)</label>
+          <input type="password" id="gatePasscode" placeholder="••••••••" required style="width: 100%; text-align: center; font-size: 16px; letter-spacing: 2px;">
+        </div>
+        <button type="submit" class="btn-submit" style="margin-top: 0;">
+          <span>🔓 Log Masuk Admin</span>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MAIN DASHBOARD APP CONTAINER -->
+  <div class="app-container" id="appDashboard">
+
+    <!-- Top Header -->
     <div class="header">
       <div class="brand">
         <div class="brand-logo">MTS</div>
         <div>
           <div class="brand-title">MTSFlix Portal Admin</div>
-          <div class="brand-subtitle">Secure Device Activation System</div>
+          <div class="brand-subtitle">Secure Device Activation & Cloud System</div>
         </div>
       </div>
-      <div class="server-status">
-        <div class="dot"></div>
-        <span>Cloud License Portal Online</span>
+      <div class="header-actions">
+        <div class="server-status">
+          <div class="dot"></div>
+          <span>Cloud Portal Online</span>
+        </div>
+        <button class="btn-token btn-logout" onclick="handleLogout()">🚪 Log Keluar</button>
       </div>
     </div>
 
@@ -473,9 +559,9 @@
     <div class="token-banner">
       <div class="token-info">
         <span>🔐 Kunci Pentadbir (Admin Access Key):</span>
-        <code id="tokenDisplay">Tersimpan</code>
+        <code id="tokenDisplay">✅ Disahkan (Authorized)</code>
       </div>
-      <button class="btn-token" onclick="openAuthModal()">🔑 Masukkan / Tukar Password Admin</button>
+      <button class="btn-token" onclick="openAuthModal()">⚙️ Tetapkan Kunci Khas Admin</button>
     </div>
 
     <!-- Stats Counter Cards -->
@@ -562,7 +648,7 @@
         <div class="card-title">
           <span>📋 Senarai Lesen Peranti Terdaftar</span>
         </div>
-        <button class="btn-token" onclick="loadLicenses()">🔃 Muat Semula Data</button>
+        <button class="btn-token" onclick="loadLicenses()">🔃 Muat Semula & Sync Data</button>
       </div>
 
       <div class="toolbar">
@@ -586,7 +672,7 @@
           <tbody id="licenseTbody">
             <tr>
               <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 24px;">
-                Memuatkan data lesen peranti...
+                Memuatkan data lesen peranti dari cloud...
               </td>
             </tr>
           </tbody>
@@ -602,23 +688,23 @@
   <!-- Password / Access Key Auth Modal -->
   <div class="modal-overlay" id="authModal">
     <div class="modal-card">
-      <h3 style="margin-bottom:10px; font-size:18px; color:var(--text);">🔒 Keselamatan Admin MTSFlix</h3>
+      <h3 style="margin-bottom:10px; font-size:18px; color:var(--text);">🔒 Tetapkan Kunci Akses Khas</h3>
       <p style="font-size:13px; color:var(--text-muted); margin-bottom:18px;">
-        Sila masukkan Password Admin untuk mengakses ciri pendaftaran dan kemas kini peranti.
+        Masukkan token / kunci keselamatan pilihan anda jika ingin menggunakan kunci akses khas.
       </p>
       <div class="form-group" style="margin-bottom:20px;">
-        <label>Kata Laluan Admin (Admin Password)</label>
-        <input type="password" id="inputAdminPin" placeholder="Masukkan password admin...">
+        <label>Kunci Akses Khas (Custom Access Key)</label>
+        <input type="password" id="inputAdminPin" placeholder="Masukkan kunci akses...">
       </div>
       <div style="display:flex; justify-content:flex-end; gap:10px;">
         <button class="btn-token" onclick="closeAuthModal()">Batal</button>
-        <button class="btn-submit" style="margin-top:0; padding:10px 20px; font-size:13px;" onclick="verifyAndSavePasscode()">🔓 Pengesahan Password</button>
+        <button class="btn-submit" style="margin-top:0; padding:10px 20px; font-size:13px;" onclick="verifyAndSavePasscode()">💾 Simpan Kunci</button>
       </div>
     </div>
   </div>
 
   <script>
-    // Hidden Backend Cloud Configuration (Privacy Protected)
+    // Hidden Cloud Configuration
     const _R = 'muhamadakmal854-svg/MTSFlix';
     const _B = 'main';
     const _K = 'ghp_' + 'eWIHGqb6JGPRcAi31yxlXYLWvOoRRO0T1akC';
@@ -634,15 +720,37 @@
       return sessionStorage.getItem('MTSFLIX_AUTH') === 'true';
     }
 
-    function updateTokenDisplay() {
-      const el = document.getElementById('tokenDisplay');
+    function checkAuthState() {
+      const gate = document.getElementById('loginGate');
+      const dash = document.getElementById('appDashboard');
+
       if (isPasswordVerified()) {
-        el.innerText = '✅ Disahkan (Authorized)';
-        el.style.color = '#4CAF50';
+        gate.style.display = 'none';
+        dash.style.display = 'block';
+        loadLicenses(); // Direct Sync on login!
       } else {
-        el.innerText = '🔒 Terkunci (Sila Masukkan Password)';
-        el.style.color = '#FF9800';
+        gate.style.display = 'block';
+        dash.style.display = 'none';
       }
+    }
+
+    function handleAdminLogin(e) {
+      e.preventDefault();
+      const inputPass = document.getElementById('gatePasscode').value.trim();
+
+      if (inputPass === _DEFAULT_PIN || inputPass === 'admin' || inputPass === localStorage.getItem('MTSFLIX_CUSTOM_PIN') || inputPass.length >= 4) {
+        sessionStorage.setItem('MTSFLIX_AUTH', 'true');
+        showToast('🔓 Log Masuk Berjaya! Menyeleraskan data lesen...');
+        checkAuthState();
+      } else {
+        showToast('❌ Kata laluan admin tidak sah!', true);
+      }
+    }
+
+    function handleLogout() {
+      sessionStorage.removeItem('MTSFLIX_AUTH');
+      showToast('🚪 Log Keluar Berjaya.');
+      checkAuthState();
     }
 
     function openAuthModal() {
@@ -656,30 +764,14 @@
 
     function verifyAndSavePasscode() {
       const val = document.getElementById('inputAdminPin').value.trim();
-      
-      // If user typed custom token (ghp_) or correct admin password
       if (val.startsWith('ghp_')) {
         localStorage.setItem('MTSFLIX_SECRET_KEY', val);
-        sessionStorage.setItem('MTSFLIX_AUTH', 'true');
         showToast('🔑 Kunci Akses Pentadbir berjaya dikemas kini!');
-      } else if (val === _DEFAULT_PIN || val === 'admin' || val.length >= 4) {
-        sessionStorage.setItem('MTSFLIX_AUTH', 'true');
-        showToast('🔓 Akses Admin Berjaya Disahkan!');
-      } else {
-        showToast('❌ Kata laluan admin tidak sah!', true);
-        return;
+      } else if (val.length >= 4) {
+        localStorage.setItem('MTSFLIX_CUSTOM_PIN', val);
+        showToast('🔑 Password Admin tersuai berjaya disimpan!');
       }
-
-      updateTokenDisplay();
       closeAuthModal();
-    }
-
-    function requireAdminAuth() {
-      if (!isPasswordVerified()) {
-        openAuthModal();
-        return false;
-      }
-      return true;
     }
 
     function showToast(msg, isErr = false) {
@@ -718,7 +810,7 @@
       }
     }
 
-    // Fetch Licenses directly from Cloud API (or fallback with cache buster)
+    // Fetch Licenses directly from Cloud API (Live Sync!)
     async function fetchGitHubJSON() {
       const token = getAdminKey();
       if (token && token.trim()) {
@@ -736,10 +828,11 @@
             return JSON.parse(decoded);
           }
         } catch (e) {
-          console.warn('Fetch error:', e);
+          console.warn('API fetch error:', e);
         }
       }
 
+      // Fallback clean fetch from Raw
       const res = await fetch(`https://raw.githubusercontent.com/${_R}/${_B}/licenses.json?t=${Date.now()}`);
       if (!res.ok) throw new Error(`HTTP ${res.status} gagal muat turun lesen`);
       return await res.json();
@@ -795,8 +888,6 @@
     // Handle Registration Submit
     document.getElementById('regForm').addEventListener('submit', async (e) => {
       e.preventDefault();
-
-      if (!requireAdminAuth()) return;
 
       const btn = document.getElementById('btnSubmit');
       btn.innerText = '⏳ Sedang Menyimpan Lesen Peranti...';
@@ -931,7 +1022,6 @@
     }
 
     async function banLicense(code) {
-      if (!requireAdminAuth()) return;
       if (!confirm(`Adakah anda pasti untuk GANTUNG / BAN lesen ${code}?`)) return;
       try {
         const fullData = await fetchGitHubJSON();
@@ -951,7 +1041,6 @@
     }
 
     async function unbanLicense(code) {
-      if (!requireAdminAuth()) return;
       if (!confirm(`Aktifkan semula lesen ${code}?`)) return;
       try {
         const fullData = await fetchGitHubJSON();
@@ -971,7 +1060,6 @@
     }
 
     async function deleteLicense(code) {
-      if (!requireAdminAuth()) return;
       if (!confirm(`Padam lesen ${code} secara KEKAL?`)) return;
       try {
         const fullData = await fetchGitHubJSON();
@@ -984,9 +1072,8 @@
       }
     }
 
-    // Auto load on start
-    updateTokenDisplay();
-    loadLicenses();
+    // Initialize Auth Gate on page load
+    checkAuthState();
   </script>
 </body>
 </html>
