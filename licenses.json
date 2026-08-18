@@ -1,7 +1,7 @@
 {
   "version": 1,
   "description": "MTSFlix Device License Registry",
-  "lastUpdated": "2026-08-17",
+  "lastUpdated": "2026-08-18",
   "licenses": [
     {
       "id": "LIC-20260816-CF758B3B",
@@ -310,6 +310,20 @@
       "deviceInfo": "SAMSUNG A07",
       "note": "VIP",
       "lastModified": "2026-08-17T23:17:41"
+    },
+    {
+      "id": "LIC-20260818-9Y2BE44L",
+      "deviceCode": "MTSF-5E9A-5766-C7C8",
+      "username": "e.youssef",
+      "email": "elkahri4@gmail.com",
+      "expiredAt": "2099-12-30",
+      "active": true,
+      "banned": false,
+      "bannedReason": "",
+      "addedAt": "2026-08-18",
+      "deviceInfo": "redmi pad 2 pro",
+      "note": "Username Telegram: @Shadotec | from Morocco",
+      "lastModified": "2026-08-18T00:20:22.320Z"
     }
   ]
 }
