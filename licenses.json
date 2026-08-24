@@ -1,7 +1,7 @@
 {
   "version": 1,
   "description": "MTSFlix Device License Registry",
-  "lastUpdated": "2026-08-19",
+  "lastUpdated": "2026-08-24",
   "licenses": [
     {
       "id": "LIC-20260816-CF758B3B",
@@ -338,6 +338,20 @@
       "deviceInfo": "HY300Plus",
       "note": "Android Projector",
       "lastModified": "2026-08-19T10:00:02.758Z"
+    },
+    {
+      "id": "LIC-20260824-00PJ6U4G",
+      "deviceCode": "MTSF-D1EC-529A-BC0D",
+      "username": "Paklong",
+      "email": "pklong@gmail.com",
+      "expiredAt": "2099-12-30",
+      "active": true,
+      "banned": false,
+      "bannedReason": "",
+      "addedAt": "2026-08-24",
+      "deviceInfo": "Android",
+      "note": "done",
+      "lastModified": "2026-08-24T09:05:45.375Z"
     }
   ]
 }
