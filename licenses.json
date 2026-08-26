@@ -1,7 +1,7 @@
 {
   "version": 1,
   "description": "MTSFlix Device License Registry",
-  "lastUpdated": "2026-08-24",
+  "lastUpdated": "2026-08-26",
   "licenses": [
     {
       "id": "LIC-20260816-CF758B3B",
@@ -352,6 +352,20 @@
       "deviceInfo": "Android",
       "note": "done",
       "lastModified": "2026-08-24T09:05:45.375Z"
+    },
+    {
+      "id": "LIC-20260826-Z9X1BKLW",
+      "deviceCode": "MTSF-9E73-D613-0F1F",
+      "username": "adamm",
+      "email": "adamharros0053@gmail.com",
+      "expiredAt": "2099-12-30",
+      "active": true,
+      "banned": false,
+      "bannedReason": "",
+      "addedAt": "2026-08-26",
+      "deviceInfo": "tecno kl4",
+      "note": "VIP",
+      "lastModified": "2026-08-26T03:37:57.934Z"
     }
   ]
 }
