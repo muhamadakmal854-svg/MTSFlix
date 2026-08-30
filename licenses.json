@@ -1,7 +1,7 @@
 {
   "version": 1,
   "description": "MTSFlix Device License Registry",
-  "lastUpdated": "2026-08-26",
+  "lastUpdated": "2026-08-30",
   "licenses": [
     {
       "id": "LIC-20260816-CF758B3B",
@@ -366,6 +366,20 @@
       "deviceInfo": "tecno kl4",
       "note": "VIP",
       "lastModified": "2026-08-26T03:37:57.934Z"
+    },
+    {
+      "id": "LIC-20260830-A0Y7MIJU",
+      "deviceCode": "MTSF-6B62-3C03-C659",
+      "username": "bahau22",
+      "email": "bahau22@gmail.com",
+      "expiredAt": "2099-12-30",
+      "active": true,
+      "banned": false,
+      "bannedReason": "",
+      "addedAt": "2026-08-30",
+      "deviceInfo": "vivo x300 pro",
+      "note": "VIP",
+      "lastModified": "2026-08-30T05:50:28.777Z"
     }
   ]
 }
