@@ -394,6 +394,20 @@
       "deviceInfo": "tv box",
       "note": "vip",
       "lastModified": "2026-09-05T01:35:01.213Z"
+    },
+    {
+      "id": "LIC-20260905-AA85OUHB",
+      "deviceCode": "MTSF-64CF-8F56-C35A",
+      "username": "TV2 Kapt Taufik",
+      "email": "tv2@gmail.com",
+      "expiredAt": "2099-12-30",
+      "active": true,
+      "banned": false,
+      "bannedReason": "",
+      "addedAt": "2026-09-05",
+      "deviceInfo": "tv box",
+      "note": "VIP",
+      "lastModified": "2026-09-05T01:35:54.228Z"
     }
   ]
 }
