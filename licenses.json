@@ -1,7 +1,7 @@
 {
   "version": 1,
   "description": "MTSFlix Device License Registry",
-  "lastUpdated": "2026-08-30",
+  "lastUpdated": "2026-09-05",
   "licenses": [
     {
       "id": "LIC-20260816-CF758B3B",
@@ -380,6 +380,20 @@
       "deviceInfo": "vivo x300 pro",
       "note": "VIP",
       "lastModified": "2026-08-30T05:50:28.777Z"
+    },
+    {
+      "id": "LIC-20260905-OVX6349S",
+      "deviceCode": "MTSF-A845-C2F0-E8DD",
+      "username": "TV1 Kapt Taufik",
+      "email": "tv1@gmail.com",
+      "expiredAt": "2099-12-30",
+      "active": true,
+      "banned": false,
+      "bannedReason": "",
+      "addedAt": "2026-09-05",
+      "deviceInfo": "tv box",
+      "note": "vip",
+      "lastModified": "2026-09-05T01:35:01.213Z"
     }
   ]
 }
