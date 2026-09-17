@@ -72,6 +72,12 @@ jobs:
 
       - name: 🤖 Setup Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools'
+        continue-on-error: true
+
+      - name: 📝 Accept Android Licenses
+        run: yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || yes | sdkmanager --licenses || true
 
       # ─── Determine Version ─────────────────────────────────────────────────
       - name: 🏷️ Determine Version
