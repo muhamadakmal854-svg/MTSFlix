@@ -341,9 +341,10 @@ class ProfilePickerActivity : AppCompatActivity() {
         lifecycleScope.launch(Dispatchers.IO) {
             ProfileManager.setActiveProfile(this@ProfilePickerActivity, profile)
             try {
-                val syncKey = ProfileManager.cloudSyncKey(email, profile.id)
-                com.mts.mtsflix.cloud.MTSFlixCloudSync.restoreWatchHistoryByKey(
-                    this@ProfilePickerActivity, syncKey)
+                if (email.isNotBlank()) {
+                    com.mts.mtsflix.cloud.MTSFlixCloudSync.restoreWatchHistory(
+                        this@ProfilePickerActivity, email)
+                }
             } catch (e: Exception) {}
             withContext(Dispatchers.Main) {
                 progressBar.visibility = View.GONE

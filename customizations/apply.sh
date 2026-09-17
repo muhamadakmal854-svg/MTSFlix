@@ -1600,8 +1600,107 @@ if os.path.exists(tv_pair_path):
             print('  OK: TVPairingActivity.kt patched to register device on Google login')
 PYEOF
 
+# ============================================================
+# MTSFlix v1.1.6 — IPTV / DRM Live Stream Support
+# ============================================================
+
+echo "[v1.1.6 Step 25] IPTV DRM Support — register IPTVSourceActivity in AndroidManifest..."
+python3 - << 'PYEOF'
+import os
+cs_dir = os.environ.get('CS_DIR', 'cloudstream')
+mtsflix_dir = os.environ.get('MTSFLIX_DIR', '.')
+
+# 25a. Register IPTVSourceActivity in AndroidManifest
+path = cs_dir + '/app/src/main/AndroidManifest.xml'
+if os.path.exists(path):
+    c = open(path, encoding='utf-8').read()
+    new_act = ''
+    if 'IPTVSourceActivity' not in c:
+        new_act += '''
+        <!-- MTSFlix v1.1.6: IPTV Source Manager -->
+        <activity
+            android:name="com.mts.mtsflix.iptv.IPTVSourceActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboard|keyboardHidden"
+            android:theme="@style/AppTheme" />'''
+
+    if new_act:
+        c = c.replace('</application>', new_act + '\n    </application>')
+        open(path, 'w', encoding='utf-8').write(c)
+        print('  OK: AndroidManifest.xml updated with IPTVSourceActivity')
+PYEOF
+
+echo "[v1.1.6 Step 26] IPTV — add settings preference entry..."
+python3 - << 'PYEOF'
+import os
+cs_dir = os.environ.get('CS_DIR', 'cloudstream')
+
+prefs_path = cs_dir + '/app/src/main/res/xml/settings_account.xml'
+if os.path.exists(prefs_path):
+    c = open(prefs_path, encoding='utf-8').read()
+    iptv_pref = '''
+    <!-- MTSFlix v1.1.6: IPTV / Live TV -->
+    <PreferenceCategory
+        android:title="MTSFlix — IPTV / Live TV">
+
+        <Preference
+            android:key="mtsflix_iptv_sources_key"
+            android:title="📺 Urus Sumber IPTV / Live TV"
+            android:summary="Tambah playlist M3U untuk Live TV dengan sokongan DRM ClearKey &amp; Widevine" />
+
+    </PreferenceCategory>'''
+
+    if 'mtsflix_iptv_sources_key' not in c:
+        c = c.replace('</PreferenceScreen>', iptv_pref + '\n</PreferenceScreen>')
+        open(prefs_path, 'w', encoding='utf-8').write(c)
+        print('  OK: IPTV preference added to settings_account.xml')
+PYEOF
+
+echo "[v1.1.6 Step 27] IPTV — patch SettingsAccount to launch IPTVSourceActivity..."
+python3 - << 'PYEOF'
+import os
+cs_dir = os.environ.get('CS_DIR', 'cloudstream')
+mtsflix_dir = os.environ.get('MTSFLIX_DIR', '.')
+
+kt_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/ui/settings/SettingsAccount.kt'
+if os.path.exists(kt_path):
+    c = open(kt_path, encoding='utf-8').read()
+    if 'mtsflix_iptv_sources_key' not in c:
+        handler = '''
+        findPreference<androidx.preference.Preference>("mtsflix_iptv_sources_key")?.setOnPreferenceClickListener {
+            startActivity(android.content.Intent(activity, com.mts.mtsflix.iptv.IPTVSourceActivity::class.java))
+            true
+        }'''
+        anchor = 'for ((key, api) in syncApis) {'
+        if anchor in c:
+            c = c.replace(anchor, handler + '\n        ' + anchor)
+            open(kt_path, 'w', encoding='utf-8').write(c)
+            print('  OK: SettingsAccount.kt patched with IPTV source manager handler')
+PYEOF
+
+echo "[v1.1.6 Step 28] IPTV — patch CloudStreamApp to init IPTVManager on startup..."
+python3 - << 'PYEOF'
+import os
+cs_dir = os.environ.get('CS_DIR', 'cloudstream')
+
+app_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/CloudStreamApp.kt'
+if os.path.exists(app_path):
+    c = open(app_path, encoding='utf-8').read()
+    if 'IPTVManager' not in c:
+        anchor = 'super.onCreate()'
+        patch = '''super.onCreate()
+        // MTSFlix v1.1.6: Initialise IPTV Manager (load M3U sources)
+        try {
+            com.mts.mtsflix.iptv.IPTVManager.init(this)
+        } catch (e: Exception) { /* silent */ }'''
+        if anchor in c:
+            c = c.replace(anchor, patch, 1)
+            open(app_path, 'w', encoding='utf-8').write(c)
+            print('  OK: CloudStreamApp.kt patched to init IPTVManager on startup')
+PYEOF
+
 echo "======================================================"
-echo "    MTSFlix Customization Complete! v1.1.5"
+echo "    MTSFlix Customization Complete! v1.1.6"
 echo ""
 echo "    v1.1.4 Features:"
 echo "    Provider Lock PIN + Confirmation + Old PIN check"
@@ -1616,4 +1715,12 @@ echo "    ⭐ Quick Favorites Provider Bar (long-press)"
 echo "    🍿 Auto-Skip Intro + Auto-Next Episode"
 echo "    🔔 Watchlist Episode Notifications (every 6h)"
 echo "    🛡️ Remote Device Management (revoke sessions)"
+echo ""
+echo "    v1.1.6 NEW Features:"
+echo "    📺 IPTV / Live TV M3U Playlist Support"
+echo "    🔐 ClearKey DRM (org.w3.clearkey) Support"
+echo "    🔐 Widevine DRM (com.widevine.alpha) Support"
+echo "    📡 MPEG-DASH + HLS Stream Support"
+echo "    🌐 Custom User-Agent + HTTP Headers (EXTHTTP)"
+echo "    📋 KODIPROP Parsing (inputstream.adaptive)"
 echo "======================================================"
