@@ -214,7 +214,7 @@ if os.path.exists(repo_mgr_path):
         open(repo_mgr_path, 'w', encoding='utf-8').write(content)
         print("  OK: RepositoryManager.kt patched successfully")
 
-# 2. DataStoreHelper.kt (Auto sync history to cloud on every video watch & resume position change)
+# 2. DataStoreHelper.kt (Auto sync history & deletions to cloud on video watch, resume position change, and remove)
 dsh_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/utils/DataStoreHelper.kt'
 if os.path.exists(dsh_path):
     c = open(dsh_path, encoding='utf-8').read()
@@ -226,50 +226,148 @@ if os.path.exists(dsh_path):
             Thread { context?.let { com.mts.mtsflix.cloud.MTSFlixCloudSync.saveWatchHistory(it) } }.start()
         } catch (e: Exception) {}'''
 
-    # Hook 1: setLastWatched (Continue Watching row)
+    # Hook 1: setLastWatched (Continue Watching row - untombstone and sync)
     t_lw = 'isFromDownload\n            )\n        )'
     r_lw = '''isFromDownload
             )
         )
-        ''' + CLOUD_SYNC_CALL
-    if t_lw in c and 'saveWatchHistory' not in c:
+        try {
+            context?.let {
+                if (parentId != null) com.mts.mtsflix.cloud.MTSFlixCloudSync.unrecordDeletedResumeId(it, parentId)
+                Thread { com.mts.mtsflix.cloud.MTSFlixCloudSync.saveWatchHistory(it) }.start()
+            }
+        } catch (e: Exception) {}'''
+    if t_lw in c and 'unrecordDeletedResumeId' not in c:
         c = c.replace(t_lw, r_lw, 1)
         changed_dsh = True
 
-    # Also update existing saveWatchHistory calls to be on background thread (fix NetworkOnMainThreadException)
-    OLD_SYNC = 'try {\n            context?.let { com.mts.mtsflix.cloud.MTSFlixCloudSync.saveWatchHistory(it) }\n        } catch (e: Exception) {}'
-    if OLD_SYNC in c:
-        c = c.replace(OLD_SYNC, CLOUD_SYNC_CALL)
+    # Also update existing plain saveWatchHistory calls inside setLastWatched
+    old_lw_sync = '''isFromDownload
+            )
+        )
+        ''' + CLOUD_SYNC_CALL
+    if old_lw_sync in c:
+        c = c.replace(old_lw_sync, r_lw, 1)
         changed_dsh = True
 
-    # Hook 2: setViewPos (video seek position = evidence of watching)
+    # Hook 2: removeLastWatched (When card is removed from Continue Watching)
+    t_rlw = '''    fun removeLastWatched(parentId: Int?) {
+        if (parentId == null) return
+        removeKey("$currentAccount/$RESULT_RESUME_WATCHING", parentId.toString())
+    }'''
+    r_rlw = '''    fun removeLastWatched(parentId: Int?) {
+        if (parentId == null) return
+        removeKey("$currentAccount/$RESULT_RESUME_WATCHING", parentId.toString())
+        try {
+            context?.let { com.mts.mtsflix.cloud.MTSFlixCloudSync.deleteResumeWatching(it, parentId) }
+        } catch (e: Exception) {}
+    }'''
+    if t_rlw in c:
+        c = c.replace(t_rlw, r_rlw, 1)
+        changed_dsh = True
+
+    # Hook 3: deleteAllResumeStateIds (When user clicks Clear History)
+    t_dall = '''    fun deleteAllResumeStateIds() {
+        val folder = "$currentAccount/$RESULT_RESUME_WATCHING"
+        removeKeys(folder)
+    }'''
+    r_dall = '''    fun deleteAllResumeStateIds() {
+        val folder = "$currentAccount/$RESULT_RESUME_WATCHING"
+        val ids = getAllResumeStateIds() ?: emptyList()
+        removeKeys(folder)
+        try {
+            context?.let { com.mts.mtsflix.cloud.MTSFlixCloudSync.deleteAllResumeWatching(it, ids) }
+        } catch (e: Exception) {}
+    }'''
+    if t_dall in c:
+        c = c.replace(t_dall, r_dall, 1)
+        changed_dsh = True
+
+    # Hook 4: setViewPos (video seek position = evidence of watching)
     t_vp = 'setKey("$currentAccount/$VIDEO_POS_DUR", id.toString(), PosDur(pos, dur))'
     r_vp = 'setKey("$currentAccount/$VIDEO_POS_DUR", id.toString(), PosDur(pos, dur))\n        ' + CLOUD_SYNC_CALL
     if t_vp in c and 'VIDEO_POS_DUR' in c:
-        # Only replace in setViewPos function, check it's not already there
         if c.count(CLOUD_SYNC_CALL) < 2:
             c = c.replace(t_vp, r_vp, 1)
             changed_dsh = True
 
-    # Hook 3: setBookmarkedData (Watching, Completed, On-Hold, Dropped, Plan To Watch, Favorites)
+    # Hook 5: setBookmarkedData (Watching, Completed, On-Hold, Dropped, Plan To Watch, Favorites)
     t_bk = 'setKey("$currentAccount/$RESULT_WATCH_STATE_DATA", id.toString(), data)'
-    r_bk = 'setKey("$currentAccount/$RESULT_WATCH_STATE_DATA", id.toString(), data)\n        ' + CLOUD_SYNC_CALL
-    if t_bk in c:
+    r_bk = '''setKey("$currentAccount/$RESULT_WATCH_STATE_DATA", id.toString(), data)
+        try {
+            context?.let {
+                if (id != null) com.mts.mtsflix.cloud.MTSFlixCloudSync.unrecordDeletedBookmarkId(it, id)
+                Thread { com.mts.mtsflix.cloud.MTSFlixCloudSync.saveWatchHistory(it) }.start()
+            }
+        } catch (e: Exception) {}'''
+    if t_bk in c and 'unrecordDeletedBookmarkId' not in c:
         c = c.replace(t_bk, r_bk, 1)
         changed_dsh = True
 
-    # Hook 4: setWatchState (Watching, Completed, On-Hold, Dropped, Plan to Watch)
+    # Hook 6: deleteBookmarkedData (When bookmark is removed)
+    t_dbk = '''    fun deleteBookmarkedData(id: Int?) {
+        if (id == null) return
+        AccountManager.localListApi.requireLibraryRefresh = true
+        removeKey("$currentAccount/$RESULT_WATCH_STATE", id.toString())
+        removeKey("$currentAccount/$RESULT_WATCH_STATE_DATA", id.toString())
+    }'''
+    r_dbk = '''    fun deleteBookmarkedData(id: Int?) {
+        if (id == null) return
+        AccountManager.localListApi.requireLibraryRefresh = true
+        removeKey("$currentAccount/$RESULT_WATCH_STATE", id.toString())
+        removeKey("$currentAccount/$RESULT_WATCH_STATE_DATA", id.toString())
+        try {
+            context?.let { com.mts.mtsflix.cloud.MTSFlixCloudSync.deleteBookmark(it, id) }
+        } catch (e: Exception) {}
+    }'''
+    if t_dbk in c:
+        c = c.replace(t_dbk, r_dbk, 1)
+        changed_dsh = True
+
+    # Hook 7: setWatchState (Watching, Completed, On-Hold, Dropped, Plan to Watch)
     t_ws = 'setKey("$currentAccount/$RESULT_WATCH_STATE", id.toString(), state)'
     r_ws = 'setKey("$currentAccount/$RESULT_WATCH_STATE", id.toString(), state)\n        ' + CLOUD_SYNC_CALL
-    if t_ws in c:
+    if t_ws in c and r_ws not in c:
         c = c.replace(t_ws, r_ws, 1)
         changed_dsh = True
 
     if changed_dsh:
         open(dsh_path, 'w', encoding='utf-8').write(c)
-        print("  OK: DataStoreHelper.kt patched for background cloud sync on playback & bookmarks")
+        print("  OK: DataStoreHelper.kt patched for real-time cloud sync and deletion handling")
     else:
         print("  SKIP: DataStoreHelper.kt already patched")
+
+# 2b. Patch HomeParentItemAdapterPreview.kt for direct delete sync on card remove
+hpia_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/ui/home/HomeParentItemAdapterPreview.kt'
+if os.path.exists(hpia_path):
+    c_hpia = open(hpia_path, encoding='utf-8').read()
+    t_rm = '''                        // remove
+                        2 -> {
+                            val card = callback.card
+                            if (card is DataStoreHelper.ResumeWatchingResult) {
+                                DataStoreHelper.removeLastWatched(card.parentId)
+                                viewModel.reloadStored()
+                            }
+                        }'''
+    r_rm = '''                        // remove
+                        2 -> {
+                            val card = callback.card
+                            if (card is DataStoreHelper.ResumeWatchingResult) {
+                                DataStoreHelper.removeLastWatched(card.parentId)
+                                try {
+                                    card.parentId?.let { pid ->
+                                        callback.view.context?.let { ctx ->
+                                            com.mts.mtsflix.cloud.MTSFlixCloudSync.deleteResumeWatching(ctx, pid)
+                                        }
+                                    }
+                                } catch (e: Exception) {}
+                                viewModel.reloadStored()
+                            }
+                        }'''
+    if t_rm in c_hpia and 'deleteResumeWatching' not in c_hpia:
+        c_hpia = c_hpia.replace(t_rm, r_rm, 1)
+        open(hpia_path, 'w', encoding='utf-8').write(c_hpia)
+        print("  OK: HomeParentItemAdapterPreview.kt patched for direct cloud deletion sync")
 PYEOF
 
 # --- 5. Patch MainActivity.kt, SetupFragmentExtensions.kt & SetupFragmentLanguage.kt ---
