@@ -480,7 +480,7 @@ python3 - << 'PYEOF'
 import os, re
 cs_dir = os.environ.get('CS_DIR','cloudstream')
 
-# Hide Extensions section in SettingsFragment.kt to prevent URL theft
+# 6a. Hide Extensions section in SettingsFragment.kt to prevent URL theft
 settings_frag_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/ui/settings/SettingsFragment.kt'
 if os.path.exists(settings_frag_path):
     c = open(settings_frag_path, encoding='utf-8').read()
@@ -489,7 +489,7 @@ if os.path.exists(settings_frag_path):
         open(settings_frag_path, 'w', encoding='utf-8').write(c)
         print("  OK: HIDE Extensions section in SettingsFragment")
 
-# Also hide settings_extensions in main_settings.xml directly (layout level guarantee)
+# 6b. Hide settings_extensions in main_settings.xml directly (layout level guarantee)
 xml_settings_path = cs_dir + '/app/src/main/res/layout/main_settings.xml'
 if os.path.exists(xml_settings_path):
     c = open(xml_settings_path, encoding='utf-8').read()
@@ -498,7 +498,33 @@ if os.path.exists(xml_settings_path):
         open(xml_settings_path, 'w', encoding='utf-8').write(c)
         print("  OK: HIDE settings_extensions in main_settings.xml")
 
-# Remove Accounts category in settings_account.xml
+# 6c. Hide Extensions tab in new Compose SettingsFragmentScreen.kt (for latest CloudStream UI)
+compose_settings_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/ui/settings/SettingsFragmentScreen.kt'
+if os.path.exists(compose_settings_path):
+    c = open(compose_settings_path, encoding='utf-8').read()
+    ext_tab = '''        SettingsNavigation(
+            title = R.string.pref_category_extensions,
+            navigation = R.id.action_navigation_global_to_navigation_settings_extensions,
+            screen = null,
+            icon = R.drawable.extension_24px,
+            subtitle = persistentListOf(R.string.add_repository)
+        ),'''
+    if ext_tab in c:
+        c = c.replace(ext_tab, '')
+        open(compose_settings_path, 'w', encoding='utf-8').write(c)
+        print("  OK: Removed Extensions tab from SettingsFragmentScreen.kt")
+
+# 6d. Patch mobile_navigation.xml to redirect navigation_settings_account to SettingsAccount (v1.1.5 MTSFlix content)
+nav_path = cs_dir + '/app/src/main/res/navigation/mobile_navigation.xml'
+if os.path.exists(nav_path):
+    c = open(nav_path, encoding='utf-8').read()
+    target_acc2 = 'android:name="com.lagradost.cloudstream3.ui.settings.SettingsAccount2"'
+    if target_acc2 in c:
+        c = c.replace(target_acc2, 'android:name="com.lagradost.cloudstream3.ui.settings.SettingsAccount"')
+        open(nav_path, 'w', encoding='utf-8').write(c)
+        print("  OK: mobile_navigation.xml redirects navigation_settings_account to SettingsAccount")
+
+# 6e. Remove Accounts category in settings_account.xml
 xml_acc_path = cs_dir + '/app/src/main/res/xml/settings_account.xml'
 if os.path.exists(xml_acc_path):
     c = open(xml_acc_path, encoding='utf-8').read()
