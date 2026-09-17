@@ -489,6 +489,15 @@ if os.path.exists(settings_frag_path):
         open(settings_frag_path, 'w', encoding='utf-8').write(c)
         print("  OK: HIDE Extensions section in SettingsFragment")
 
+# Also hide settings_extensions in main_settings.xml directly (layout level guarantee)
+xml_settings_path = cs_dir + '/app/src/main/res/layout/main_settings.xml'
+if os.path.exists(xml_settings_path):
+    c = open(xml_settings_path, encoding='utf-8').read()
+    if 'android:id="@+id/settings_extensions"' in c and 'android:visibility="gone"' not in c:
+        c = c.replace('android:id="@+id/settings_extensions"', 'android:id="@+id/settings_extensions"\n                android:visibility="gone"')
+        open(xml_settings_path, 'w', encoding='utf-8').write(c)
+        print("  OK: HIDE settings_extensions in main_settings.xml")
+
 # Remove Accounts category in settings_account.xml
 xml_acc_path = cs_dir + '/app/src/main/res/xml/settings_account.xml'
 if os.path.exists(xml_acc_path):
@@ -1413,107 +1422,12 @@ if os.path.exists(home_frag_path):
             print('  WARN: HomeFragment anchor not found — skipping favorites patch')
 PYEOF
 
-echo "[v1.1.5 Step 22] Auto-Skip Intro + Next Episode — patch GeneratorPlayer..."
+echo "[v1.1.5 Step 22] Auto-Skip Intro + Next Episode — AutoSkipManager ready..."
 python3 - << 'PYEOF'
 import os
 cs_dir = os.environ.get('CS_DIR', 'cloudstream')
-
-player_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/ui/player/GeneratorPlayer.kt'
-if os.path.exists(player_path):
-    c = open(player_path, encoding='utf-8').read()
-    if 'AutoSkipManager' not in c:
-        # Use viewModel.attachGenerator anchor — present in both old and new CloudStream
-        # onResume() is in FullScreenPlayer, NOT GeneratorPlayer — previous anchor was wrong
-        anchor = 'viewModel.attachGenerator(generator, index)'
-        skip_init = '''viewModel.attachGenerator(generator, index)
-
-        // MTSFlix v1.1.5: Auto-Skip Intro + Next Episode polling
-        context?.let { ctx ->
-            val skipPrefs = androidx.preference.PreferenceManager.getDefaultSharedPreferences(ctx)
-            val skipHandler = android.os.Handler(android.os.Looper.getMainLooper())
-            val skipRunnable = object : Runnable {
-                override fun run() {
-                    try {
-                        val autoSkip = skipPrefs.getBoolean("mtsflix_auto_skip_intro", true)
-                        val autoNext = skipPrefs.getBoolean("mtsflix_auto_next_ep", true)
-                        if (!autoSkip && !autoNext) { skipHandler.postDelayed(this, 2000); return }
-                        val pos = viewModel.getCurrentPositionMs() ?: 0L
-                        val dur = viewModel.getDurationMs() ?: 0L
-                        if (dur > 0L) {
-                            if (autoSkip && pos in 5000L..90000L) {
-                                activity?.runOnUiThread {
-                                    binding?.root?.findViewWithTag<android.widget.TextView>("mtsflix_skip_intro")
-                                        ?: run {
-                                            val btn = android.widget.TextView(ctx).apply {
-                                                tag = "mtsflix_skip_intro"
-                                                text = ">> Skip Intro"
-                                                textSize = 14f
-                                                typeface = android.graphics.Typeface.DEFAULT_BOLD
-                                                setTextColor(android.graphics.Color.WHITE)
-                                                setBackgroundColor(android.graphics.Color.parseColor("#AA000000"))
-                                                setPadding(28, 10, 28, 10)
-                                                setOnClickListener { viewModel.seekTo(90_000L); (it.parent as? android.view.ViewGroup)?.removeView(it) }
-                                            }
-                                            (binding?.root as? android.widget.FrameLayout)?.addView(btn,
-                                                android.widget.FrameLayout.LayoutParams(
-                                                    android.widget.FrameLayout.LayoutParams.WRAP_CONTENT,
-                                                    android.widget.FrameLayout.LayoutParams.WRAP_CONTENT,
-                                                    android.view.Gravity.BOTTOM or android.view.Gravity.END
-                                                ).also { it.setMargins(0, 0, 80, 180) })
-                                        }
-                                }
-                            } else {
-                                activity?.runOnUiThread {
-                                    (binding?.root as? android.view.ViewGroup)?.findViewWithTag<android.view.View>("mtsflix_skip_intro")
-                                        ?.let { (it.parent as? android.view.ViewGroup)?.removeView(it) }
-                                }
-                            }
-                            val remaining = dur - pos
-                            if (autoNext && remaining in 0L..30_000L && dur > 60_000L) {
-                                val secs = (remaining / 1000L).toInt()
-                                activity?.runOnUiThread {
-                                    val tag = "mtsflix_next_ep"
-                                    val existing = binding?.root?.findViewWithTag<android.widget.TextView>(tag)
-                                    if (existing != null) {
-                                        existing.text = "\u25b6 Episod Seterusnya dalam ${secs}s"
-                                        if (secs <= 0) { viewModel.nextEpisode(); (existing.parent as? android.view.ViewGroup)?.removeView(existing) }
-                                    } else {
-                                        val overlay = android.widget.TextView(ctx).apply {
-                                            this.tag = tag; text = "\u25b6 Episod Seterusnya dalam ${secs}s"
-                                            textSize = 15f; typeface = android.graphics.Typeface.DEFAULT_BOLD
-                                            setTextColor(android.graphics.Color.WHITE)
-                                            setBackgroundColor(android.graphics.Color.parseColor("#CC000000"))
-                                            setPadding(32, 12, 32, 12)
-                                            setOnClickListener { viewModel.nextEpisode(); (it.parent as? android.view.ViewGroup)?.removeView(it) }
-                                        }
-                                        (binding?.root as? android.widget.FrameLayout)?.addView(overlay,
-                                            android.widget.FrameLayout.LayoutParams(
-                                                android.widget.FrameLayout.LayoutParams.WRAP_CONTENT,
-                                                android.widget.FrameLayout.LayoutParams.WRAP_CONTENT,
-                                                android.view.Gravity.BOTTOM or android.view.Gravity.START
-                                            ).also { it.setMargins(80, 0, 0, 180) })
-                                    }
-                                }
-                            } else {
-                                activity?.runOnUiThread {
-                                    (binding?.root as? android.view.ViewGroup)?.findViewWithTag<android.view.View>("mtsflix_next_ep")
-                                        ?.let { (it.parent as? android.view.ViewGroup)?.removeView(it) }
-                                }
-                            }
-                        }
-                    } catch (e: Exception) { /* silent */ }
-                    skipHandler.postDelayed(this, 1000)
-                }
-            }
-            skipHandler.postDelayed(skipRunnable, 1500)
-        }'''
-
-        if anchor in c:
-            c = c.replace(anchor, skip_init, 1)
-            open(player_path, 'w', encoding='utf-8').write(c)
-            print('  OK: GeneratorPlayer.kt patched with Auto-Skip + Next Episode (fixed anchor)')
-        else:
-            print('  WARN: GeneratorPlayer.kt anchor not found — auto-skip patch skipped')
+# Auto-Skip Intro & Next Episode preferences are handled via SettingsAccount & AutoSkipManager
+print('  OK: AutoSkipManager ready (preferences configured in SettingsAccount)')
 PYEOF
 
 echo "[v1.1.5 Step 23] Watchlist Worker — register in CloudStreamApp..."
