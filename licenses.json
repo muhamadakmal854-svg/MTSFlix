@@ -1,7 +1,7 @@
 {
   "version": 1,
   "description": "MTSFlix Device License Registry",
-  "lastUpdated": "2026-09-13",
+  "lastUpdated": "2026-09-25",
   "licenses": [
     {
       "id": "LIC-20260816-CF758B3B",
@@ -422,6 +422,20 @@
       "deviceInfo": "Android TV",
       "note": "VIP 2099",
       "lastModified": "2026-09-13T14:33:14.863Z"
+    },
+    {
+      "id": "LIC-20260925-8SPFG5G3",
+      "deviceCode": "MTSF-DC94-007E-0D32",
+      "username": "Sjn Mamu",
+      "email": "mamu@gmail.com",
+      "expiredAt": "2099-12-30",
+      "active": true,
+      "banned": false,
+      "bannedReason": "",
+      "addedAt": "2026-09-25",
+      "deviceInfo": "Samsung A22",
+      "note": "VIP",
+      "lastModified": "2026-09-25T02:17:32.222Z"
     }
   ]
 }
