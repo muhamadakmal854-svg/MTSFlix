@@ -1,7 +1,7 @@
 {
   "version": 1,
   "description": "MTSFlix Device License Registry",
-  "lastUpdated": "2026-09-25",
+  "lastUpdated": "2026-10-13",
   "licenses": [
     {
       "id": "LIC-20260816-CF758B3B",
@@ -436,6 +436,20 @@
       "deviceInfo": "Samsung A22",
       "note": "VIP",
       "lastModified": "2026-09-25T02:17:32.222Z"
+    },
+    {
+      "id": "LIC-20261013-1NULOV7V",
+      "deviceCode": "MTSF-DCEE-F7C4-8DCD",
+      "username": "Mej Fazly",
+      "email": "honorx9pad@gmail.com",
+      "expiredAt": "2099-12-30",
+      "active": true,
+      "banned": false,
+      "bannedReason": "",
+      "addedAt": "2026-10-13",
+      "deviceInfo": "Honor Pad X9",
+      "note": "VIP",
+      "lastModified": "2026-10-13T07:31:33.638Z"
     }
   ]
 }
