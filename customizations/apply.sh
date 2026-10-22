@@ -681,17 +681,16 @@ object InAppUpdater {
 if os.path.exists(os.path.dirname(updater_path)):
     open(updater_path, 'w', encoding='utf-8').write(stub_code)
     print("  OK: InAppUpdater replaced with no-op stub (100% immune to upstream 4.8.0 popups)")
-PYEOF
 
-    # Also translate update strings in strings.xml
-    strings_path = cs_dir + '/app/src/main/res/values/strings.xml'
-    if os.path.exists(strings_path):
-        sc = open(strings_path, encoding='utf-8').read()
-        sc = sc.replace('<string name="new_update_format">New update found!\\n%1$s -&gt; %2$s</string>', '<string name="new_update_format">Kemas kini MTSFlix tersedia!\\n%1$s -&gt; %2$s</string>')
-        sc = sc.replace('<string name="update">Update</string>', '<string name="update">Kemas kini</string>')
-        sc = sc.replace('<string name="skip_update">Skip this Update</string>', '<string name="skip_update">Langkau Kemas Kini</string>')
-        open(strings_path, 'w', encoding='utf-8').write(sc)
-        print('  OK: strings.xml update strings translated to Malay')
+# Also translate update strings in strings.xml
+strings_path = cs_dir + '/app/src/main/res/values/strings.xml'
+if os.path.exists(strings_path):
+    sc = open(strings_path, encoding='utf-8').read()
+    sc = sc.replace('<string name="new_update_format">New update found!\\n%1$s -&gt; %2$s</string>', '<string name="new_update_format">Kemas kini MTSFlix tersedia!\\n%1$s -&gt; %2$s</string>')
+    sc = sc.replace('<string name="update">Update</string>', '<string name="update">Kemas kini</string>')
+    sc = sc.replace('<string name="skip_update">Skip this Update</string>', '<string name="skip_update">Langkau Kemas Kini</string>')
+    open(strings_path, 'w', encoding='utf-8').write(sc)
+    print('  OK: strings.xml update strings translated to Malay')
 PYEOF
 
 # --- 9. Generate BuildUrls.kt ----------------------------------------------
