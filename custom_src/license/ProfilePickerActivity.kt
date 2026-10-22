@@ -150,8 +150,22 @@ class ProfilePickerActivity : AppCompatActivity() {
 
     private fun loadProfiles() {
         gridContainer.removeAllViews()
-        val profiles = ProfileManager.loadProfiles(this)
-        val active   = ProfileManager.getActiveProfile(this)
+        var profiles = ProfileManager.loadProfiles(this)
+        if (profiles.isEmpty()) {
+            val prefs = PreferenceManager.getDefaultSharedPreferences(this)
+            val email = prefs.getString(ProfileSwitchActivity.KEY_ACTIVE_EMAIL, null)
+            val name = if (!email.isNullOrBlank()) {
+                email.substringBefore("@").replace(".", " ").split(" ")
+                    .filter { it.isNotBlank() }
+                    .joinToString(" ") { it.replaceFirstChar { c -> c.uppercase() } }
+            } else "Utama"
+            val newProf = ProfileManager.addProfile(this, name, "#E50914", false)
+            if (newProf != null) {
+                ProfileManager.setActiveProfile(this, newProf)
+                profiles = listOf(newProf)
+            }
+        }
+        val active   = ProfileManager.getActiveProfile(this) ?: profiles.firstOrNull()
         val cols     = if (isTV) 4 else 2
         val avatarSz = if (isTV) dp(120) else dp(88)
 

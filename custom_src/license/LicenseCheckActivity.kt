@@ -306,6 +306,15 @@ class LicenseCheckActivity : AppCompatActivity() {
             list.add(email)
             prefs.edit().putString(com.mts.mtsflix.license.ProfileSwitchActivity.KEY_PROFILES, list.joinToString(com.mts.mtsflix.license.ProfileSwitchActivity.SEPARATOR)).commit()
         }
+        try {
+            if (com.mts.mtsflix.license.ProfileManager.loadProfiles(this).isEmpty()) {
+                val profName = email.substringBefore("@").replace(".", " ").split(" ")
+                    .filter { it.isNotBlank() }
+                    .joinToString(" ") { it.replaceFirstChar { c -> c.uppercase() } }
+                val newP = com.mts.mtsflix.license.ProfileManager.addProfile(this, profName, "#E50914", false)
+                if (newP != null) com.mts.mtsflix.license.ProfileManager.setActiveProfile(this, newP)
+            }
+        } catch (e: Exception) {}
 
         tvStatus.text = "🔄 Memulihkan Sejarah Tontonan..."
         tvStatus.setTextColor(Color.parseColor("#FFA500"))

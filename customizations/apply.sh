@@ -517,6 +517,10 @@ if os.path.exists(main_path):
             new_onresume = '''override fun onResume() {
         super.onResume()
         try {
+            com.lagradost.cloudstream3.MainActivity.reloadHomeEvent(true)
+            com.lagradost.cloudstream3.MainActivity.bookmarksUpdatedEvent(true)
+        } catch (e: Exception) {}
+        try {
             val ctx = this
             Thread {
                 try {
@@ -524,11 +528,9 @@ if os.path.exists(main_path):
                     if (updated) {
                         runOnUiThread {
                             try {
+                                com.lagradost.cloudstream3.MainActivity.reloadHomeEvent(true)
+                                com.lagradost.cloudstream3.MainActivity.bookmarksUpdatedEvent(true)
                                 android.widget.Toast.makeText(ctx, "\u2705 Sejarah tontonan dikemas kini dari cloud", android.widget.Toast.LENGTH_SHORT).show()
-                                try {
-                                    val navFrag = supportFragmentManager.findFragmentById(com.lagradost.cloudstream3.R.id.nav_host_fragment) as? androidx.navigation.fragment.NavHostFragment
-                                    navFrag?.navController?.navigate(com.lagradost.cloudstream3.R.id.navigation_home)
-                                } catch (e: Exception) {}
                             } catch (e: Exception) {}
                         }
                     }
@@ -1635,6 +1637,114 @@ if os.path.exists(tv_pair_path):
             c = c.replace(anchor, patch)
             open(tv_pair_path, 'w', encoding='utf-8').write(c)
             print('  OK: TVPairingActivity.kt patched to register device on Google login')
+PYEOF
+
+# --- 25. Watch History Restore & Continue Watching Auto-Reload (v1.1.7) ---
+echo "[25/25] Patching HomeViewModel & HomeParentItemAdapterPreview for Continue Watching restore..."
+python3 - << 'PYEOF'
+import os
+cs_dir = os.environ.get('CS_DIR', 'cloudstream')
+
+# 25a. Patch HomeViewModel.kt to reload resume watching on all lifecycle events and add safe fallback
+hvm_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/ui/home/HomeViewModel.kt'
+if os.path.exists(hvm_path):
+    c = open(hvm_path, encoding='utf-8').read()
+    changed = False
+
+    # 1. reloadHome must call reloadStored()
+    old_rh = 'private fun reloadHome(unused: Boolean = false) {\n        loadAndCancel(DataStoreHelper.currentHomePage, true)\n    }'
+    new_rh = '''private fun reloadHome(unused: Boolean = false) {
+        reloadStored()
+        loadAndCancel(DataStoreHelper.currentHomePage, true)
+    }'''
+    if old_rh in c:
+        c = c.replace(old_rh, new_rh, 1)
+        changed = True
+
+    # 2. afterMainPluginsLoaded must call reloadStored()
+    old_mpl = 'private fun afterMainPluginsLoaded(unused: Boolean = false) {\n        loadAndCancel(DataStoreHelper.currentHomePage, false)\n    }'
+    new_mpl = '''private fun afterMainPluginsLoaded(unused: Boolean = false) {
+        reloadStored()
+        loadAndCancel(DataStoreHelper.currentHomePage, false)
+    }'''
+    if old_mpl in c:
+        c = c.replace(old_mpl, new_mpl, 1)
+        changed = True
+
+    # 3. afterPluginsLoaded must call reloadStored()
+    old_apl = 'private fun afterPluginsLoaded(forceReload: Boolean) {\n        loadAndCancel(DataStoreHelper.currentHomePage, forceReload)\n    }'
+    new_apl = '''private fun afterPluginsLoaded(forceReload: Boolean) {
+        reloadStored()
+        loadAndCancel(DataStoreHelper.currentHomePage, forceReload)
+    }'''
+    if old_apl in c:
+        c = c.replace(old_apl, new_apl, 1)
+        changed = True
+
+    # 4. Fallback in getResumeWatching: do NOT drop items if headerCache is null
+    old_fallback = '''val data = if (headerCache == null) {
+                        // We store resume watching data in download header cache
+                        // Because downloads automatically pruned outdated download headers we
+                        // removed resume watching data. We should restore the data for affected users.
+                        val oldData = getKey<DownloadObjects.DownloadHeaderCached>(
+                            DOWNLOAD_HEADER_CACHE_BACKUP,
+                            resume.parentId.toString()
+                        ) ?: return@mapNotNull null
+
+                        // Restore data
+                        setKey(DOWNLOAD_HEADER_CACHE, resume.parentId.toString(), oldData)
+                        oldData
+                    } else {
+                        headerCache
+                    }'''
+    new_fallback = '''val data = if (headerCache == null) {
+                        val oldData = getKey<DownloadObjects.DownloadHeaderCached>(
+                            DOWNLOAD_HEADER_CACHE_BACKUP,
+                            resume.parentId.toString()
+                        )
+                        if (oldData != null) {
+                            setKey(DOWNLOAD_HEADER_CACHE, resume.parentId.toString(), oldData)
+                            oldData
+                        } else {
+                            DownloadObjects.DownloadHeaderCached(
+                                apiName = "MTSFlix",
+                                url = "",
+                                type = com.lagradost.cloudstream3.TvType.Movie,
+                                name = "Item #${resume.parentId}",
+                                poster = null,
+                                cacheTime = System.currentTimeMillis(),
+                                id = resume.parentId
+                            )
+                        }
+                    } else {
+                        headerCache
+                    }'''
+    if old_fallback in c:
+        c = c.replace(old_fallback, new_fallback, 1)
+        changed = True
+
+    if changed:
+        open(hvm_path, 'w', encoding='utf-8').write(c)
+        print('  OK: HomeViewModel.kt patched for Continue Watching reload & fallback')
+    else:
+        print('  SKIP/ALREADY: HomeViewModel.kt')
+
+# 25b. Patch HomeParentItemAdapterPreview.kt to trigger reloadStored on attach
+preview_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/ui/home/HomeParentItemAdapterPreview.kt'
+if os.path.exists(preview_path):
+    c = open(preview_path, encoding='utf-8').read()
+    old_attach = 'fun onViewAttachedToWindow() {\n            previewViewpager.registerOnPageChangeCallback(previewCallback)'
+    new_attach = '''fun onViewAttachedToWindow() {
+            previewViewpager.registerOnPageChangeCallback(previewCallback)
+            try {
+                viewModel.reloadStored()
+            } catch (e: Exception) {}'''
+    if old_attach in c and 'viewModel.reloadStored()' not in c:
+        c = c.replace(old_attach, new_attach, 1)
+        open(preview_path, 'w', encoding='utf-8').write(c)
+        print('  OK: HomeParentItemAdapterPreview.kt patched with reloadStored on attach')
+    else:
+        print('  SKIP/ALREADY: HomeParentItemAdapterPreview.kt')
 PYEOF
 
 echo "======================================================"
