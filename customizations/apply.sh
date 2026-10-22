@@ -1599,13 +1599,16 @@ if os.path.exists(gp_path):
     changed = False
 
     sync_flush = '''        try {
-            val meta = currentMeta
-            if (meta is com.lagradost.cloudstream3.ui.result.ResultEpisode) {
-                com.lagradost.cloudstream3.utils.DataStoreHelper.setLastWatched(
-                    meta.parentId, meta.id, meta.episode, meta.season, isFromDownload = false
-                )
+            val ctx = context ?: activity
+            if (ctx != null) {
+                val meta = currentMeta
+                if (meta is com.lagradost.cloudstream3.ui.result.ResultEpisode) {
+                    com.lagradost.cloudstream3.utils.DataStoreHelper.setLastWatched(
+                        meta.parentId, meta.id, meta.episode, meta.season, isFromDownload = false
+                    )
+                }
+                com.mts.mtsflix.cloud.MTSFlixCloudSync.saveWatchHistoryImmediate(ctx)
             }
-            com.mts.mtsflix.cloud.MTSFlixCloudSync.saveWatchHistoryImmediate(this)
         } catch (e: Exception) {}'''
 
     # 1. Patch nextEpisode to flush before switching
