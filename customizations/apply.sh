@@ -223,7 +223,7 @@ if os.path.exists(dsh_path):
     # CRITICAL: Use plain Thread{}.start() to avoid NetworkOnMainThreadException
     # Cannot use GlobalScope.launch here as DataStoreHelper may not have coroutine scope import
     CLOUD_SYNC_CALL = '''try {
-            Thread { context?.let { com.mts.mtsflix.cloud.MTSFlixCloudSync.saveWatchHistory(it) } }.start()
+            context?.let { com.mts.mtsflix.cloud.MTSFlixCloudSync.scheduleSaveWatchHistory(it) }
         } catch (e: Exception) {}'''
 
     # Hook 1: setLastWatched (Continue Watching row - untombstone and sync)
@@ -234,7 +234,7 @@ if os.path.exists(dsh_path):
         try {
             context?.let {
                 if (parentId != null) com.mts.mtsflix.cloud.MTSFlixCloudSync.unrecordDeletedResumeId(it, parentId)
-                Thread { com.mts.mtsflix.cloud.MTSFlixCloudSync.saveWatchHistory(it) }.start()
+                com.mts.mtsflix.cloud.MTSFlixCloudSync.scheduleSaveWatchHistory(it)
             }
         } catch (e: Exception) {}'''
     if t_lw in c and 'unrecordDeletedResumeId' not in c:
@@ -283,21 +283,13 @@ if os.path.exists(dsh_path):
         c = c.replace(t_dall, r_dall, 1)
         changed_dsh = True
 
-    # Hook 4: setViewPos (video seek position = evidence of watching)
-    t_vp = 'setKey("$currentAccount/$VIDEO_POS_DUR", id.toString(), PosDur(pos, dur))'
-    r_vp = 'setKey("$currentAccount/$VIDEO_POS_DUR", id.toString(), PosDur(pos, dur))\n        ' + CLOUD_SYNC_CALL
-    if t_vp in c and 'VIDEO_POS_DUR' in c:
-        if c.count(CLOUD_SYNC_CALL) < 2:
-            c = c.replace(t_vp, r_vp, 1)
-            changed_dsh = True
-
     # Hook 5: setBookmarkedData (Watching, Completed, On-Hold, Dropped, Plan To Watch, Favorites)
     t_bk = 'setKey("$currentAccount/$RESULT_WATCH_STATE_DATA", id.toString(), data)'
     r_bk = '''setKey("$currentAccount/$RESULT_WATCH_STATE_DATA", id.toString(), data)
         try {
             context?.let {
                 if (id != null) com.mts.mtsflix.cloud.MTSFlixCloudSync.unrecordDeletedBookmarkId(it, id)
-                Thread { com.mts.mtsflix.cloud.MTSFlixCloudSync.saveWatchHistory(it) }.start()
+                com.mts.mtsflix.cloud.MTSFlixCloudSync.scheduleSaveWatchHistory(it)
             }
         } catch (e: Exception) {}'''
     if t_bk in c and 'unrecordDeletedBookmarkId' not in c:
@@ -489,7 +481,7 @@ if os.path.exists(main_path):
         super.onPause()
         try {
             val ctx = this
-            Thread { com.mts.mtsflix.cloud.MTSFlixCloudSync.saveWatchHistory(ctx) }.start()
+            com.mts.mtsflix.cloud.MTSFlixCloudSync.saveWatchHistoryImmediate(ctx)
         } catch (e: Exception) {}
     }
 '''
@@ -502,7 +494,7 @@ if os.path.exists(main_path):
         super.onPause()
         try {
             val ctx = this
-            Thread { com.mts.mtsflix.cloud.MTSFlixCloudSync.saveWatchHistory(ctx) }.start()
+            com.mts.mtsflix.cloud.MTSFlixCloudSync.saveWatchHistoryImmediate(ctx)
         } catch (e: Exception) {}'''
         if old_onpause in c3 and 'saveWatchHistory' not in c3:
             c3 = c3.replace(old_onpause, new_onpause, 1)
@@ -666,77 +658,30 @@ if os.path.exists(xml_path):
     open(xml_path, 'w', encoding='utf-8').write(content)
 PYEOF
 
-# --- 8. Patch InAppUpdater.kt ----------------------------------------------
-echo "[8/12] Patching InAppUpdater.kt for custom update repository..."
+# --- 8. Disable InAppUpdater completely (prevent any upstream 4.8.0 popups) ---
+echo "[8/12] Disabling InAppUpdater (stubbing to prevent any update popups)..."
 python3 - << 'PYEOF'
 import os
 cs_dir = os.environ.get('CS_DIR','cloudstream')
 updater_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/utils/InAppUpdater.kt'
 
-if os.path.exists(updater_path):
-    content = open(updater_path, encoding='utf-8').read()
-    content = content.replace('private const val GITHUB_USER_NAME = "recloudstream"', 'private const val GITHUB_USER_NAME = "muhamadakmal854-svg"')
-    content = content.replace('private const val GITHUB_REPO = "cloudstream"', 'private const val GITHUB_REPO = "MTSFlix"')
-    content = content.replace('val appUpdateName = "CloudStream"', 'val appUpdateName = "MTSFlix"')
+stub_code = '''package com.lagradost.cloudstream3.utils
 
-    # MTSFlix: Never auto-update on launch or background
-    old_rau = 'suspend fun Activity.runAutoUpdate(\n        checkAutoUpdate: Boolean = true, installPrerelease: Boolean = false\n    ): Boolean {'
-    new_rau = '''suspend fun Activity.runAutoUpdate(
+import android.app.Activity
+import android.content.Context
+
+object InAppUpdater {
+    suspend fun Activity.runAutoUpdate(
         checkAutoUpdate: Boolean = true, installPrerelease: Boolean = false
-    ): Boolean {
-        // MTSFlix: Never auto-update on launch or background
-        if (checkAutoUpdate) return false'''
-    if old_rau in content and 'MTSFlix: Never auto-update' not in content:
-        content = content.replace(old_rau, new_rau)
+    ): Boolean = false
 
-    # MTSFlix: Reject any upstream CloudStream versions (e.g. 4.x, 3.x, etc.)
-    old_fver = 'val foundVersion = foundAsset?.name?.let { versionRegex.find(it) }'
-    new_fver = '''val foundVersion = foundAsset?.name?.let { versionRegex.find(it) }
-        // MTSFlix: Reject any upstream CloudStream versions
-        val foundVerStr = foundVersion?.groupValues?.getOrNull(2) ?: ""
-        if (foundVerStr.startsWith("4.") || foundVerStr.startsWith("3.") || foundVerStr.startsWith("2.") || foundVerStr.startsWith("0.")) {
-            return Update(false, null, null, null, null)
-        }'''
-    if old_fver in content and 'MTSFlix: Reject any upstream' not in content:
-        content = content.replace(old_fver, new_fver)
-
-    # Strip markdown symbols from changelog before displaying in popup
-    old_return = '''        return Update(
-            shouldUpdate,
-            foundAsset.browserDownloadUrl,
-            foundVersion.groupValues[2],
-            found.body,
-            found.nodeId
-        )'''
-    new_return = '''        // Strip markdown symbols from changelog so popup looks clean
-        val cleanBody = (found.body ?: "")
-            .replace(Regex("#{1,6}\\\\s*"), "")   // remove ## ### etc
-            .replace(Regex("\\\\*{1,2}([^*]+)\\\\*{1,2}"), "$1") // remove **bold**
-            .replace(Regex("^---+$", RegexOption.MULTILINE), "")  // remove ---
-            .replace(Regex("^\\\\|.*\\\\|$", RegexOption.MULTILINE), "") // remove tables
-            .replace(Regex("^>\\\\s*", RegexOption.MULTILINE), "")       // remove blockquotes
-            .replace(Regex("\\\\n{3,}"), "\\n\\n")  // collapse blank lines
-            .trim()
-        return Update(
-            shouldUpdate,
-            foundAsset.browserDownloadUrl,
-            foundVersion.groupValues[2],
-            cleanBody,
-            found.nodeId
-        )'''
-    if old_return in content:
-        content = content.replace(old_return, new_return)
-
-    # Translate update dialog strings to Malay
-    content = content.replace('"New update found!"', '"Kemas kini MTSFlix tersedia!"')
-    content = content.replace('"Download"', '"Muat Turun"')
-    content = content.replace('"Cancel"', '"Batal"')
-    content = content.replace('"Update"', '"Kemas kini"')
-    content = content.replace('"Downloading update"', '"Sedang memuat turun kemas kini"')
-    content = content.replace('"Installing update"', '"Memasang kemas kini"')
-
-    open(updater_path, 'w', encoding='utf-8').write(content)
-    print('  OK: InAppUpdater patched — disabled auto-update on launch, blocked upstream 4.x, translated to Malay')
+    fun Activity.installPreReleaseIfNeeded() {}
+}
+'''
+if os.path.exists(os.path.dirname(updater_path)):
+    open(updater_path, 'w', encoding='utf-8').write(stub_code)
+    print("  OK: InAppUpdater replaced with no-op stub (100% immune to upstream 4.8.0 popups)")
+PYEOF
 
     # Also translate update strings in strings.xml
     strings_path = cs_dir + '/app/src/main/res/values/strings.xml'
@@ -1028,141 +973,7 @@ for root, dirs, files in os.walk(cs_dir + '/app/src/main/java/com/mts/mtsflix'):
 PYEOF
 
 # --- 15. Patch InAppUpdater: Download Progress Bar --------------------------
-echo "[15/15] Patching InAppUpdater.kt — adding download progress bar..."
-python3 - << 'PYEOF'
-import os, re
-cs_dir = os.environ.get('CS_DIR','cloudstream')
-path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/utils/InAppUpdater.kt'
-
-if not os.path.exists(path):
-    print('  SKIP: InAppUpdater.kt not found')
-else:
-    c = open(path, encoding='utf-8').read()
-
-    # Replace the legacy downloadUpdate function with one that shows a progress dialog
-    old_download = '''    private suspend fun Activity.downloadUpdate(url: String): Boolean {
-        try {
-            Log.d(LOG_TAG, "Downloading update: $url")
-            val appUpdateName = "CloudStream"
-            val appUpdateSuffix = "apk"
-
-            // Delete all old updates
-            this.cacheDir.listFiles()?.filter {
-                it.name.startsWith(appUpdateName) && it.extension == appUpdateSuffix
-            }?.forEach { deleteFileOnExit(it) }
-
-            val downloadedFile = File.createTempFile(appUpdateName, ".$appUpdateSuffix")
-            val sink: BufferedSink = downloadedFile.sink().buffer()
-
-            updateLock.withLock {
-                sink.writeAll(app.get(url).body.source())
-                sink.close()
-                openApk(this, Uri.fromFile(downloadedFile))
-            }
-
-            return true
-        } catch (e: Exception) {
-            logError(e)
-            return false
-        }
-    }'''
-
-    new_download = '''    private suspend fun Activity.downloadUpdate(url: String): Boolean {
-        // Show progress dialog on UI thread
-        var progressDialog: android.app.ProgressDialog? = null
-        withContext(kotlinx.coroutines.Dispatchers.Main) {
-            try {
-                progressDialog = android.app.ProgressDialog(this@downloadUpdate).apply {
-                    setTitle("Memuat turun kemas kini")
-                    setMessage("Menyambung...")
-                    setProgressStyle(android.app.ProgressDialog.STYLE_HORIZONTAL)
-                    isIndeterminate = true
-                    setCancelable(false)
-                    progress = 0; max = 100
-                    show()
-                }
-            } catch (_: Exception) {}
-        }
-
-        return try {
-            Log.d(LOG_TAG, "Downloading update with progress: $url")
-            val appUpdateName = "MTSFlix"
-            val appUpdateSuffix = "apk"
-
-            // Delete old update files
-            this.cacheDir.listFiles()?.filter {
-                it.name.startsWith(appUpdateName) && it.extension == appUpdateSuffix
-            }?.forEach { deleteFileOnExit(it) }
-
-            val downloadedFile = File.createTempFile(appUpdateName, ".$appUpdateSuffix")
-
-            updateLock.withLock {
-                val connection = java.net.URL(url).openConnection() as java.net.HttpURLConnection
-                connection.connect()
-                val totalBytes = connection.contentLength.toLong()
-                val input = java.io.BufferedInputStream(connection.inputStream, 8192)
-                val output = java.io.FileOutputStream(downloadedFile)
-                val buffer = ByteArray(8192)
-                var downloaded = 0L
-                var read: Int
-
-                while (input.read(buffer).also { read = it } != -1) {
-                    output.write(buffer, 0, read)
-                    downloaded += read
-                    if (totalBytes > 0) {
-                        val pct = (downloaded * 100 / totalBytes).toInt()
-                        val dlMb = "%.1f".format(downloaded / 1_048_576.0)
-                        val totMb = "%.1f".format(totalBytes / 1_048_576.0)
-                        withContext(kotlinx.coroutines.Dispatchers.Main) {
-                            try {
-                                progressDialog?.apply {
-                                    isIndeterminate = false
-                                    progress = pct
-                                    setMessage("$dlMb MB / $totMb MB  ($pct%)")
-                                }
-                            } catch (_: Exception) {}
-                        }
-                    }
-                }
-                output.flush(); output.close(); input.close()
-                connection.disconnect()
-
-                withContext(kotlinx.coroutines.Dispatchers.Main) {
-                    try {
-                        progressDialog?.setMessage("Memasang kemas kini...")
-                        progressDialog?.isIndeterminate = true
-                    } catch (_: Exception) {}
-                }
-
-                openApk(this@downloadUpdate, Uri.fromFile(downloadedFile))
-            }
-
-            withContext(kotlinx.coroutines.Dispatchers.Main) {
-                try { progressDialog?.dismiss() } catch (_: Exception) {}
-            }
-            true
-        } catch (e: Exception) {
-            logError(e)
-            withContext(kotlinx.coroutines.Dispatchers.Main) {
-                try { progressDialog?.dismiss() } catch (_: Exception) {}
-                try { showToast("Muat turun gagal. Cuba lagi.", android.widget.Toast.LENGTH_LONG) } catch (_: Exception) {}
-            }
-            false
-        }
-    }'''
-
-    if old_download in c and 'progressDialog' not in c:
-        c = c.replace(old_download, new_download)
-        # Add missing imports if needed
-        if 'import kotlinx.coroutines.Dispatchers' not in c and 'import kotlinx.coroutines' not in c:
-            c = c.replace('import java.io.InputStreamReader', 'import java.io.InputStreamReader\nimport kotlinx.coroutines.withContext')
-        open(path, 'w', encoding='utf-8').write(c)
-        print('  OK: InAppUpdater download progress bar added')
-    elif 'progressDialog' in c:
-        print('  OK: Download progress already patched')
-    else:
-        print('  WARN: Could not find downloadUpdate function to patch (CloudStream updated?)')
-PYEOF
+echo "[15/15] InAppUpdater download progress bar skipped (InAppUpdater stubbed)..."
 
 echo "# --- 16. Kids Mode: Cartoon/Anime-only Filter -------------------------"
 echo "[16/16] Patching kids cartoon/anime-only content filter..."
@@ -1778,8 +1589,60 @@ if os.path.exists(preview_path):
         print('  SKIP/ALREADY: HomeParentItemAdapterPreview.kt')
 PYEOF
 
+echo "[v1.1.8 Step 26] Real-time Episode Sync on Pause, Next & Exit - patch GeneratorPlayer..."
+python3 - << 'PYEOF'
+import os
+cs_dir = os.environ.get('CS_DIR', 'cloudstream')
+gp_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/ui/player/GeneratorPlayer.kt'
+
+if os.path.exists(gp_path):
+    c = open(gp_path, encoding='utf-8').read()
+    changed = False
+
+    sync_flush = '''        try {
+            val meta = currentMeta
+            if (meta is com.lagradost.cloudstream3.ui.result.ResultEpisode) {
+                com.lagradost.cloudstream3.utils.DataStoreHelper.setLastWatched(
+                    meta.parentId, meta.id, meta.episode, meta.season, isFromDownload = false
+                )
+            }
+            com.mts.mtsflix.cloud.MTSFlixCloudSync.saveWatchHistoryImmediate(this)
+        } catch (e: Exception) {}'''
+
+    # 1. Patch nextEpisode to flush before switching
+    t_next = 'override fun nextEpisode() {'
+    if t_next in c and 'saveWatchHistoryImmediate' not in c:
+        c = c.replace(t_next, t_next + '\n' + sync_flush)
+        changed = True
+
+    # 2. Add onPause to flush when leaving player
+    onpause_code = '''    override fun onPause() {
+        super.onPause()
+''' + sync_flush + '''
+    }
+'''
+    if 'override fun onPause()' not in c:
+        c = c.replace('override fun onDestroy() {', onpause_code + '\n    override fun onDestroy() {')
+        changed = True
+
+    # 3. Patch onDestroy to flush before destroying
+    t_dest = 'override fun onDestroy() {'
+    if t_dest in c:
+        dest_idx = c.find('override fun onDestroy() {')
+        dest_snippet = c[dest_idx:dest_idx+400]
+        if 'saveWatchHistoryImmediate' not in dest_snippet:
+            c = c.replace(t_dest, t_dest + '\n' + sync_flush)
+            changed = True
+
+    if changed:
+        open(gp_path, 'w', encoding='utf-8').write(c)
+        print('  OK: GeneratorPlayer.kt patched with real-time episode sync on pause, next, and destroy')
+    else:
+        print('  SKIP/ALREADY: GeneratorPlayer.kt already patched')
+PYEOF
+
 echo "======================================================"
-echo "    MTSFlix Customization Complete! v1.1.7"
+echo "    MTSFlix Customization Complete! v1.1.8"
 echo ""
 echo "    v1.1.4 Features:"
 echo "    Provider Lock PIN + Confirmation + Old PIN check"

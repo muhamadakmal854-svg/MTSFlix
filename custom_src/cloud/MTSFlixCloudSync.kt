@@ -38,8 +38,54 @@ object MTSFlixCloudSync {
     private const val KEY_DELETED_BOOKMARK_IDS = "MTSFLIX_DELETED_BOOKMARK_IDS"
     private const val KEY_CLEAR_ALL_RESUME_TS = "MTSFLIX_CLEAR_ALL_RESUME_TS"
 
+    // Concurrency & rate-limiting protection
+    private val isSaving = java.util.concurrent.atomic.AtomicBoolean(false)
+    private val hasPendingSave = java.util.concurrent.atomic.AtomicBoolean(false)
+    private var lastSaveAttempt = 0L
+    private const val SAVE_DEBOUNCE_MS = 6_000L // 6 seconds debounce during playback
+
     private val GITHUB_TOKEN = "ghp_eWIHGqb6JGPR" + "cAi31yxlXYLWvOoRRO0T1akC"
     private const val GIST_API_URL = "https://api.github.com/gists"
+
+    /**
+     * Throttled background save — called when episodes/bookmarks update.
+     * Prevents hammering GitHub API and triggering secondary rate limits.
+     */
+    fun scheduleSaveWatchHistory(context: Context) {
+        val now = System.currentTimeMillis()
+        if (now - lastSaveAttempt < SAVE_DEBOUNCE_MS || isSaving.get()) {
+            hasPendingSave.set(true)
+            return
+        }
+        lastSaveAttempt = now
+        Thread {
+            try {
+                saveWatchHistory(context)
+            } catch (e: Exception) {
+                Log.e(TAG, "scheduleSaveWatchHistory error: ${e.message}")
+            }
+        }.start()
+    }
+
+    /**
+     * Immediate save — called on lifecycle events (player pause, exit, activity pause, delete).
+     * Bypasses the 6-second debounce so progress is never lost.
+     */
+    fun saveWatchHistoryImmediate(context: Context) {
+        lastSaveAttempt = System.currentTimeMillis()
+        Thread {
+            try {
+                var waitCount = 0
+                while (isSaving.get() && waitCount < 10) {
+                    Thread.sleep(300)
+                    waitCount++
+                }
+                saveWatchHistory(context)
+            } catch (e: Exception) {
+                Log.e(TAG, "saveWatchHistoryImmediate error: ${e.message}")
+            }
+        }.start()
+    }
 
     private fun getFileName(email: String): String {
         val safe = email.trim().lowercase().replace(Regex("[^a-z0-9]"), "_")
@@ -168,9 +214,7 @@ object MTSFlixCloudSync {
             editor.commit()
             Log.i(TAG, "deleteResumeWatching: locally purged $removedCount keys for parentId $parentId")
 
-            Thread {
-                saveWatchHistory(context)
-            }.start()
+            saveWatchHistoryImmediate(context)
         } catch (e: Exception) {
             Log.e(TAG, "deleteResumeWatching error: ${e.message}")
         }
@@ -197,9 +241,7 @@ object MTSFlixCloudSync {
             editor.commit()
             Log.i(TAG, "deleteAllResumeWatching: locally purged $removedCount keys")
 
-            Thread {
-                saveWatchHistory(context)
-            }.start()
+            saveWatchHistoryImmediate(context)
         } catch (e: Exception) {
             Log.e(TAG, "deleteAllResumeWatching error: ${e.message}")
         }
@@ -222,9 +264,7 @@ object MTSFlixCloudSync {
             }
             editor.commit()
 
-            Thread {
-                saveWatchHistory(context)
-            }.start()
+            saveWatchHistoryImmediate(context)
         } catch (e: Exception) {
             Log.e(TAG, "deleteBookmark error: ${e.message}")
         }
@@ -553,6 +593,11 @@ object MTSFlixCloudSync {
      * Must be called from a BACKGROUND thread.
      */
     fun saveWatchHistory(context: Context): Boolean {
+        if (!isSaving.compareAndSet(false, true)) {
+            Log.d(TAG, "saveWatchHistory: save already in progress, queuing pending save")
+            hasPendingSave.set(true)
+            return false
+        }
         try {
             val defaultPrefs = PreferenceManager.getDefaultSharedPreferences(context)
             val email = defaultPrefs.getString("GOOGLE_ACCOUNT_EMAIL", null)
@@ -764,6 +809,18 @@ object MTSFlixCloudSync {
             }
         } catch (e: Exception) {
             Log.e(TAG, "saveWatchHistory error: ${e.message}")
+        } finally {
+            isSaving.set(false)
+            if (hasPendingSave.compareAndSet(true, false)) {
+                Thread {
+                    try {
+                        Thread.sleep(1000)
+                        saveWatchHistory(context)
+                    } catch (e: Exception) {
+                        Log.e(TAG, "pending save error: ${e.message}")
+                    }
+                }.start()
+            }
         }
         return false
     }
