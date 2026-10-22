@@ -565,9 +565,10 @@ if os.path.exists(main_path):
             c3 = c3.replace('override fun onDestroy() {', onresume_code + '\n    override fun onDestroy() {')
             changed = True
 
-    if 'runAutoUpdate()' in c3:
-        c3 = c3.replace('runAutoUpdate()', 'runAutoUpdate(checkAutoUpdate = false)')
-        changed = True
+    for target_rau in ['runAutoUpdate(checkAutoUpdate = false)', 'runAutoUpdate()']:
+        if target_rau in c3:
+            c3 = c3.replace(target_rau, '// MTSFlix: disabled auto-update on launch')
+            changed = True
 
     if changed:
         open(main_path, 'w', encoding='utf-8').write(c3)
@@ -678,8 +679,28 @@ if os.path.exists(updater_path):
     content = content.replace('private const val GITHUB_REPO = "cloudstream"', 'private const val GITHUB_REPO = "MTSFlix"')
     content = content.replace('val appUpdateName = "CloudStream"', 'val appUpdateName = "MTSFlix"')
 
+    # MTSFlix: Never auto-update on launch or background
+    old_rau = 'suspend fun Activity.runAutoUpdate(\n        checkAutoUpdate: Boolean = true, installPrerelease: Boolean = false\n    ): Boolean {'
+    new_rau = '''suspend fun Activity.runAutoUpdate(
+        checkAutoUpdate: Boolean = true, installPrerelease: Boolean = false
+    ): Boolean {
+        // MTSFlix: Never auto-update on launch or background
+        if (checkAutoUpdate) return false'''
+    if old_rau in content and 'MTSFlix: Never auto-update' not in content:
+        content = content.replace(old_rau, new_rau)
+
+    # MTSFlix: Reject any upstream CloudStream versions (e.g. 4.x, 3.x, etc.)
+    old_fver = 'val foundVersion = foundAsset?.name?.let { versionRegex.find(it) }'
+    new_fver = '''val foundVersion = foundAsset?.name?.let { versionRegex.find(it) }
+        // MTSFlix: Reject any upstream CloudStream versions
+        val foundVerStr = foundVersion?.groupValues?.getOrNull(2) ?: ""
+        if (foundVerStr.startsWith("4.") || foundVerStr.startsWith("3.") || foundVerStr.startsWith("2.") || foundVerStr.startsWith("0.")) {
+            return Update(false, null, null, null, null)
+        }'''
+    if old_fver in content and 'MTSFlix: Reject any upstream' not in content:
+        content = content.replace(old_fver, new_fver)
+
     # Strip markdown symbols from changelog before displaying in popup
-    # Insert a helper function and clean the changelog text
     old_return = '''        return Update(
             shouldUpdate,
             foundAsset.browserDownloadUrl,
@@ -688,7 +709,7 @@ if os.path.exists(updater_path):
             found.nodeId
         )'''
     new_return = '''        // Strip markdown symbols from changelog so popup looks clean
-        val cleanBody = found.body
+        val cleanBody = (found.body ?: "")
             .replace(Regex("#{1,6}\\\\s*"), "")   // remove ## ### etc
             .replace(Regex("\\\\*{1,2}([^*]+)\\\\*{1,2}"), "$1") // remove **bold**
             .replace(Regex("^---+$", RegexOption.MULTILINE), "")  // remove ---
@@ -706,8 +727,8 @@ if os.path.exists(updater_path):
     if old_return in content:
         content = content.replace(old_return, new_return)
 
-    # Translate "New update found!" and related strings to Malay
-    content = content.replace('"New update found!"', '"Kemas kini tersedia!"')
+    # Translate update dialog strings to Malay
+    content = content.replace('"New update found!"', '"Kemas kini MTSFlix tersedia!"')
     content = content.replace('"Download"', '"Muat Turun"')
     content = content.replace('"Cancel"', '"Batal"')
     content = content.replace('"Update"', '"Kemas kini"')
@@ -715,7 +736,17 @@ if os.path.exists(updater_path):
     content = content.replace('"Installing update"', '"Memasang kemas kini"')
 
     open(updater_path, 'w', encoding='utf-8').write(content)
-    print('  OK: InAppUpdater patched — markdown stripped, strings translated to Malay')
+    print('  OK: InAppUpdater patched — disabled auto-update on launch, blocked upstream 4.x, translated to Malay')
+
+    # Also translate update strings in strings.xml
+    strings_path = cs_dir + '/app/src/main/res/values/strings.xml'
+    if os.path.exists(strings_path):
+        sc = open(strings_path, encoding='utf-8').read()
+        sc = sc.replace('<string name="new_update_format">New update found!\\n%1$s -&gt; %2$s</string>', '<string name="new_update_format">Kemas kini MTSFlix tersedia!\\n%1$s -&gt; %2$s</string>')
+        sc = sc.replace('<string name="update">Update</string>', '<string name="update">Kemas kini</string>')
+        sc = sc.replace('<string name="skip_update">Skip this Update</string>', '<string name="skip_update">Langkau Kemas Kini</string>')
+        open(strings_path, 'w', encoding='utf-8').write(sc)
+        print('  OK: strings.xml update strings translated to Malay')
 PYEOF
 
 # --- 9. Generate BuildUrls.kt ----------------------------------------------

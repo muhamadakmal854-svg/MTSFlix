@@ -1,11 +1,11 @@
 {
-  "version": "1.1.7",
+  "version": "1.1.8",
   "versionCode": 1,
-  "downloadUrl": "https://github.com/muhamadakmal854-svg/MTSFlix/releases/download/v1.1.7/MTSFlix-v1.1.7.apk",
-  "releaseNotes": "MTSFlix v1.1.7",
+  "downloadUrl": "https://github.com/muhamadakmal854-svg/MTSFlix/releases/download/v1.1.8/MTSFlix-v1.1.8.apk",
+  "releaseNotes": "MTSFlix v1.1.8 - Update berasaskan CloudStream v4.8.0 (Intro Skip DB, TV Metadata Overlay, Penambahbaikan Pemain Video & Pemulihan Sejarah Tontonan)",
   "mandatory": false,
   "sha256": "",
-  "publishedAt": "2026-10-22T18:39:53Z",
+  "publishedAt": "2026-10-22T19:10:00Z",
   "minAndroid": 21,
   "providerUrl": "https://cdn.jsdelivr.net/gh/muhamadakmal854-svg/Provider@builds/repo.json"
 }
