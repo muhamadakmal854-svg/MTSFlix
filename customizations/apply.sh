@@ -624,10 +624,18 @@ if os.path.exists(xml_acc_path):
     c = re.sub(r'<PreferenceCategory\s+android:title="@string/pref_category_accounts">.*?</PreferenceCategory>', '', c, flags=re.DOTALL)
     open(xml_acc_path, 'w', encoding='utf-8').write(c)
     print("  OK: Removed Accounts section from settings_account.xml")
+
+# 6f. Remove Accounts category in SettingsAccountScreen.kt (Compose Settings)
+compose_acc_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/ui/settings/SettingsAccountScreen.kt'
+if os.path.exists(compose_acc_path):
+    c = open(compose_acc_path, encoding='utf-8').read()
+    c = re.sub(r'Preference\.PreferenceGroup\(\s*title = stringResource\(R\.string\.pref_category_accounts\),.*?icon = painterResource\(R\.drawable\.ic_outline_account_circle_24\)\s*\),\s*\),\s*', '', c, flags=re.DOTALL)
+    open(compose_acc_path, 'w', encoding='utf-8').write(c)
+    print("  OK: Removed Accounts section from SettingsAccountScreen.kt")
 PYEOF
 
-# --- 7. Patch strings and settings_general.xml ----------------------------
-echo "[7/12] Patching donottranslate-strings.xml and settings_general.xml..."
+# --- 7. Patch strings, settings_general.xml & SettingsGeneralScreen.kt -----
+echo "[7/12] Patching donottranslate-strings.xml, settings_general.xml & SettingsGeneralScreen.kt..."
 python3 - << 'PYEOF'
 import os, re
 cs_dir = os.environ.get('CS_DIR','cloudstream')
@@ -650,12 +658,35 @@ if os.path.exists(donottranslate_path):
     if new_content != content:
         open(donottranslate_path, 'w', encoding='utf-8').write(new_content)
 
+# Patch legacy XML layout
 xml_path = cs_dir + '/app/src/main/res/xml/settings_general.xml'
 if os.path.exists(xml_path):
     content = open(xml_path, encoding='utf-8').read()
     content = re.sub(r'\s*<Preference\s+android:icon="@drawable/benene".*?/>', '', content, flags=re.DOTALL)
     content = re.sub(r'\s*<PreferenceCategory android:title="@string/pref_category_links">.*?</PreferenceCategory>', '', content, flags=re.DOTALL)
     open(xml_path, 'w', encoding='utf-8').write(content)
+    print("  OK: Removed Links and Benene from settings_general.xml")
+
+# Patch modern Compose SettingsGeneralScreen.kt (v4.8.0+ UI)
+compose_general_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/ui/settings/SettingsGeneralScreen.kt'
+if os.path.exists(compose_general_path):
+    c = open(compose_general_path, encoding='utf-8').read()
+    # Remove Links PreferenceGroup (GitHub, QuickNovel, Discord, Wiki)
+    c = re.sub(r'Preference\.PreferenceGroup\(\s*title = stringResource\(R\.string\.pref_category_links\),.*?preferenceItems = persistentListOf\(.*?\)\s*\),?', '', c, flags=re.DOTALL)
+    # Remove Benene TextPreference
+    c = re.sub(r'Preference\.PreferenceItem\.TextPreference\(\s*title = stringResource\(R\.string\.benene\),.*?icon = painterResource\(R\.drawable\.benene\),?\s*\),?', '', c, flags=re.DOTALL)
+    open(compose_general_path, 'w', encoding='utf-8').write(c)
+    print("  OK: Removed Links and Benene from SettingsGeneralScreen.kt")
+
+# Patch SettingsFragmentScreen.kt to remove R.string.pref_category_links from General subtitle
+compose_frag_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/ui/settings/SettingsFragmentScreen.kt'
+if os.path.exists(compose_frag_path):
+    c = open(compose_frag_path, encoding='utf-8').read()
+    c = c.replace('R.string.pref_category_links\n            )', ')')
+    c = c.replace('R.string.pref_category_links,', '')
+    c = c.replace('R.string.pref_category_links', '')
+    open(compose_frag_path, 'w', encoding='utf-8').write(c)
+    print("  OK: Removed pref_category_links from SettingsFragmentScreen.kt subtitle")
 PYEOF
 
 # --- 8. Patch InAppUpdater.kt & GithubReleases.kt (MTSFlix updates only) ---
