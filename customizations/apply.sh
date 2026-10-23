@@ -658,13 +658,14 @@ if os.path.exists(xml_path):
     open(xml_path, 'w', encoding='utf-8').write(content)
 PYEOF
 
-# --- 8. Disable InAppUpdater completely (prevent any upstream 4.8.0 popups) ---
-echo "[8/12] Disabling InAppUpdater (stubbing to prevent any update popups)..."
+# --- 8. Patch InAppUpdater.kt & GithubReleases.kt (MTSFlix updates only) ---
+echo "[8/12] Patching update repository to MTSFlix (blocking CloudStream 4.8.0)..."
 python3 - << 'PYEOF'
-import os
+import os, re
 cs_dir = os.environ.get('CS_DIR','cloudstream')
-updater_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/utils/InAppUpdater.kt'
 
+# 8a. Stub legacy InAppUpdater.kt (for CloudStream v3 callers)
+updater_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/utils/InAppUpdater.kt'
 stub_code = '''package com.lagradost.cloudstream3.utils
 
 import android.app.Activity
@@ -680,9 +681,111 @@ object InAppUpdater {
 '''
 if os.path.exists(os.path.dirname(updater_path)):
     open(updater_path, 'w', encoding='utf-8').write(stub_code)
-    print("  OK: InAppUpdater replaced with no-op stub (100% immune to upstream 4.8.0 popups)")
+    print("  OK: Legacy InAppUpdater replaced with no-op stub")
 
-# Also translate update strings in strings.xml
+# 8b. Patch modern Compose GithubReleases.kt (used by MainActivityScreen & SettingsUpdatesScreen in v4.8.0+)
+gh_releases_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/ui/settings/GithubReleases.kt'
+if os.path.exists(gh_releases_path):
+    c = open(gh_releases_path, encoding='utf-8').read()
+    c = c.replace('const val APK_USERNAME = "recloudstream"', 'const val APK_USERNAME = "muhamadakmal854-svg"')
+    c = c.replace('const val APK_REPOSITORY = "cloudstream"', 'const val APK_REPOSITORY = "MTSFlix"')
+
+    old_get_release = '''        val latestRelease = app.get(
+            url = latestReleaseUrl,
+            headers = defaultHeaders
+        ).parsed<GithubRelease>()
+
+        // Find the first correct asset, given that we might have other binaries we release in the same version
+        val foundAsset = latestRelease.assets.firstOrNull { asset ->
+            asset.contentType == contentType
+        }
+
+        if (foundAsset == null) {
+            throw FileNotFoundException()
+        }
+
+        return GithubFile(
+            digest = foundAsset.digest,
+            downloadUrl = foundAsset.browserDownloadUrl,
+            displayName = foundAsset.name.substringBeforeLast("."),
+            changeLog = latestRelease.body,
+            tagName = latestRelease.tagName,
+            nodeId = latestRelease.nodeId
+        )'''
+
+    new_get_release = '''        val latestRelease = app.get(
+            url = latestReleaseUrl,
+            headers = defaultHeaders
+        ).parsed<GithubRelease>()
+
+        val rawTag = latestRelease.tagName
+        val cleanVer = Regex("""\\d+\\.\\d+(\\.\\d+)?""").find(rawTag)?.value
+            ?: Regex("""\\d+\\.\\d+(\\.\\d+)?""").find(latestRelease.assets.firstOrNull()?.name ?: "")?.value
+            ?: rawTag
+
+        // Block any upstream CloudStream versions completely (never show 4.x, 3.x, etc.)
+        if (cleanVer.startsWith("4.") || cleanVer.startsWith("3.") || cleanVer.startsWith("2.") || cleanVer.startsWith("0.")) {
+            throw FileNotFoundException("Ignoring upstream CloudStream release: $rawTag")
+        }
+
+        val foundAsset = latestRelease.assets.firstOrNull { asset ->
+            asset.contentType == contentType || asset.name.endsWith(".apk", ignoreCase = true)
+        } ?: throw FileNotFoundException("No APK asset found in release $rawTag")
+
+        fun parseSemver(v: String): Long {
+            val numbers = Regex("""\\d+""").findAll(v).mapNotNull { it.value.toLongOrNull() }.toList()
+            val major = numbers.getOrNull(0) ?: 0L
+            val minor = numbers.getOrNull(1) ?: 0L
+            val patch = numbers.getOrNull(2) ?: 0L
+            return major * 1000000L + minor * 1000L + patch
+        }
+
+        val currentVerName = com.lagradost.cloudstream3.BuildConfig.VERSION_NAME
+        val currentVal = parseSemver(currentVerName)
+        val releaseVal = parseSemver(cleanVer)
+
+        // If latest release is older than or equal to current version, set displayName = currentVerName
+        // so GithubViewModel recognizes release.displayName == versionName (NoUpdateFound)
+        val finalDisplayName = if (releaseVal <= currentVal) {
+            currentVerName
+        } else {
+            cleanVer
+        }
+
+        val cleanBody = (latestRelease.body ?: "")
+            .replace(Regex("#{1,6}\\\\s*"), "")
+            .replace(Regex("\\\\*{1,2}([^*]+)\\\\*{1,2}"), "$1")
+            .replace(Regex("^---+$", RegexOption.MULTILINE), "")
+            .trim()
+
+        return GithubFile(
+            digest = foundAsset.digest,
+            downloadUrl = foundAsset.browserDownloadUrl,
+            displayName = finalDisplayName,
+            changeLog = cleanBody,
+            tagName = latestRelease.tagName,
+            nodeId = latestRelease.nodeId
+        )'''
+
+    if old_get_release in c:
+        c = c.replace(old_get_release, new_get_release, 1)
+        open(gh_releases_path, 'w', encoding='utf-8').write(c)
+        print("  OK: GithubReleases.kt patched for MTSFlix updates only (upstream 4.8.0 blocked)")
+    else:
+        c = c.replace('const val APK_USERNAME = "recloudstream"', 'const val APK_USERNAME = "muhamadakmal854-svg"')
+        c = c.replace('const val APK_REPOSITORY = "cloudstream"', 'const val APK_REPOSITORY = "MTSFlix"')
+        open(gh_releases_path, 'w', encoding='utf-8').write(c)
+        print("  OK: GithubReleases.kt repository constants updated to MTSFlix")
+
+# 8c. Patch ApkUpdater.kt
+apk_updater_path = cs_dir + '/app/src/main/java/com/lagradost/cloudstream3/ui/settings/ApkUpdater.kt'
+if os.path.exists(apk_updater_path):
+    ac = open(apk_updater_path, encoding='utf-8').read()
+    ac = ac.replace('private const val APP_UPDATE_NAME = "CloudStream"', 'private const val APP_UPDATE_NAME = "MTSFlix"')
+    open(apk_updater_path, 'w', encoding='utf-8').write(ac)
+    print("  OK: ApkUpdater.kt patched to MTSFlix")
+
+# 8d. Also translate update strings in strings.xml
 strings_path = cs_dir + '/app/src/main/res/values/strings.xml'
 if os.path.exists(strings_path):
     sc = open(strings_path, encoding='utf-8').read()
