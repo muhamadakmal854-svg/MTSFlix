@@ -1,7 +1,7 @@
 {
   "version": 1,
   "description": "MTSFlix Device License Registry",
-  "lastUpdated": "2026-10-13",
+  "lastUpdated": "2026-11-05",
   "licenses": [
     {
       "id": "LIC-20260816-CF758B3B",
@@ -450,6 +450,20 @@
       "deviceInfo": "Honor Pad X9",
       "note": "VIP",
       "lastModified": "2026-10-13T07:31:33.638Z"
+    },
+    {
+      "id": "LIC-20261105-LY2TP1YS",
+      "deviceCode": "MTSF-B704-E571-9233",
+      "username": "SADO",
+      "email": "sado@gmail.com",
+      "expiredAt": "2099-12-30",
+      "active": true,
+      "banned": false,
+      "bannedReason": "",
+      "addedAt": "2026-11-05",
+      "deviceInfo": "Infinix Note 30",
+      "note": "VIP",
+      "lastModified": "2026-11-05T15:00:48.673Z"
     }
   ]
 }
